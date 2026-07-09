@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(curl -s -o /dev/null -w \"team: %{http_code}\\\\n\" http://localhost:3000/team)",
+      "Bash(curl -s -o /dev/null -w \"projects: %{http_code}\\\\n\" http://localhost:3000/projects)",
+      "Bash(tail -8 \"C:/Users/khans/AppData/Local/Temp/claude/c--Users-khans-company-workspace/4a08c7f7-a3d4-440f-ad84-030850bedf8a/tasks/b59e2yj12.output\")",
+      "Bash(npx next *)",
+      "Bash(npm run *)",
+      "Bash(tail -3 \"C:/Users/khans/AppData/Local/Temp/claude/c--Users-khans-company-workspace/4a08c7f7-a3d4-440f-ad84-030850bedf8a/tasks/bmgl1gw6k.output\")"
+    ]
+  }
+}

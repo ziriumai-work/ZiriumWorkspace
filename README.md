@@ -1,3 +1,15 @@
+# Workspace
+
+A Notion-style company workspace: project tracking with flexible databases,
+developer assignment, and a built-in DeepSeek-powered AI assistant ("Zirium AI").
+
+**New here? Start with these:**
+- 📐 [ARCHITECTURE.md](ARCHITECTURE.md) — full developer guide (stack, data model, file map, conventions, how to extend). **Read this first.**
+- ⚙️ [SETUP.md](SETUP.md) — how to run it (Firebase + DeepSeek).
+- 🤖 [AGENTS.md](AGENTS.md) — rules for AI coding assistants (Next.js 16 has breaking changes — read its bundled docs before coding).
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

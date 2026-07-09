@@ -1,0 +1,95 @@
+rules_version = '2';
+
+// Phase 0 baseline security rules.
+// Principle: deny by default. Every collection must be explicitly allowed.
+// Role enforcement here is the REAL gate (the UI is only a convenience).
+//
+// Bootstrapping the first admin: the first user who signs in self-joins as a
+// plain 'member'. Promote them to 'owner' once, by hand, in the Firebase
+// console (members/{uid}.role = "owner"). After that, owners/admins manage
+// roles from the app. This avoids anyone self-assigning elevated access.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function memberDoc(uid) {
+      return get(/databases/$(database)/documents/members/$(uid)).data;
+    }
+
+    function isMember() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid));
+    }
+
+    function myRole() {
+      return memberDoc(request.auth.uid).role;
+    }
+
+    function isAdmin() {
+      return isMember() && myRole() in ['owner', 'admin'];
+    }
+
+    // User profiles (display name, photo, email).
+    match /users/{uid} {
+      allow read: if isMember();
+      allow create, update: if isSignedIn() && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // Company membership + role. This is the heart of permissions.
+    match /members/{uid} {
+      // You can always read your OWN membership (even before it exists, so the
+      // app can detect first sign-in). Members can read everyone's membership.
+      allow read: if isSignedIn() && (request.auth.uid == uid || isMember());
+
+      // Self-join is allowed only as a plain 'member' — never as owner/admin.
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == 'member';
+
+      // Only owners/admins can change roles or remove members.
+      allow update, delete: if isAdmin();
+    }
+
+    // Teams inside the company.
+    match /teams/{teamId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    // Projects (the Phase 1 tracker). Any member can read and create projects
+    // and edit/delete them. (Finer-grained ownership — e.g. only the creator or
+    // an admin may delete — can be layered in later.)
+    match /projects/{projectId} {
+      allow read: if isMember();
+
+      // On create, the caller must stamp themselves as the creator.
+      allow create: if isMember()
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow update, delete: if isMember();
+    }
+
+    // Developers roster — people you can assign tasks to. Any member can view
+    // and manage the roster (add/edit/remove teammates).
+    match /developers/{devId} {
+      allow read: if isMember();
+      allow create, update, delete: if isMember();
+    }
+
+    // Daily tasks assigned to employees. Members can read and write; admin-only
+    // actions (assigning/deleting) are gated in the UI. Employees update their
+    // own task status + report.
+    match /tasks/{taskId} {
+      allow read: if isMember();
+      allow create, update, delete: if isMember();
+    }
+
+    // Everything else (databases, pages, automations, ...) is locked until the
+    // phase that introduces it defines explicit rules.
+  }
+}
