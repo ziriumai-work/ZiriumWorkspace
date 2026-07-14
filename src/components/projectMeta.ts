@@ -1,66 +1,64 @@
-// Shared display metadata (labels + Tailwind color classes) for project status
-// and priority. Keeping this in one place means the dashboard, table, board,
-// and detail views stay visually consistent.
+// Shared display metadata (labels + brand colors) for project status and
+// priority, plus the soft-badge styling helper used everywhere a colored
+// chip/pill appears. Keeping this in one place means the dashboard, table,
+// board, and detail views stay visually consistent.
 
-import type { ProjectPriority, ProjectStatus } from "@/lib/data/types";
-
-export const STATUS_META: Record<
+import { alpha, darken, lighten, type Theme } from "@mui/material/styles";
+import type {
+  DailyTaskStatus,
+  EmployeeStatus,
+  ProjectPriority,
   ProjectStatus,
-  { label: string; dot: string; badge: string }
-> = {
-  backlog: {
-    label: "Backlog",
-    dot: "bg-neutral-400",
-    badge: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300",
-  },
-  planned: {
-    label: "Planned",
-    dot: "bg-blue-400",
-    badge: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  },
-  in_progress: {
-    label: "In Progress",
-    dot: "bg-amber-400",
-    badge: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  },
-  in_review: {
-    label: "In Review",
-    dot: "bg-purple-400",
-    badge: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
-  },
-  done: {
-    label: "Done",
-    dot: "bg-green-500",
-    badge: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-  },
-  archived: {
-    label: "Archived",
-    dot: "bg-neutral-300",
-    badge: "bg-neutral-100 text-neutral-400 dark:bg-neutral-900 dark:text-neutral-500",
-  },
-};
+} from "@/lib/data/types";
+import {
+  dailyTaskStatus,
+  employeeStatus,
+  projectPriority,
+  projectStatus,
+} from "@/lib/theme/colors";
+
+export const STATUS_META: Record<ProjectStatus, { label: string; color: string }> =
+  {
+    backlog: { label: "Backlog", color: projectStatus.backlog },
+    planned: { label: "Planned", color: projectStatus.planned },
+    in_progress: { label: "In Progress", color: projectStatus.in_progress },
+    in_review: { label: "In Review", color: projectStatus.in_review },
+    done: { label: "Done", color: projectStatus.done },
+    archived: { label: "Archived", color: projectStatus.archived },
+  };
 
 export const PRIORITY_META: Record<
   ProjectPriority,
-  { label: string; badge: string }
+  { label: string; color: string }
 > = {
-  low: {
-    label: "Low",
-    badge: "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400",
-  },
-  medium: {
-    label: "Medium",
-    badge: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
-  },
-  high: {
-    label: "High",
-    badge: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
-  },
-  urgent: {
-    label: "Urgent",
-    badge: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
-  },
+  low: { label: "Low", color: projectPriority.low },
+  medium: { label: "Medium", color: projectPriority.medium },
+  high: { label: "High", color: projectPriority.high },
+  urgent: { label: "Urgent", color: projectPriority.urgent },
 };
+
+export const TASK_STATUS_COLORS: Record<DailyTaskStatus, string> =
+  dailyTaskStatus;
+
+export const EMPLOYEE_STATUS_COLORS: Record<EmployeeStatus, string> =
+  employeeStatus;
+
+// Soft badge styling: tinted background with a readable tone of the same hue.
+// Works on MUI Chip (`sx`), Select-as-pill, and plain Boxes. Adapts to dark
+// mode via theme.applyStyles so the same hue stays legible on both schemes.
+// Returns a theme function — pass it as an `sx` array member, never spread it
+// into an object literal (spreading a function yields no properties).
+export function chipSx(color: string) {
+  return (theme: Theme) => ({
+    bgcolor: alpha(color, 0.16),
+    color: darken(color, 0.35),
+    fontWeight: 500,
+    ...theme.applyStyles("dark", {
+      bgcolor: alpha(color, 0.22),
+      color: lighten(color, 0.45),
+    }),
+  });
+}
 
 // Format a Firestore Timestamp-ish value to a short date, tolerating null.
 export function formatDueDate(ts: { toDate: () => Date } | null): string {

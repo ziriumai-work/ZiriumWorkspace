@@ -1,10 +1,22 @@
 "use client";
 
 // Table view of the Projects database. Status and priority are editable inline
-// via native selects (writes straight to Firestore). The title links to the
+// via pill selects (writes straight to Firestore). The title links to the
 // project detail page.
 
 import Link from "next/link";
+import Avatar from "@mui/material/Avatar";
+import AvatarGroup from "@mui/material/AvatarGroup";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import MuiLink from "@mui/material/Link";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
 import { updateProject, deleteProject } from "@/lib/data/projects";
 import {
   PROJECT_PRIORITIES,
@@ -14,7 +26,12 @@ import {
   type ProjectPriority,
   type ProjectStatus,
 } from "@/lib/data/types";
-import { PRIORITY_META, STATUS_META, formatDueDate } from "@/components/projectMeta";
+import {
+  PRIORITY_META,
+  STATUS_META,
+  formatDueDate,
+} from "@/components/projectMeta";
+import { PillSelect } from "@/components/ui/PillSelect";
 
 export function ProjectTable({
   projects,
@@ -24,114 +41,126 @@ export function ProjectTable({
   developers: Record<string, Developer>;
 }) {
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead>
-        <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500 dark:border-neutral-800">
-          <th className="px-8 py-2 font-medium">Title</th>
-          <th className="px-3 py-2 font-medium">Status</th>
-          <th className="px-3 py-2 font-medium">Priority</th>
-          <th className="px-3 py-2 font-medium">Developers</th>
-          <th className="px-3 py-2 font-medium">Due</th>
-          <th className="px-3 py-2" />
-        </tr>
-      </thead>
-      <tbody>
+    <Table>
+      <TableHead>
+        <TableRow>
+          <TableCell sx={{ pl: 4 }}>Title</TableCell>
+          <TableCell>Status</TableCell>
+          <TableCell>Priority</TableCell>
+          <TableCell>Developers</TableCell>
+          <TableCell>Due</TableCell>
+          <TableCell />
+        </TableRow>
+      </TableHead>
+      <TableBody>
         {projects.map((p) => {
           const devs = p.developerIds
             .map((did) => developers[did])
             .filter(Boolean);
           return (
-            <tr
+            <TableRow
               key={p.id}
-              className="group border-b border-neutral-100 hover:bg-neutral-50 dark:border-neutral-900 dark:hover:bg-neutral-900/50"
+              hover
+              sx={{
+                "& .row-actions": { opacity: 0 },
+                "&:hover .row-actions": { opacity: 1 },
+              }}
             >
-              <td className="px-8 py-2">
-                <Link
+              <TableCell sx={{ pl: 4 }}>
+                <MuiLink
+                  component={Link}
                   href={`/projects/${p.id}`}
-                  className="font-medium hover:underline"
+                  color="inherit"
+                  underline="hover"
+                  sx={{ fontWeight: 500 }}
                 >
                   {p.title}
-                </Link>
-              </td>
+                </MuiLink>
+              </TableCell>
 
-              <td className="px-3 py-2">
-                <select
+              <TableCell>
+                <PillSelect
                   value={p.status}
-                  onChange={(e) =>
-                    updateProject(p.id, {
-                      status: e.target.value as ProjectStatus,
-                    })
+                  options={PROJECT_STATUSES}
+                  color={STATUS_META[p.status].color}
+                  onChange={(status: ProjectStatus) =>
+                    updateProject(p.id, { status })
                   }
-                  className={`cursor-pointer rounded-full border-0 px-2 py-0.5 text-[11px] font-medium outline-none ${STATUS_META[p.status].badge}`}
-                >
-                  {PROJECT_STATUSES.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </td>
+                />
+              </TableCell>
 
-              <td className="px-3 py-2">
-                <select
+              <TableCell>
+                <PillSelect
                   value={p.priority}
-                  onChange={(e) =>
-                    updateProject(p.id, {
-                      priority: e.target.value as ProjectPriority,
-                    })
+                  options={PROJECT_PRIORITIES}
+                  color={PRIORITY_META[p.priority].color}
+                  onChange={(priority: ProjectPriority) =>
+                    updateProject(p.id, { priority })
                   }
-                  className={`cursor-pointer rounded-full border-0 px-2 py-0.5 text-[11px] font-medium outline-none ${PRIORITY_META[p.priority].badge}`}
-                >
-                  {PROJECT_PRIORITIES.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </td>
+                />
+              </TableCell>
 
-              <td className="px-3 py-2">
+              <TableCell>
                 {devs.length > 0 ? (
-                  <div className="flex items-center gap-1">
-                    <div className="flex -space-x-1.5">
-                      {devs.slice(0, 3).map((d) => (
-                        <span
-                          key={d.id}
-                          title={d.name}
-                          className="flex h-6 w-6 items-center justify-center rounded-full border border-background bg-accent-soft text-[10px] font-semibold text-accent"
-                        >
-                          {d.name.charAt(0).toUpperCase()}
-                        </span>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <AvatarGroup
+                      max={3}
+                      sx={{
+                        "& .MuiAvatar-root": {
+                          width: 24,
+                          height: 24,
+                          fontSize: 10,
+                          fontWeight: 600,
+                          bgcolor: "accentSoft",
+                          color: "primary.main",
+                        },
+                      }}
+                    >
+                      {devs.map((d) => (
+                        <Tooltip key={d.id} title={d.name}>
+                          <Avatar>{d.name.charAt(0).toUpperCase()}</Avatar>
+                        </Tooltip>
                       ))}
-                    </div>
-                    <span className="ml-1 truncate text-xs text-neutral-600 dark:text-neutral-300">
+                    </AvatarGroup>
+                    <Typography variant="caption" color="text.secondary" noWrap>
                       {devs[0].name}
                       {devs.length > 1 ? ` +${devs.length - 1}` : ""}
-                    </span>
-                  </div>
+                    </Typography>
+                  </Box>
                 ) : (
-                  <span className="text-neutral-400">—</span>
+                  <Typography variant="body2" color="text.disabled">
+                    —
+                  </Typography>
                 )}
-              </td>
+              </TableCell>
 
-              <td className="px-3 py-2 text-neutral-500">
+              <TableCell sx={{ color: "text.secondary" }}>
                 {formatDueDate(p.dueDate)}
-              </td>
+              </TableCell>
 
-              <td className="px-3 py-2 text-right">
-                <button
+              <TableCell align="right">
+                <Button
+                  className="row-actions"
+                  size="small"
+                  color="inherit"
                   onClick={() => {
                     if (confirm(`Delete "${p.title}"?`)) deleteProject(p.id);
                   }}
-                  className="rounded px-2 py-0.5 text-xs text-neutral-400 opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 dark:hover:bg-red-950"
+                  sx={{
+                    fontSize: 12,
+                    fontWeight: 400,
+                    color: "text.secondary",
+                    transition: "opacity 0.15s",
+                    "&:hover": { color: "error.main" },
+                  }}
                 >
                   Delete
-                </button>
-              </td>
-            </tr>
+                </Button>
+              </TableCell>
+            </TableRow>
           );
         })}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   );
 }

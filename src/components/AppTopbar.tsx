@@ -4,6 +4,9 @@
 // trigger on the right (also reachable via ⌘K).
 
 import { usePathname } from "next/navigation";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Typography from "@mui/material/Typography";
 import { useAi } from "@/components/ai/AiProvider";
 import { useAuth } from "@/lib/firebase/auth-context";
 
@@ -24,28 +27,58 @@ export function AppTopbar() {
   const { isAdmin } = useAuth();
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-6">
-      <nav className="flex items-center gap-1.5 text-sm text-muted">
-        <span className="font-medium text-foreground">
-          {crumbFromPath(pathname)}
-        </span>
-      </nav>
+    <Box
+      component="header"
+      sx={{
+        height: 48,
+        flexShrink: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        borderBottom: 1,
+        borderColor: "divider",
+        px: 3,
+      }}
+    >
+      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+        {crumbFromPath(pathname)}
+      </Typography>
 
       {/* AI is admin-only (see the role matrix) — hide the trigger otherwise. */}
       {isAdmin && (
-        <button
+        <Button
           onClick={() => openAi()}
-          className="flex items-center gap-2 rounded-lg border border-border bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent transition hover:opacity-90"
+          variant="outlined"
+          sx={{
+            bgcolor: "accentSoft",
+            borderColor: "divider",
+            fontSize: 12,
+            gap: 1,
+          }}
+          startIcon={
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+            </svg>
+          }
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
-          </svg>
           Ask AI
-          <kbd className="rounded border border-accent/30 px-1 text-[10px] font-medium opacity-70">
+          <Box
+            component="kbd"
+            sx={{
+              border: 1,
+              borderColor: "divider",
+              borderRadius: 0.5,
+              px: 0.5,
+              fontSize: 10,
+              fontWeight: 500,
+              opacity: 0.7,
+              fontFamily: "inherit",
+            }}
+          >
             ⌘K
-          </kbd>
-        </button>
+          </Box>
+        </Button>
       )}
-    </header>
+    </Box>
   );
 }

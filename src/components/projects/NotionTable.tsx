@@ -7,6 +7,24 @@
 // the full arrays back to Firestore.
 
 import { useMemo, useState } from "react";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
+import Chip from "@mui/material/Chip";
+import Collapse from "@mui/material/Collapse";
+import Divider from "@mui/material/Divider";
+import IconButton from "@mui/material/IconButton";
+import InputBase from "@mui/material/InputBase";
+import MenuItem from "@mui/material/MenuItem";
+import MenuList from "@mui/material/MenuList";
+import MuiLink from "@mui/material/Link";
+import Paper from "@mui/material/Paper";
+import Popover from "@mui/material/Popover";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import CloseIcon from "@mui/icons-material/Close";
+import { chipSx } from "@/components/projectMeta";
+import { optionColors } from "@/lib/theme/colors";
 import {
   OPTION_COLOR_CYCLE,
   type CellValue,
@@ -18,29 +36,6 @@ import {
 } from "@/lib/data/types";
 
 const uuid = () => crypto.randomUUID();
-
-const OPTION_BADGE: Record<OptionColor, string> = {
-  gray: "bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200",
-  blue: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  green: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-  yellow: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
-  orange: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
-  red: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
-  purple: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
-  pink: "bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300",
-};
-
-// Solid swatch colours for the option color picker.
-const OPTION_DOT: Record<OptionColor, string> = {
-  gray: "bg-neutral-400",
-  blue: "bg-blue-400",
-  green: "bg-green-500",
-  yellow: "bg-yellow-400",
-  orange: "bg-orange-400",
-  red: "bg-red-400",
-  purple: "bg-purple-400",
-  pink: "bg-pink-400",
-};
 
 const ALL_COLORS: OptionColor[] = [
   "gray",
@@ -96,6 +91,15 @@ const TYPE_ORDER: ColumnType[] = [
 // Which types use coloured options.
 const OPTION_TYPES: ColumnType[] = ["select", "multi_select", "status"];
 
+// Soft badge chip for select/status options. Legacy options may carry a color
+// name outside the palette — fall back to gray instead of crashing.
+function OptionBadge({ option }: { option: SelectOption }) {
+  const base = optionColors[option.color] ?? optionColors.gray;
+  return (
+    <Chip label={option.label} sx={[chipSx(base), { height: 20, fontSize: 11 }]} />
+  );
+}
+
 export function NotionTable({
   columns,
   rows,
@@ -107,10 +111,15 @@ export function NotionTable({
   onColumnsChange: (next: DbColumn[]) => void;
   onRowsChange: (next: DbRow[]) => void;
 }) {
-  const [menuCol, setMenuCol] = useState<string | null>(null);
-  const [openCell, setOpenCell] = useState<{ row: string; col: string } | null>(
-    null,
-  );
+  const [menuAnchor, setMenuAnchor] = useState<{
+    colId: string;
+    el: HTMLElement;
+  } | null>(null);
+  const [cellAnchor, setCellAnchor] = useState<{
+    row: string;
+    col: string;
+    el: HTMLElement;
+  } | null>(null);
   const [sort, setSort] = useState<{ col: string; dir: "asc" | "desc" } | null>(
     null,
   );
@@ -121,14 +130,14 @@ export function NotionTable({
   }
   function deleteColumn(id: string) {
     onColumnsChange(columns.filter((c) => c.id !== id));
-    setMenuCol(null);
+    setMenuAnchor(null);
   }
   function insertColumn(index: number) {
     const col: DbColumn = { id: uuid(), name: "New column", type: "text" };
     const next = [...columns];
     next.splice(index, 0, col);
     onColumnsChange(next);
-    setMenuCol(col.id);
+    setMenuAnchor(null);
   }
   function addOption(colId: string, label: string): string {
     const col = columns.find((c) => c.id === colId);
@@ -181,140 +190,226 @@ export function NotionTable({
     return copy;
   }, [rows, sort, columns]);
 
-  const anyOpen = menuCol !== null || openCell !== null;
+  const menuColumn = menuAnchor
+    ? (columns.find((c) => c.id === menuAnchor.colId) ?? null)
+    : null;
+  const menuColIndex = menuAnchor
+    ? columns.findIndex((c) => c.id === menuAnchor.colId)
+    : -1;
 
   return (
-    <div className="relative">
-      {/* click-away backdrop for menus/popovers */}
-      {anyOpen && (
-        <div
-          className="fixed inset-0 z-20"
-          onClick={() => {
-            setMenuCol(null);
-            setOpenCell(null);
-          }}
-        />
-      )}
-
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border bg-surface">
-              {columns.map((col, i) => (
-                <th
+    <Box>
+      <Paper variant="outlined" sx={{ borderRadius: 3, overflowX: "auto" }}>
+        <Box component="table" sx={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+          <Box component="thead">
+            <Box
+              component="tr"
+              sx={{ borderBottom: 1, borderColor: "divider", bgcolor: "surface" }}
+            >
+              {columns.map((col) => (
+                <Box
+                  component="th"
                   key={col.id}
-                  className="relative border-r border-border px-3 py-2 text-left font-medium"
+                  sx={{
+                    borderRight: 1,
+                    borderColor: "divider",
+                    px: 1.5,
+                    py: 1,
+                    textAlign: "left",
+                    fontWeight: 500,
+                  }}
                 >
-                  <button
-                    onClick={() =>
-                      setMenuCol(menuCol === col.id ? null : col.id)
+                  <Box
+                    component="button"
+                    onClick={(e: React.MouseEvent<HTMLElement>) =>
+                      setMenuAnchor(
+                        menuAnchor?.colId === col.id
+                          ? null
+                          : { colId: col.id, el: e.currentTarget },
+                      )
                     }
-                    className="flex w-full items-center gap-1.5 text-xs text-muted transition hover:text-foreground"
+                    sx={{
+                      display: "flex",
+                      width: "100%",
+                      alignItems: "center",
+                      gap: 0.75,
+                      border: 0,
+                      bgcolor: "transparent",
+                      p: 0,
+                      fontSize: 12,
+                      fontFamily: "inherit",
+                      color: "text.secondary",
+                      cursor: "pointer",
+                      transition: "color 0.15s",
+                      "&:hover": { color: "text.primary" },
+                    }}
                   >
-                    <span className="opacity-60">{TYPE_ICONS[col.type]}</span>
-                    <span className="truncate">{col.name}</span>
-                  </button>
-
-                  {menuCol === col.id && (
-                    <ColumnMenu
-                      column={col}
-                      canDelete={i !== 0 && columns.length > 1}
-                      onRename={(name) => updateColumn(col.id, { name })}
-                      onType={(type) => updateColumn(col.id, { type })}
-                      onSortAsc={() => {
-                        setSort({ col: col.id, dir: "asc" });
-                        setMenuCol(null);
-                      }}
-                      onSortDesc={() => {
-                        setSort({ col: col.id, dir: "desc" });
-                        setMenuCol(null);
-                      }}
-                      onInsertLeft={() => insertColumn(i)}
-                      onInsertRight={() => insertColumn(i + 1)}
-                      onDelete={() => deleteColumn(col.id)}
-                      onOptionsChange={(opts) =>
-                        updateColumn(col.id, { options: opts })
-                      }
-                    />
-                  )}
-                </th>
+                    <Box component="span" sx={{ opacity: 0.6 }}>
+                      {TYPE_ICONS[col.type]}
+                    </Box>
+                    <Box
+                      component="span"
+                      sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                    >
+                      {col.name}
+                    </Box>
+                  </Box>
+                </Box>
               ))}
-              <th className="w-10 px-2 py-2">
-                <button
+              <Box component="th" sx={{ width: 40, px: 1, py: 1 }}>
+                <IconButton
+                  size="small"
                   onClick={() => insertColumn(columns.length)}
                   title="Add column"
-                  className="rounded px-1.5 text-muted transition hover:bg-card hover:text-foreground"
+                  sx={{ color: "text.secondary" }}
                 >
                   +
-                </button>
-              </th>
-            </tr>
-          </thead>
+                </IconButton>
+              </Box>
+            </Box>
+          </Box>
 
-          <tbody>
+          <Box component="tbody">
             {displayRows.map((row) => (
-              <tr
+              <Box
+                component="tr"
                 key={row.id}
-                className="group border-b border-border last:border-0 hover:bg-surface/60"
+                sx={{
+                  borderBottom: 1,
+                  borderColor: "divider",
+                  "&:last-child": { borderBottom: 0 },
+                  "& .row-delete": { opacity: 0 },
+                  "&:hover .row-delete": { opacity: 1 },
+                  "&:hover": { bgcolor: "surface" },
+                }}
               >
                 {columns.map((col) => (
-                  <td
+                  <Box
+                    component="td"
                     key={col.id}
-                    className="border-r border-border px-3 py-1.5 align-top"
+                    sx={{
+                      borderRight: 1,
+                      borderColor: "divider",
+                      px: 1.5,
+                      py: 0.75,
+                      verticalAlign: "top",
+                    }}
                   >
                     <Cell
                       column={col}
                       value={row.cells[col.id] ?? null}
                       open={
-                        openCell?.row === row.id && openCell?.col === col.id
+                        cellAnchor?.row === row.id && cellAnchor?.col === col.id
                       }
-                      onOpen={() => setOpenCell({ row: row.id, col: col.id })}
-                      onClose={() => setOpenCell(null)}
+                      anchorEl={
+                        cellAnchor?.row === row.id && cellAnchor?.col === col.id
+                          ? cellAnchor.el
+                          : null
+                      }
+                      onOpen={(el) =>
+                        setCellAnchor({ row: row.id, col: col.id, el })
+                      }
+                      onClose={() => setCellAnchor(null)}
                       onChange={(v) => setCell(row.id, col.id, v)}
                       onAddOption={(label) => addOption(col.id, label)}
                     />
-                  </td>
+                  </Box>
                 ))}
-                <td className="px-2 py-1.5 text-right align-top">
-                  <button
+                <Box component="td" sx={{ px: 1, py: 0.75, textAlign: "right", verticalAlign: "top" }}>
+                  <IconButton
+                    className="row-delete"
+                    size="small"
                     onClick={() => deleteRow(row.id)}
-                    className="rounded px-1 text-xs text-muted opacity-0 transition hover:text-red-600 group-hover:opacity-100"
                     title="Delete row"
+                    sx={{
+                      color: "text.secondary",
+                      transition: "opacity 0.15s",
+                      "&:hover": { color: "error.main" },
+                    }}
                   >
-                    ✕
-                  </button>
-                </td>
-              </tr>
+                    <CloseIcon sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Box>
+              </Box>
             ))}
 
             {/* New row */}
-            <tr>
-              <td
-                colSpan={columns.length + 1}
-                className="px-3 py-2 text-xs text-muted"
-              >
-                <button
+            <Box component="tr">
+              <Box component="td" colSpan={columns.length + 1} sx={{ px: 1.5, py: 1 }}>
+                <Box
+                  component="button"
                   onClick={addRow}
-                  className="flex w-full items-center gap-1.5 text-left transition hover:text-foreground"
+                  sx={{
+                    display: "flex",
+                    width: "100%",
+                    alignItems: "center",
+                    gap: 0.75,
+                    border: 0,
+                    bgcolor: "transparent",
+                    p: 0,
+                    textAlign: "left",
+                    fontSize: 12,
+                    fontFamily: "inherit",
+                    color: "text.secondary",
+                    cursor: "pointer",
+                    "&:hover": { color: "text.primary" },
+                  }}
                 >
-                  <span className="text-base leading-none">+</span> New
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                  <Box component="span" sx={{ fontSize: 16, lineHeight: 1 }}>
+                    +
+                  </Box>{" "}
+                  New
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      </Paper>
 
       {sort && (
-        <button
+        <MuiLink
+          component="button"
+          variant="caption"
+          underline="hover"
           onClick={() => setSort(null)}
-          className="mt-2 text-xs text-accent hover:underline"
+          sx={{ mt: 1 }}
         >
-          Clear sort ({columns.find((c) => c.id === sort.col)?.name} ·{" "}
-          {sort.dir})
-        </button>
+          Clear sort ({columns.find((c) => c.id === sort.col)?.name} · {sort.dir})
+        </MuiLink>
       )}
-    </div>
+
+      {/* Column menu */}
+      <Popover
+        open={Boolean(menuAnchor && menuColumn)}
+        anchorEl={menuAnchor?.el ?? null}
+        onClose={() => setMenuAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        slotProps={{ paper: { sx: { width: 256, maxHeight: "70vh", borderRadius: 3, p: 0.5 } } }}
+      >
+        {menuColumn && (
+          <ColumnMenu
+            column={menuColumn}
+            canDelete={menuColIndex !== 0 && columns.length > 1}
+            onRename={(name) => updateColumn(menuColumn.id, { name })}
+            onType={(type) => updateColumn(menuColumn.id, { type })}
+            onSortAsc={() => {
+              setSort({ col: menuColumn.id, dir: "asc" });
+              setMenuAnchor(null);
+            }}
+            onSortDesc={() => {
+              setSort({ col: menuColumn.id, dir: "desc" });
+              setMenuAnchor(null);
+            }}
+            onInsertLeft={() => insertColumn(menuColIndex)}
+            onInsertRight={() => insertColumn(menuColIndex + 1)}
+            onDelete={() => deleteColumn(menuColumn.id)}
+            onOptionsChange={(opts) =>
+              updateColumn(menuColumn.id, { options: opts })
+            }
+          />
+        )}
+      </Popover>
+    </Box>
   );
 }
 
@@ -346,55 +441,72 @@ function ColumnMenu({
   const [typeOpen, setTypeOpen] = useState(false);
   const hasOptions = OPTION_TYPES.includes(column.type);
   return (
-    <div className="absolute left-0 top-full z-30 mt-1 max-h-[70vh] w-64 overflow-y-auto rounded-xl border border-border bg-card p-1 shadow-xl animate-pop-in">
-      <input
+    <MenuList>
+      <Box sx={{ px: 2, pb: 1 }}>
+        <TextField
         autoFocus
         defaultValue={column.name}
         onChange={(e) => onRename(e.target.value)}
-        className="mb-1 w-full rounded-md border border-border bg-transparent px-2 py-1.5 text-sm outline-none focus:border-accent"
+        fullWidth
+        sx={{ mb: 0.5, "& .MuiInputBase-input": { fontSize: 14, py: 0.75 } }}
       />
 
+      </Box>
+
       {/* Change type — collapsible, Notion-style list */}
-      <button
+      <MenuItem
         onClick={() => setTypeOpen((v) => !v)}
-        className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm transition hover:bg-surface"
+        sx={{ borderRadius: 1.5, justifyContent: "space-between", fontSize: 14 }}
       >
-        <span className="flex items-center gap-2 text-muted">
-          <span className="w-4 text-center text-xs opacity-70">↻</span>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: "text.secondary" }}>
+          <Box component="span" sx={{ width: 16, textAlign: "center", fontSize: 12, opacity: 0.7 }}>
+            ↻
+          </Box>
           Change type
-        </span>
-        <span className="flex items-center gap-1 text-xs text-muted">
-          {TYPE_LABELS[column.type]} <span>{typeOpen ? "▾" : "▸"}</span>
-        </span>
-      </button>
-      {typeOpen && (
-        <div className="mb-1 max-h-56 overflow-y-auto rounded-lg bg-surface/60 p-1">
+        </Box>
+        <Typography variant="caption" color="text.secondary">
+          {TYPE_LABELS[column.type]} {typeOpen ? "▾" : "▸"}
+        </Typography>
+      </MenuItem>
+      <Collapse in={typeOpen}>
+        <Box
+          sx={{
+            mb: 0.5,
+            maxHeight: 224,
+            overflowY: "auto",
+            borderRadius: 2,
+            bgcolor: "surface",
+            p: 0.5,
+          }}
+        >
           {TYPE_ORDER.map((t) => (
-            <button
+            <MenuItem
               key={t}
               onClick={() => {
                 onType(t);
                 setTypeOpen(false);
               }}
-              className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm transition hover:bg-card"
+              sx={{ borderRadius: 1.5, justifyContent: "space-between", fontSize: 14 }}
             >
-              <span className="flex items-center gap-2">
-                <span className="w-4 text-center text-xs opacity-70">
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Box component="span" sx={{ width: 16, textAlign: "center", fontSize: 12, opacity: 0.7 }}>
                   {TYPE_ICONS[t]}
-                </span>
+                </Box>
                 {TYPE_LABELS[t]}
-              </span>
+              </Box>
               {column.type === t && (
-                <span className="text-xs text-accent">✓</span>
+                <Typography variant="caption" color="primary">
+                  ✓
+                </Typography>
               )}
-            </button>
+            </MenuItem>
           ))}
-        </div>
-      )}
+        </Box>
+      </Collapse>
 
       {hasOptions && (
         <>
-          <div className="my-1 border-t border-border" />
+          <Divider sx={{ my: 0.5 }} />
           <OptionsEditor
             options={column.options ?? []}
             onChange={onOptionsChange}
@@ -402,19 +514,32 @@ function ColumnMenu({
         </>
       )}
 
-      <div className="my-1 border-t border-border" />
-      <MenuItem label="Sort ascending" onClick={onSortAsc} />
-      <MenuItem label="Sort descending" onClick={onSortDesc} />
-      <div className="my-1 border-t border-border" />
-      <MenuItem label="Insert left" onClick={onInsertLeft} />
-      <MenuItem label="Insert right" onClick={onInsertRight} />
+      <Divider sx={{ my: 0.5 }} />
+      <MenuItem onClick={onSortAsc} sx={{ borderRadius: 1.5, fontSize: 14 }}>
+        Sort ascending
+      </MenuItem>
+      <MenuItem onClick={onSortDesc} sx={{ borderRadius: 1.5, fontSize: 14 }}>
+        Sort descending
+      </MenuItem>
+      <Divider sx={{ my: 0.5 }} />
+      <MenuItem onClick={onInsertLeft} sx={{ borderRadius: 1.5, fontSize: 14 }}>
+        Insert left
+      </MenuItem>
+      <MenuItem onClick={onInsertRight} sx={{ borderRadius: 1.5, fontSize: 14 }}>
+        Insert right
+      </MenuItem>
       {canDelete && (
         <>
-          <div className="my-1 border-t border-border" />
-          <MenuItem label="Delete column" danger onClick={onDelete} />
+          <Divider sx={{ my: 0.5 }} />
+          <MenuItem
+            onClick={onDelete}
+            sx={{ borderRadius: 1.5, fontSize: 14, color: "error.main" }}
+          >
+            Delete column
+          </MenuItem>
         </>
       )}
-    </div>
+    </MenuList>
   );
 }
 
@@ -445,95 +570,133 @@ function OptionsEditor({
   }
 
   return (
-    <div className="px-1 pb-1">
-      <p className="px-1 py-1 text-[11px] font-medium uppercase tracking-wide text-muted">
+    <Box sx={{ px: 0.5, pb: 0.5 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{
+          px: 0.5,
+          py: 0.5,
+          display: "block",
+          fontSize: 11,
+          fontWeight: 500,
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        }}
+      >
         Options
-      </p>
+      </Typography>
 
-      <div className="flex flex-col gap-1">
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
         {options.map((o) => (
-          <div key={o.id} className="relative">
-            <div className="flex items-center gap-1.5 rounded-md px-1 py-0.5 hover:bg-surface">
+          <Box key={o.id}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                borderRadius: 1.5,
+                px: 0.5,
+                py: 0.25,
+                "&:hover": { bgcolor: "surface" },
+              }}
+            >
               {/* color swatch -> opens palette */}
-              <button
+              <Box
+                component="button"
                 onClick={() => setColorFor(colorFor === o.id ? null : o.id)}
-                className={`h-4 w-4 shrink-0 rounded-full ring-1 ring-black/10 ${OPTION_DOT[o.color]}`}
                 title="Change colour"
+                sx={{
+                  width: 16,
+                  height: 16,
+                  flexShrink: 0,
+                  borderRadius: "50%",
+                  border: 0,
+                  cursor: "pointer",
+                  bgcolor: optionColors[o.color],
+                  boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.1)",
+                }}
               />
-              <input
+              <InputBase
                 value={o.label}
                 onChange={(e) => update(o.id, { label: e.target.value })}
-                className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                sx={{ minWidth: 0, flex: 1, fontSize: 14 }}
               />
-              <button
+              <IconButton
+                size="small"
                 onClick={() => remove(o.id)}
-                className="shrink-0 text-xs text-muted transition hover:text-red-600"
                 title="Delete option"
+                sx={{ color: "text.secondary", "&:hover": { color: "error.main" } }}
               >
-                ✕
-              </button>
-            </div>
+                <CloseIcon sx={{ fontSize: 12 }} />
+              </IconButton>
+            </Box>
 
-            {colorFor === o.id && (
-              <div className="ml-5 mt-1 flex flex-wrap gap-1.5 rounded-lg border border-border bg-card p-2">
+            <Collapse in={colorFor === o.id}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  ml: 2.5,
+                  mt: 0.5,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 0.75,
+                  borderRadius: 2,
+                  p: 1,
+                }}
+              >
                 {ALL_COLORS.map((c) => (
-                  <button
+                  <Box
+                    component="button"
                     key={c}
                     onClick={() => {
                       update(o.id, { color: c });
                       setColorFor(null);
                     }}
                     title={c}
-                    className={`h-5 w-5 rounded-full ring-1 ring-black/10 transition hover:scale-110 ${OPTION_DOT[c]} ${
-                      o.color === c ? "ring-2 ring-accent" : ""
-                    }`}
+                    sx={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      border: 0,
+                      cursor: "pointer",
+                      bgcolor: optionColors[c],
+                      boxShadow:
+                        o.color === c
+                          ? (theme) =>
+                              `0 0 0 2px ${theme.palette.primary.main}`
+                          : "inset 0 0 0 1px rgba(0,0,0,0.1)",
+                      transition: "transform 0.1s",
+                      "&:hover": { transform: "scale(1.1)" },
+                    }}
                   />
                 ))}
-              </div>
-            )}
-          </div>
+              </Paper>
+            </Collapse>
+          </Box>
         ))}
-      </div>
+      </Box>
 
       {/* add option */}
-      <div className="mt-1 flex items-center gap-1">
-        <input
+      <Box sx={{ mt: 0.5, display: "flex", alignItems: "center", gap: 0.5 }}>
+        <TextField
           value={newLabel}
           onChange={(e) => setNewLabel(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
           placeholder="Add an option…"
-          className="min-w-0 flex-1 rounded-md border border-border bg-transparent px-2 py-1 text-sm outline-none focus:border-accent"
+          fullWidth
+          sx={{ "& .MuiInputBase-input": { fontSize: 14, py: 0.5 } }}
         />
-        <button
+        <Button
           onClick={add}
           disabled={!newLabel.trim()}
-          className="rounded-md bg-accent px-2 py-1 text-xs font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-40"
+          variant="contained"
+          sx={{ flexShrink: 0, fontSize: 12, minWidth: 0, px: 1.5 }}
         >
           Add
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function MenuItem({
-  label,
-  onClick,
-  danger,
-}: {
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`block w-full rounded-md px-2 py-1.5 text-left text-sm transition hover:bg-surface ${
-        danger ? "text-red-600" : ""
-      }`}
-    >
-      {label}
-    </button>
+        </Button>
+      </Box>
+    </Box>
   );
 }
 
@@ -543,6 +706,7 @@ function Cell({
   column,
   value,
   open,
+  anchorEl,
   onOpen,
   onClose,
   onChange,
@@ -551,29 +715,31 @@ function Cell({
   column: DbColumn;
   value: CellValue;
   open: boolean;
-  onOpen: () => void;
+  anchorEl: HTMLElement | null;
+  onOpen: (el: HTMLElement) => void;
   onClose: () => void;
   onChange: (v: CellValue) => void;
   onAddOption: (label: string) => string;
 }) {
   if (column.type === "checkbox") {
     return (
-      <input
-        type="checkbox"
+      <Checkbox
         checked={Boolean(value)}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-4 w-4 cursor-pointer accent-[var(--accent)]"
+        size="small"
+        sx={{ p: 0.25 }}
       />
     );
   }
 
   if (column.type === "date") {
     return (
-      <input
+      <InputBase
         type="date"
         value={typeof value === "string" ? value : ""}
         onChange={(e) => onChange(e.target.value || null)}
-        className="w-full bg-transparent text-sm outline-none"
+        fullWidth
+        sx={{ fontSize: 14 }}
       />
     );
   }
@@ -608,74 +774,98 @@ function Cell({
     const ids = Array.isArray(value) ? value : [];
     const chosen = (column.options ?? []).filter((o) => ids.includes(o.id));
     return (
-      <div className="relative">
-        <button
-          onClick={open ? onClose : onOpen}
-          className="flex min-h-[1.5rem] w-full flex-wrap items-center gap-1"
+      <>
+        <Box
+          component="button"
+          onClick={(e: React.MouseEvent<HTMLElement>) =>
+            open ? onClose() : onOpen(e.currentTarget)
+          }
+          sx={{
+            display: "flex",
+            minHeight: 24,
+            width: "100%",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 0.5,
+            border: 0,
+            bgcolor: "transparent",
+            p: 0,
+            cursor: "pointer",
+            textAlign: "left",
+          }}
         >
           {chosen.length ? (
-            chosen.map((o) => (
-              <span
-                key={o.id}
-                className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${OPTION_BADGE[o.color]}`}
-              >
-                {o.label}
-              </span>
-            ))
+            chosen.map((o) => <OptionBadge key={o.id} option={o} />)
           ) : (
-            <span className="text-xs text-muted">Empty</span>
+            <Typography variant="caption" color="text.disabled">
+              Empty
+            </Typography>
           )}
-        </button>
-        {open && (
-          <MultiSelectPopover
-            column={column}
-            selected={ids}
-            onToggle={(id) =>
-              onChange(
-                ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id],
-              )
-            }
-            onCreate={(label) => onChange([...ids, onAddOption(label)])}
-          />
-        )}
-      </div>
+        </Box>
+        <OptionPopover
+          open={open}
+          anchorEl={anchorEl}
+          onClose={onClose}
+          column={column}
+          multi
+          selected={ids}
+          onToggle={(id) =>
+            onChange(
+              ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id],
+            )
+          }
+          onCreate={(label) => onChange([...ids, onAddOption(label)])}
+        />
+      </>
     );
   }
 
   if (column.type === "select" || column.type === "status") {
     const opt = column.options?.find((o) => o.id === value) ?? null;
     return (
-      <div className="relative">
-        <button
-          onClick={open ? onClose : onOpen}
-          className="flex min-h-[1.5rem] w-full items-center"
+      <>
+        <Box
+          component="button"
+          onClick={(e: React.MouseEvent<HTMLElement>) =>
+            open ? onClose() : onOpen(e.currentTarget)
+          }
+          sx={{
+            display: "flex",
+            minHeight: 24,
+            width: "100%",
+            alignItems: "center",
+            border: 0,
+            bgcolor: "transparent",
+            p: 0,
+            cursor: "pointer",
+            textAlign: "left",
+          }}
         >
           {opt ? (
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${OPTION_BADGE[opt.color]}`}
-            >
-              {opt.label}
-            </span>
+            <OptionBadge option={opt} />
           ) : (
-            <span className="text-xs text-muted">Empty</span>
+            <Typography variant="caption" color="text.disabled">
+              Empty
+            </Typography>
           )}
-        </button>
-        {open && (
-          <SelectPopover
-            column={column}
-            value={typeof value === "string" ? value : null}
-            onPick={(id) => {
-              onChange(id);
-              onClose();
-            }}
-            onCreate={(label) => {
-              const id = onAddOption(label);
-              onChange(id);
-              onClose();
-            }}
-          />
-        )}
-      </div>
+        </Box>
+        <OptionPopover
+          open={open}
+          anchorEl={anchorEl}
+          onClose={onClose}
+          column={column}
+          value={typeof value === "string" ? value : null}
+          onPick={(id) => {
+            onChange(id);
+            onClose();
+          }}
+          onCreate={(label) => {
+            const id = onAddOption(label);
+            onChange(id);
+            onClose();
+          }}
+        />
+      </>
     );
   }
 
@@ -709,30 +899,46 @@ function TextCell({
     setDraft(value);
   }
   return (
-    <input
+    <InputBase
       type={htmlType ?? "text"}
       value={draft}
-      inputMode={numeric ? "numeric" : undefined}
+      inputProps={{ inputMode: numeric ? "numeric" : undefined }}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => draft !== value && onCommit(draft)}
       onKeyDown={(e) => {
         if (e.key === "Enter") (e.target as HTMLInputElement).blur();
       }}
-      className="w-full bg-transparent text-sm outline-none placeholder:text-muted"
       placeholder="Empty"
+      fullWidth
+      sx={{ fontSize: 14 }}
     />
   );
 }
 
-function MultiSelectPopover({
+// Search-or-create popover for select / multi-select / status cells. In single
+// mode picking closes the popover (via onPick); in multi mode it stays open so
+// several options can be toggled.
+function OptionPopover({
+  open,
+  anchorEl,
+  onClose,
   column,
+  multi,
+  value,
   selected,
+  onPick,
   onToggle,
   onCreate,
 }: {
+  open: boolean;
+  anchorEl: HTMLElement | null;
+  onClose: () => void;
   column: DbColumn;
-  selected: string[];
-  onToggle: (id: string) => void;
+  multi?: boolean;
+  value?: string | null;
+  selected?: string[];
+  onPick?: (id: string) => void;
+  onToggle?: (id: string) => void;
   onCreate: (label: string) => void;
 }) {
   const [q, setQ] = useState("");
@@ -745,8 +951,14 @@ function MultiSelectPopover({
   );
 
   return (
-    <div className="absolute left-0 top-full z-30 mt-1 w-52 rounded-xl border border-border bg-card p-1 shadow-xl animate-pop-in">
-      <input
+    <Popover
+      open={open && Boolean(anchorEl)}
+      anchorEl={anchorEl}
+      onClose={onClose}
+      anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      slotProps={{ paper: { sx: { width: 208, borderRadius: 3, p: 0.5 } } }}
+    >
+      <TextField
         autoFocus
         value={q}
         onChange={(e) => setQ(e.target.value)}
@@ -757,110 +969,45 @@ function MultiSelectPopover({
           }
         }}
         placeholder="Search or create…"
-        className="mb-1 w-full rounded-md border border-border bg-transparent px-2 py-1.5 text-sm outline-none focus:border-accent"
+        fullWidth
+        sx={{ mb: 0.5, "& .MuiInputBase-input": { fontSize: 14, py: 0.75 } }}
       />
-      <div className="max-h-48 overflow-y-auto">
-        {filtered.map((o) => (
-          <button
-            key={o.id}
-            onClick={() => onToggle(o.id)}
-            className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left transition hover:bg-surface"
+      <Box sx={{ maxHeight: 192, overflowY: "auto" }}>
+        {!multi && value && (
+          <MenuItem
+            onClick={() => onPick?.("")}
+            sx={{ borderRadius: 1.5, fontSize: 12, color: "text.secondary" }}
           >
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${OPTION_BADGE[o.color]}`}
-            >
-              {o.label}
-            </span>
-            {selected.includes(o.id) && (
-              <span className="text-xs text-accent">✓</span>
+            Clear
+          </MenuItem>
+        )}
+        {filtered.map((o) => (
+          <MenuItem
+            key={o.id}
+            onClick={() => (multi ? onToggle?.(o.id) : onPick?.(o.id))}
+            sx={{ borderRadius: 1.5, justifyContent: "space-between" }}
+          >
+            <OptionBadge option={o} />
+            {multi && selected?.includes(o.id) && (
+              <Typography variant="caption" color="primary">
+                ✓
+              </Typography>
             )}
-          </button>
+          </MenuItem>
         ))}
         {q.trim() && !exact && (
-          <button
+          <MenuItem
             onClick={() => {
               onCreate(q.trim());
               setQ("");
             }}
-            className="block w-full rounded-md px-2 py-1.5 text-left text-sm transition hover:bg-surface"
+            sx={{ borderRadius: 1.5, fontSize: 14, gap: 0.75 }}
           >
-            Create{" "}
-            <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] dark:bg-neutral-700">
-              {q.trim()}
-            </span>
-          </button>
+            Create
+            <Chip label={q.trim()} sx={{ height: 20, fontSize: 11, bgcolor: "surface" }} />
+          </MenuItem>
         )}
-      </div>
-    </div>
-  );
-}
-
-function SelectPopover({
-  column,
-  value,
-  onPick,
-  onCreate,
-}: {
-  column: DbColumn;
-  value: string | null;
-  onPick: (id: string) => void;
-  onCreate: (label: string) => void;
-}) {
-  const [q, setQ] = useState("");
-  const options = column.options ?? [];
-  const filtered = options.filter((o) =>
-    o.label.toLowerCase().includes(q.trim().toLowerCase()),
-  );
-  const exact = options.some(
-    (o) => o.label.toLowerCase() === q.trim().toLowerCase(),
-  );
-
-  return (
-    <div className="absolute left-0 top-full z-30 mt-1 w-52 rounded-xl border border-border bg-card p-1 shadow-xl animate-pop-in">
-      <input
-        autoFocus
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && q.trim() && !exact) onCreate(q.trim());
-        }}
-        placeholder="Search or create…"
-        className="mb-1 w-full rounded-md border border-border bg-transparent px-2 py-1.5 text-sm outline-none focus:border-accent"
-      />
-      <div className="max-h-48 overflow-y-auto">
-        {value && (
-          <button
-            onClick={() => onPick("")}
-            className="block w-full rounded-md px-2 py-1.5 text-left text-xs text-muted transition hover:bg-surface"
-          >
-            Clear
-          </button>
-        )}
-        {filtered.map((o) => (
-          <button
-            key={o.id}
-            onClick={() => onPick(o.id)}
-            className="block w-full rounded-md px-2 py-1.5 text-left transition hover:bg-surface"
-          >
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${OPTION_BADGE[o.color]}`}
-            >
-              {o.label}
-            </span>
-          </button>
-        ))}
-        {q.trim() && !exact && (
-          <button
-            onClick={() => onCreate(q.trim())}
-            className="block w-full rounded-md px-2 py-1.5 text-left text-sm transition hover:bg-surface"
-          >
-            Create{" "}
-            <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] dark:bg-neutral-700">
-              {q.trim()}
-            </span>
-          </button>
-        )}
-      </div>
-    </div>
+      </Box>
+    </Popover>
   );
 }

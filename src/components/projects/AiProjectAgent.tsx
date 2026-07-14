@@ -5,6 +5,16 @@
 // sample). Review the plan, then create it in one click.
 
 import { useState } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import Divider from "@mui/material/Divider";
+import MenuItem from "@mui/material/MenuItem";
+import Paper from "@mui/material/Paper";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { createProject } from "@/lib/data/projects";
 import { generateProjectPlan, type GeneratedPlan } from "@/lib/ai/ai-agent";
@@ -83,138 +93,203 @@ export function AiProjectAgent({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 pt-[8vh] backdrop-blur-sm animate-fade-in"
-      onMouseDown={onClose}
+    <Dialog
+      open
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      slotProps={{
+        backdrop: { sx: { backdropFilter: "blur(4px)" } },
+        paper: {
+          sx: {
+            maxHeight: "84vh",
+            display: "flex",
+            flexDirection: "column",
+            mt: "8vh",
+            alignSelf: "flex-start",
+          },
+        },
+      }}
     >
-      <div
-        className="flex max-h-[84vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-pop-in"
-        onMouseDown={(e) => e.stopPropagation()}
+      {/* Header */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: 1,
+          borderColor: "divider",
+          px: 2,
+          py: 1.5,
+        }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <div className="flex items-center gap-2">
-            <SparkIcon />
-            <span className="text-sm font-semibold">AI Project Agent</span>
-          </div>
-          <select
-            value={modelId}
-            onChange={(e) => setModelId(e.target.value)}
-            className="rounded-lg border border-border bg-transparent px-2 py-1 text-xs font-medium outline-none"
-          >
-            {AI_MODELS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <SparkIcon />
+          <Typography variant="subtitle2">AI Project Agent</Typography>
+        </Box>
+        <TextField
+          select
+          value={modelId}
+          onChange={(e) => setModelId(e.target.value)}
+          sx={{ minWidth: 150, "& .MuiInputBase-input": { fontSize: 12, py: 0.75 } }}
+        >
+          {AI_MODELS.map((m) => (
+            <MenuItem key={m.id} value={m.id}>
+              {m.label}
+            </MenuItem>
+          ))}
+        </TextField>
+      </Box>
 
-        {/* Body */}
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          <label className="mb-1 block text-xs font-medium text-muted">
-            Project brief or timeline
-          </label>
-          <textarea
-            value={brief}
-            onChange={(e) => setBrief(e.target.value)}
-            rows={6}
-            placeholder={
-              "Paste a timeline, or describe the project. e.g.\n" +
-              "\"Build a 4-week marketing site: week 1 design, week 2 build pages, week 3 CMS + blog, week 4 QA and launch.\""
-            }
-            className="w-full resize-y rounded-xl border border-border bg-transparent p-3 text-sm leading-relaxed outline-none focus:border-accent"
-          />
+      {/* Body */}
+      <Box sx={{ minHeight: 0, flex: 1, overflowY: "auto", p: 2 }}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ mb: 0.5, display: "block", fontWeight: 500 }}
+        >
+          Project brief or timeline
+        </Typography>
+        <TextField
+          value={brief}
+          onChange={(e) => setBrief(e.target.value)}
+          multiline
+          minRows={6}
+          fullWidth
+          placeholder={
+            "Paste a timeline, or describe the project. e.g.\n" +
+            "\"Build a 4-week marketing site: week 1 design, week 2 build pages, week 3 CMS + blog, week 4 QA and launch.\""
+          }
+        />
 
-          {error && (
-            <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-              {error}
-            </p>
-          )}
+        {error && (
+          <Alert severity="error" sx={{ mt: 1.5 }}>
+            {error}
+          </Alert>
+        )}
 
-          {/* Preview */}
-          {plan && (
-            <div className="mt-4 rounded-xl border border-border">
-              <div className="border-b border-border px-4 py-3">
-                <p className="text-sm font-semibold">{plan.title}</p>
-                {plan.description && (
-                  <p className="mt-1 text-xs text-muted">{plan.description}</p>
-                )}
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent">
-                    {plan.rows.length} tasks
-                  </span>
-                  {weekSummary.map((w) => (
-                    <span
-                      key={w.week}
-                      className="rounded-full bg-surface px-2 py-0.5 text-[11px] text-muted"
-                    >
-                      {w.week}: {w.count}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <ul className="max-h-52 divide-y divide-border overflow-y-auto">
-                {plan.rows.map((r) => (
-                  <li key={r.id} className="px-4 py-2 text-sm">
-                    <span>{String(r.cells.name ?? "")}</span>
-                    <span className="ml-2 text-[11px] text-muted">
-                      · {String(r.cells.phase ?? "")} · {weekLabel(r.cells.week)}
-                    </span>
-                  </li>
+        {/* Preview */}
+        {plan && (
+          <Paper variant="outlined" sx={{ mt: 2, borderRadius: 3, overflow: "hidden" }}>
+            <Box sx={{ borderBottom: 1, borderColor: "divider", px: 2, py: 1.5 }}>
+              <Typography variant="subtitle2">{plan.title}</Typography>
+              {plan.description && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+                  {plan.description}
+                </Typography>
+              )}
+              <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+                <Chip
+                  label={`${plan.rows.length} tasks`}
+                  sx={{
+                    bgcolor: "accentSoft",
+                    color: "primary.main",
+                    fontWeight: 500,
+                    fontSize: 11,
+                    height: 20,
+                  }}
+                />
+                {weekSummary.map((w) => (
+                  <Chip
+                    key={w.week}
+                    label={`${w.week}: ${w.count}`}
+                    sx={{ bgcolor: "surface", fontSize: 11, height: 20, color: "text.secondary" }}
+                  />
                 ))}
-              </ul>
-            </div>
-          )}
-        </div>
+              </Box>
+            </Box>
+            <Box component="ul" sx={{ m: 0, p: 0, maxHeight: 208, overflowY: "auto", listStyle: "none" }}>
+              {plan.rows.map((r, i) => (
+                <Box
+                  component="li"
+                  key={r.id}
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    borderTop: i > 0 ? 1 : 0,
+                    borderColor: "divider",
+                  }}
+                >
+                  <Typography component="span" variant="body2">
+                    {String(r.cells.name ?? "")}
+                  </Typography>
+                  <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1, fontSize: 11 }}>
+                    · {String(r.cells.phase ?? "")} · {weekLabel(r.cells.week)}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Paper>
+        )}
+      </Box>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3">
-          <span className="text-[11px] text-muted">
-            {generating
-              ? `Generating with ${getModel(modelId)?.label}…`
-              : plan
-                ? "Review the plan, then create the project."
-                : "The agent will structure your brief into weeks & tasks."}
-          </span>
-          <div className="flex gap-2">
-            {plan ? (
-              <>
-                <button
-                  onClick={generate}
-                  disabled={generating}
-                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition hover:bg-surface disabled:opacity-50"
-                >
-                  Regenerate
-                </button>
-                <button
-                  onClick={create}
-                  disabled={creating}
-                  className="rounded-lg bg-accent px-4 py-1.5 text-xs font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-50"
-                >
-                  {creating ? "Creating…" : "Create project"}
-                </button>
-              </>
-            ) : (
-              <button
+      {/* Footer */}
+      <Divider />
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 1,
+          px: 2,
+          py: 1.5,
+        }}
+      >
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+          {generating
+            ? `Generating with ${getModel(modelId)?.label}…`
+            : plan
+              ? "Review the plan, then create the project."
+              : "The agent will structure your brief into weeks & tasks."}
+        </Typography>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          {plan ? (
+            <>
+              <Button
                 onClick={generate}
-                disabled={generating || !brief.trim()}
-                className="rounded-lg bg-accent px-4 py-1.5 text-xs font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-50"
+                disabled={generating}
+                variant="outlined"
+                color="inherit"
+                sx={{ borderColor: "divider", fontSize: 12 }}
               >
-                {generating ? "Generating…" : "Generate plan"}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+                Regenerate
+              </Button>
+              <Button
+                onClick={create}
+                disabled={creating}
+                variant="contained"
+                sx={{ px: 2.5, fontSize: 12 }}
+              >
+                {creating ? "Creating…" : "Create project"}
+              </Button>
+            </>
+          ) : (
+            <Button
+              onClick={generate}
+              disabled={generating || !brief.trim()}
+              variant="contained"
+              sx={{ px: 2.5, fontSize: 12 }}
+            >
+              {generating ? "Generating…" : "Generate plan"}
+            </Button>
+          )}
+        </Box>
+      </Box>
+    </Dialog>
   );
 }
 
 function SparkIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-accent">
+    <Box
+      component="svg"
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      sx={{ color: "primary.main" }}
+    >
       <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
-    </svg>
+    </Box>
   );
 }

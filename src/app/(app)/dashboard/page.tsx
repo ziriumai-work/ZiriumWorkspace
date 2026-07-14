@@ -6,9 +6,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
+import Grid from "@mui/material/Grid";
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
+import MuiLink from "@mui/material/Link";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
 import { subscribeToProjects } from "@/lib/data/projects";
 import { PROJECT_STATUSES, type Project } from "@/lib/data/types";
-import { STATUS_META } from "@/components/projectMeta";
+import { STATUS_META, chipSx } from "@/components/projectMeta";
 import { useAuth } from "@/lib/firebase/auth-context";
 
 export default function DashboardPage() {
@@ -48,86 +57,127 @@ export default function DashboardPage() {
   const firstName = (user?.displayName ?? "there").split(" ")[0];
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-8 py-10">
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Welcome back, {firstName}
-        </h1>
-        <p className="mt-1 text-sm text-neutral-500">
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 5 }}>
+      <Box component="header" sx={{ mb: 4 }}>
+        <Typography variant="h1">Welcome back, {firstName}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           {active} active {active === 1 ? "project" : "projects"} across the
           workspace.
-        </p>
-      </header>
+        </Typography>
+      </Box>
 
       {/* Status summary cards */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <Grid container spacing={1.5}>
         {PROJECT_STATUSES.map((s) => (
-          <div
-            key={s.value}
-            className="rounded-xl border border-neutral-200 p-3 dark:border-neutral-800"
-          >
-            <div className="flex items-center gap-1.5">
-              <span
-                className={`h-2 w-2 rounded-full ${STATUS_META[s.value].dot}`}
-              />
-              <span className="text-xs text-neutral-500">{s.label}</span>
-            </div>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">
-              {counts[s.value] ?? 0}
-            </p>
-          </div>
+          <Grid key={s.value} size={{ xs: 6, sm: 4, lg: 2 }}>
+            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 3 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    bgcolor: STATUS_META[s.value].color,
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary">
+                  {s.label}
+                </Typography>
+              </Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  mt: 0.5,
+                  fontWeight: 600,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {counts[s.value] ?? 0}
+              </Typography>
+            </Paper>
+          </Grid>
         ))}
-      </section>
+      </Grid>
 
       {/* Recently updated */}
-      <section className="mt-10">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-            Recently updated
-          </h2>
-          <Link
+      <Box component="section" sx={{ mt: 5 }}>
+        <Box
+          sx={{
+            mb: 1.5,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Typography variant="subtitle2">Recently updated</Typography>
+          <MuiLink
+            component={Link}
             href="/projects"
-            className="text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+            variant="caption"
+            color="text.secondary"
+            underline="hover"
           >
             View all →
-          </Link>
-        </div>
+          </MuiLink>
+        </Box>
 
         {loading ? (
-          <p className="text-sm text-neutral-500">Loading…</p>
+          <CircularProgress size={20} />
         ) : recent.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-neutral-300 p-8 text-center dark:border-neutral-700">
-            <p className="text-sm text-neutral-500">No projects yet.</p>
-            <Link
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 4,
+              textAlign: "center",
+              borderRadius: 3,
+              borderStyle: "dashed",
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              No projects yet.
+            </Typography>
+            <MuiLink
+              component={Link}
               href="/projects"
-              className="mt-2 inline-block text-sm font-medium text-blue-600 hover:underline"
+              variant="body2"
+              sx={{ mt: 1, display: "inline-block", fontWeight: 500 }}
             >
               Create your first project
-            </Link>
-          </div>
+            </MuiLink>
+          </Paper>
         ) : (
-          <ul className="divide-y divide-neutral-200 overflow-hidden rounded-xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
-            {recent.map((p) => (
-              <li key={p.id}>
-                <Link
+          <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+            <List disablePadding>
+              {recent.map((p, i) => (
+                <ListItemButton
+                  key={p.id}
+                  component={Link}
                   href={`/projects/${p.id}`}
-                  className="flex items-center gap-3 px-4 py-3 transition hover:bg-neutral-50 dark:hover:bg-neutral-900"
+                  divider={i < recent.length - 1}
+                  sx={{ gap: 1.5, px: 2, py: 1.5 }}
                 >
-                  <span
-                    className={`h-2 w-2 shrink-0 rounded-full ${STATUS_META[p.status].dot}`}
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      flexShrink: 0,
+                      borderRadius: "50%",
+                      bgcolor: STATUS_META[p.status].color,
+                    }}
                   />
-                  <span className="flex-1 truncate text-sm">{p.title}</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] ${STATUS_META[p.status].badge}`}
-                  >
-                    {STATUS_META[p.status].label}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                  <Typography variant="body2" noWrap sx={{ flex: 1 }}>
+                    {p.title}
+                  </Typography>
+                  <Chip
+                    label={STATUS_META[p.status].label}
+                    sx={chipSx(STATUS_META[p.status].color)}
+                  />
+                </ListItemButton>
+              ))}
+            </List>
+          </Paper>
         )}
-      </section>
-    </div>
+      </Box>
+    </Box>
   );
 }

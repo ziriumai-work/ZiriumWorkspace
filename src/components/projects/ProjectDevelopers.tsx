@@ -6,6 +6,13 @@
 // People come from the shared roster (Team page).
 
 import Link from "next/link";
+import Avatar from "@mui/material/Avatar";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
+import Typography from "@mui/material/Typography";
 import type { Developer } from "@/lib/data/types";
 
 export function ProjectDevelopers({
@@ -33,63 +40,103 @@ export function ProjectDevelopers({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1 }}>
       {assigned.length === 0 && (
-        <span className="text-sm text-muted">No developer assigned yet.</span>
+        <Typography variant="body2" color="text.secondary">
+          No developer assigned yet.
+        </Typography>
       )}
 
       {assigned.map((d, i) => (
-        <span
+        <Chip
           key={d.id}
-          className="group flex items-center gap-1.5 rounded-full border border-border bg-surface py-1 pl-1 pr-2 text-sm"
-        >
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent-soft text-[11px] font-semibold text-accent">
-            {d.name.charAt(0).toUpperCase()}
-          </span>
-          <span className="font-medium">{d.name}</span>
-          {i === 0 && (
-            <span className="rounded bg-accent-soft px-1 py-0.5 text-[10px] font-medium text-accent">
-              Lead
-            </span>
-          )}
-          {d.role && <span className="text-xs text-muted">· {d.role}</span>}
-          {editable && (
-            <button
-              onClick={() => remove(d.id)}
-              className="ml-0.5 text-muted transition hover:text-red-600"
-              title={`Remove ${d.name} from this project`}
+          variant="outlined"
+          avatar={
+            <Avatar
+              sx={{
+                bgcolor: "accentSoft",
+                color: "primary.main",
+                fontWeight: 600,
+              }}
             >
-              ✕
-            </button>
-          )}
-        </span>
+              {d.name.charAt(0).toUpperCase()}
+            </Avatar>
+          }
+          label={
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {d.name}
+              </Typography>
+              {i === 0 && (
+                <Box
+                  component="span"
+                  sx={{
+                    borderRadius: 0.5,
+                    bgcolor: "accentSoft",
+                    color: "primary.main",
+                    px: 0.5,
+                    py: 0.1,
+                    fontSize: 10,
+                    fontWeight: 500,
+                  }}
+                >
+                  Lead
+                </Box>
+              )}
+              {d.role && (
+                <Typography variant="caption" color="text.secondary">
+                  · {d.role}
+                </Typography>
+              )}
+            </Box>
+          }
+          onDelete={editable ? () => remove(d.id) : undefined}
+          sx={{ height: 32, borderRadius: 999, bgcolor: "surface" }}
+        />
       ))}
 
       {/* Add control */}
       {!editable ? null : roster.length === 0 ? (
-        <Link
+        <Button
+          component={Link}
           href="/team"
-          className="rounded-lg border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted transition hover:bg-surface"
+          variant="outlined"
+          color="inherit"
+          sx={{
+            borderStyle: "dashed",
+            borderColor: "divider",
+            color: "text.secondary",
+            fontSize: 12,
+          }}
         >
           + Add developers on the Team page
-        </Link>
+        </Button>
       ) : available.length > 0 ? (
-        <select
+        <Select
           value=""
           onChange={(e) => add(e.target.value)}
-          className="rounded-lg border border-dashed border-border bg-transparent px-2.5 py-1.5 text-xs font-medium text-muted outline-none transition hover:bg-surface"
+          displayEmpty
+          variant="outlined"
+          sx={{
+            fontSize: 12,
+            color: "text.secondary",
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderStyle: "dashed",
+            },
+            "& .MuiSelect-select": { py: 0.75 },
+          }}
         >
-          <option value="">
+          <MenuItem value="">
             {assigned.length === 0 ? "+ Assign developer" : "+ Add developer"}
-          </option>
+          </MenuItem>
           {available.map((d) => (
-            <option key={d.id} value={d.id}>
+            <MenuItem key={d.id} value={d.id}>
               {d.name}
               {d.role ? ` (${d.role})` : ""}
-            </option>
+            </MenuItem>
           ))}
-        </select>
+        </Select>
       ) : null}
-    </div>
+    </Box>
   );
 }

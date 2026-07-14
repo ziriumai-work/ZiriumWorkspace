@@ -6,6 +6,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Avatar from "@mui/material/Avatar";
+import AvatarGroup from "@mui/material/AvatarGroup";
+import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
+import Paper from "@mui/material/Paper";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
 import { updateProject } from "@/lib/data/projects";
 import {
   PROJECT_STATUSES,
@@ -13,7 +20,12 @@ import {
   type Project,
   type ProjectStatus,
 } from "@/lib/data/types";
-import { PRIORITY_META, STATUS_META, formatDueDate } from "@/components/projectMeta";
+import {
+  PRIORITY_META,
+  STATUS_META,
+  chipSx,
+  formatDueDate,
+} from "@/components/projectMeta";
 
 export function ProjectBoard({
   projects,
@@ -35,37 +47,57 @@ export function ProjectBoard({
   }
 
   return (
-    <div className="flex h-full gap-3 overflow-x-auto px-8 py-4">
+    <Box sx={{ display: "flex", height: "100%", gap: 1.5, overflowX: "auto", px: 4, py: 2 }}>
       {PROJECT_STATUSES.map((col) => {
         const cards = projects.filter((p) => p.status === col.value);
+        const isOver = overStatus === col.value;
         return (
-          <div
+          <Box
             key={col.value}
             onDragOver={(e) => {
               e.preventDefault();
               setOverStatus(col.value);
             }}
             onDrop={() => onDrop(col.value)}
-            className={`flex w-64 shrink-0 flex-col rounded-xl border p-2 transition ${
-              overStatus === col.value
-                ? "border-neutral-400 bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-900"
-                : "border-neutral-200 dark:border-neutral-800"
-            }`}
+            sx={{
+              display: "flex",
+              width: 256,
+              flexShrink: 0,
+              flexDirection: "column",
+              borderRadius: 3,
+              border: 1,
+              borderColor: isOver ? "text.disabled" : "divider",
+              bgcolor: isOver ? "surface" : "transparent",
+              p: 1,
+              transition: "border-color 0.15s, background-color 0.15s",
+            }}
           >
-            <div className="mb-2 flex items-center gap-1.5 px-1.5">
-              <span className={`h-2 w-2 rounded-full ${STATUS_META[col.value].dot}`} />
-              <span className="text-xs font-medium">{col.label}</span>
-              <span className="text-xs text-neutral-400">{cards.length}</span>
-            </div>
+            <Box sx={{ mb: 1, display: "flex", alignItems: "center", gap: 0.75, px: 0.75 }}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  bgcolor: STATUS_META[col.value].color,
+                }}
+              />
+              <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                {col.label}
+              </Typography>
+              <Typography variant="caption" color="text.disabled">
+                {cards.length}
+              </Typography>
+            </Box>
 
-            <div className="flex flex-col gap-2">
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {cards.map((p) => {
                 const devs = p.developerIds
                   .map((did) => developers[did])
                   .filter(Boolean);
                 return (
-                  <Link
+                  <Paper
                     key={p.id}
+                    component={Link}
                     href={`/projects/${p.id}`}
                     draggable
                     onDragStart={() => setDraggingId(p.id)}
@@ -73,39 +105,76 @@ export function ProjectBoard({
                       setDraggingId(null);
                       setOverStatus(null);
                     }}
-                    className={`block cursor-grab rounded-lg border border-neutral-200 bg-white p-2.5 shadow-sm transition hover:border-neutral-300 active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-950 ${
-                      draggingId === p.id ? "opacity-50" : ""
-                    }`}
+                    variant="outlined"
+                    sx={{
+                      display: "block",
+                      cursor: "grab",
+                      borderRadius: 2.5,
+                      p: 1.25,
+                      textDecoration: "none",
+                      color: "inherit",
+                      opacity: draggingId === p.id ? 0.5 : 1,
+                      transition: "border-color 0.15s",
+                      "&:hover": { borderColor: "text.disabled" },
+                      "&:active": { cursor: "grabbing" },
+                    }}
                   >
-                    <p className="text-sm font-medium">{p.title}</p>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span
-                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${PRIORITY_META[p.priority].badge}`}
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {p.title}
+                    </Typography>
+                    <Box
+                      sx={{
+                        mt: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Chip
+                        label={PRIORITY_META[p.priority].label}
+                        sx={[
+                          chipSx(PRIORITY_META[p.priority].color),
+                          { height: 18, fontSize: 10 },
+                        ]}
+                      />
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.75,
+                        }}
                       >
-                        {PRIORITY_META[p.priority].label}
-                      </span>
-                      <div className="flex items-center gap-1.5 text-[11px] text-neutral-400">
-                        <span>{formatDueDate(p.dueDate)}</span>
-                        <div className="flex -space-x-1.5">
+                        <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>
+                          {formatDueDate(p.dueDate)}
+                        </Typography>
+                        <AvatarGroup
+                          max={3}
+                          sx={{
+                            "& .MuiAvatar-root": {
+                              width: 16,
+                              height: 16,
+                              fontSize: 8,
+                              fontWeight: 600,
+                              bgcolor: "accentSoft",
+                              color: "primary.main",
+                            },
+                          }}
+                        >
                           {devs.slice(0, 3).map((d) => (
-                            <span
-                              key={d.id}
-                              title={d.name}
-                              className="flex h-4 w-4 items-center justify-center rounded-full border border-background bg-accent-soft text-[8px] font-semibold text-accent"
-                            >
-                              {d.name.charAt(0).toUpperCase()}
-                            </span>
+                            <Tooltip key={d.id} title={d.name}>
+                              <Avatar>{d.name.charAt(0).toUpperCase()}</Avatar>
+                            </Tooltip>
                           ))}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
+                        </AvatarGroup>
+                      </Box>
+                    </Box>
+                  </Paper>
                 );
               })}
-            </div>
-          </div>
+            </Box>
+          </Box>
         );
       })}
-    </div>
+    </Box>
   );
 }

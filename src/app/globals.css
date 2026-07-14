@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
+/* Values mirror src/lib/theme/colors.js (the single source of truth). */
 :root {
   --background: #ffffff;
-  --foreground: #18181b;
-  --muted: #71717a;
-  --border: #e4e4e7;
+  --foreground: #15191c;
+  --muted: #6e7b84;
+  --border: #e2e7ea;
   --card: #ffffff;
-  --surface: #fafafa;
-  /* Brand accent — used for primary actions and AI features. */
-  --accent: #4f46e5;
+  --surface: #f7f9fa;
+  /* Brand accent — Zirium sky blue, used for primary actions and AI features. */
+  --accent: #0d93c7;
   --accent-foreground: #ffffff;
-  --accent-soft: #eef2ff;
+  --accent-soft: #eaf9fe;
 }
 
 @theme inline {
@@ -29,15 +30,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0b;
-    --foreground: #fafafa;
-    --muted: #a1a1aa;
-    --border: #27272a;
-    --card: #111113;
-    --surface: #141416;
-    --accent: #6366f1;
-    --accent-foreground: #ffffff;
-    --accent-soft: #1e1b3a;
+    --background: #0c0f11;
+    --foreground: #eff2f4;
+    --muted: #9da9b0;
+    --border: #262e33;
+    --card: #111517;
+    --surface: #15191c;
+    --accent: #3ec8f4;
+    --accent-foreground: #0c0f11;
+    --accent-soft: #0e2a38;
   }
 }
 

@@ -7,6 +7,17 @@
 // Firestore later so chats sync across devices).
 
 import { useEffect, useRef, useState } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Collapse from "@mui/material/Collapse";
+import InputBase from "@mui/material/InputBase";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import {
   AI_MODELS,
   DEFAULT_MODEL_ID,
@@ -44,7 +55,7 @@ export default function ZiriumPage() {
     const saved = localStorage.getItem(MODEL_STORAGE_KEY);
     return saved && getModel(saved) ? saved : DEFAULT_MODEL_ID;
   });
-  const [modelMenu, setModelMenu] = useState(false);
+  const [modelAnchor, setModelAnchor] = useState<HTMLElement | null>(null);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -58,7 +69,7 @@ export default function ZiriumPage() {
   function chooseModel(id: string) {
     setModelId(id);
     localStorage.setItem(MODEL_STORAGE_KEY, id);
-    setModelMenu(false);
+    setModelAnchor(null);
   }
 
   async function send(text: string) {
@@ -124,99 +135,180 @@ export default function ZiriumPage() {
   const empty = messages.length === 0;
 
   return (
-    <div className="flex h-full flex-col">
+    <Box sx={{ display: "flex", height: "100%", flexDirection: "column" }}>
       {/* Sub-header: model picker + new chat */}
-      <div className="flex items-center justify-between border-b border-border px-6 py-3">
-        <div className="flex items-center gap-2">
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: 1,
+          borderColor: "divider",
+          px: 3,
+          py: 1.5,
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <SparkIcon />
-          <span className="text-sm font-semibold">Zirium AI</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <button
-              onClick={() => setModelMenu((v) => !v)}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium transition hover:bg-surface"
-            >
-              {model?.label ?? modelId}
-              <span className="text-muted">▾</span>
-            </button>
-            {modelMenu && (
-              <div className="absolute right-0 z-10 mt-1 w-64 overflow-hidden rounded-xl border border-border bg-card shadow-xl animate-pop-in">
-                {AI_MODELS.map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => chooseModel(m.id)}
-                    className={`flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition hover:bg-surface ${
-                      m.id === modelId ? "bg-accent-soft" : ""
-                    }`}
-                  >
-                    <span className="flex items-center gap-1.5 text-sm font-medium">
-                      {m.label}
-                      {m.reasoning && (
-                        <span className="rounded bg-accent-soft px-1 py-0.5 text-[10px] text-accent">
-                          reasoning
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-xs text-muted">{m.description}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <button
+          <Typography variant="subtitle2">Zirium AI</Typography>
+        </Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Button
+            onClick={(e) => setModelAnchor(e.currentTarget)}
+            variant="outlined"
+            color="inherit"
+            endIcon={<ExpandMoreIcon sx={{ fontSize: 14 }} />}
+            sx={{ borderColor: "divider", fontSize: 12 }}
+          >
+            {model?.label ?? modelId}
+          </Button>
+          <Menu
+            anchorEl={modelAnchor}
+            open={Boolean(modelAnchor)}
+            onClose={() => setModelAnchor(null)}
+          >
+            {AI_MODELS.map((m) => (
+              <MenuItem
+                key={m.id}
+                selected={m.id === modelId}
+                onClick={() => chooseModel(m.id)}
+                sx={{ display: "block", maxWidth: 300 }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    {m.label}
+                  </Typography>
+                  {m.reasoning && (
+                    <Chip
+                      label="reasoning"
+                      sx={{
+                        height: 18,
+                        fontSize: 10,
+                        bgcolor: "accentSoft",
+                        color: "primary.main",
+                      }}
+                    />
+                  )}
+                </Box>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", whiteSpace: "normal" }}
+                >
+                  {m.description}
+                </Typography>
+              </MenuItem>
+            ))}
+          </Menu>
+          <Button
             onClick={newChat}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition hover:bg-surface"
+            variant="outlined"
+            color="inherit"
+            sx={{ borderColor: "divider", fontSize: 12 }}
           >
             New chat
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Box>
+      </Box>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <Box ref={scrollRef} sx={{ flex: 1, overflowY: "auto" }}>
         {empty ? (
-          <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center px-6 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft">
+          <Box
+            sx={{
+              mx: "auto",
+              display: "flex",
+              height: "100%",
+              maxWidth: 640,
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              px: 3,
+              textAlign: "center",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                width: 48,
+                height: 48,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 3,
+                bgcolor: "accentSoft",
+              }}
+            >
               <SparkIcon large />
-            </div>
-            <h2 className="mt-4 text-xl font-semibold tracking-tight">
+            </Box>
+            <Typography variant="h2" sx={{ mt: 2, fontSize: "1.25rem" }}>
               How can I help?
-            </h2>
-            <p className="mt-1 text-sm text-muted">
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Ask anything, or start with one of these.
-            </p>
-            <div className="mt-6 grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+            </Typography>
+            <Box
+              sx={{
+                mt: 3,
+                display: "grid",
+                width: "100%",
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                gap: 1,
+              }}
+            >
               {SUGGESTIONS.map((s) => (
-                <button
+                <Paper
                   key={s}
+                  component="button"
+                  variant="outlined"
                   onClick={() => send(s)}
-                  className="rounded-xl border border-border p-3 text-left text-sm text-muted transition hover:border-accent hover:text-foreground"
+                  sx={{
+                    p: 1.5,
+                    textAlign: "left",
+                    borderRadius: 3,
+                    cursor: "pointer",
+                    color: "text.secondary",
+                    bgcolor: "transparent",
+                    transition: "border-color 0.15s, color 0.15s",
+                    "&:hover": {
+                      borderColor: "primary.main",
+                      color: "text.primary",
+                    },
+                  }}
                 >
-                  {s}
-                </button>
+                  <Typography variant="body2">{s}</Typography>
+                </Paper>
               ))}
-            </div>
-          </div>
+            </Box>
+          </Box>
         ) : (
-          <div className="mx-auto max-w-3xl px-6 py-6">
+          <Box sx={{ mx: "auto", maxWidth: 760, px: 3, py: 3 }}>
             {messages.map((m) => (
               <Message key={m.id} msg={m} streaming={streaming} />
             ))}
             {error && (
-              <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+              <Alert severity="error" sx={{ mt: 1 }}>
                 {error}
-              </p>
+              </Alert>
             )}
-          </div>
+          </Box>
         )}
-      </div>
+      </Box>
 
       {/* Composer */}
-      <div className="border-t border-border px-6 py-4">
-        <div className="mx-auto max-w-3xl">
-          <div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2 focus-within:border-accent">
-            <textarea
+      <Box sx={{ borderTop: 1, borderColor: "divider", px: 3, py: 2 }}>
+        <Box sx={{ mx: "auto", maxWidth: 760 }}>
+          <Paper
+            variant="outlined"
+            sx={{
+              display: "flex",
+              alignItems: "flex-end",
+              gap: 1,
+              borderRadius: 4,
+              p: 1,
+              "&:focus-within": { borderColor: "primary.main" },
+            }}
+          >
+            <InputBase
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -225,33 +317,41 @@ export default function ZiriumPage() {
                   send(input);
                 }
               }}
-              rows={1}
+              multiline
+              maxRows={6}
               placeholder={`Message ${model?.label ?? "Zirium AI"}…`}
-              className="max-h-40 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none"
+              sx={{ flex: 1, px: 1, py: 0.75, fontSize: 14 }}
             />
             {streaming ? (
-              <button
+              <Button
                 onClick={() => abortRef.current?.abort()}
-                className="rounded-xl border border-border px-3 py-2 text-xs font-medium transition hover:bg-surface"
+                variant="outlined"
+                color="inherit"
+                sx={{ borderColor: "divider", flexShrink: 0 }}
               >
                 Stop
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 onClick={() => send(input)}
                 disabled={!input.trim()}
-                className="rounded-xl bg-accent px-3.5 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-40"
+                variant="contained"
+                sx={{ flexShrink: 0, px: 2 }}
               >
                 Send
-              </button>
+              </Button>
             )}
-          </div>
-          <p className="mt-1.5 text-center text-[11px] text-muted">
+          </Paper>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ mt: 0.75, display: "block", textAlign: "center", fontSize: 11 }}
+          >
             Enter to send · Shift+Enter for a new line · {model?.label}
-          </p>
-        </div>
-      </div>
-    </div>
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 
@@ -261,66 +361,120 @@ function Message({ msg, streaming }: { msg: ChatMsg; streaming: boolean }) {
 
   if (isUser) {
     return (
-      <div className="mb-5 flex justify-end">
-        <div className="max-w-[80%] whitespace-pre-wrap rounded-2xl bg-accent-soft px-4 py-2.5 text-sm leading-relaxed text-foreground">
+      <Box sx={{ mb: 2.5, display: "flex", justifyContent: "flex-end" }}>
+        <Box
+          sx={{
+            maxWidth: "80%",
+            whiteSpace: "pre-wrap",
+            borderRadius: 4,
+            bgcolor: "accentSoft",
+            px: 2,
+            py: 1.25,
+            fontSize: 14,
+            lineHeight: 1.65,
+          }}
+        >
           {msg.content}
-        </div>
-      </div>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <div className="mb-5 flex gap-3">
-      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-        <SparkIcon className="text-accent-foreground" />
-      </div>
-      <div className="min-w-0 flex-1">
+    <Box sx={{ mb: 2.5, display: "flex", gap: 1.5 }}>
+      <Box
+        sx={{
+          mt: 0.25,
+          display: "flex",
+          width: 28,
+          height: 28,
+          flexShrink: 0,
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 2,
+          bgcolor: "primary.main",
+          color: "primary.contrastText",
+        }}
+      >
+        <SparkIcon inherit />
+      </Box>
+      <Box sx={{ minWidth: 0, flex: 1 }}>
         {msg.reasoning && (
-          <div className="mb-2 rounded-xl border border-border bg-surface">
-            <button
+          <Paper variant="outlined" sx={{ mb: 1, borderRadius: 3, bgcolor: "surface" }}>
+            <Button
               onClick={() => setShowReasoning((v) => !v)}
-              className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted"
+              fullWidth
+              color="inherit"
+              sx={{
+                justifyContent: "space-between",
+                px: 1.5,
+                py: 1,
+                fontSize: 12,
+                color: "text.secondary",
+                fontWeight: 500,
+              }}
             >
               <span>Reasoning</span>
               <span>{showReasoning ? "Hide" : "Show"}</span>
-            </button>
-            {showReasoning && (
-              <pre className="whitespace-pre-wrap px-3 pb-3 font-mono text-[11px] leading-relaxed text-muted">
+            </Button>
+            <Collapse in={showReasoning}>
+              <Typography
+                component="pre"
+                sx={{
+                  whiteSpace: "pre-wrap",
+                  px: 1.5,
+                  pb: 1.5,
+                  m: 0,
+                  fontFamily: "var(--font-geist-mono), monospace",
+                  fontSize: 11,
+                  lineHeight: 1.65,
+                  color: "text.secondary",
+                }}
+              >
                 {msg.reasoning}
-              </pre>
-            )}
-          </div>
+              </Typography>
+            </Collapse>
+          </Paper>
         )}
-        <div className="whitespace-pre-wrap text-sm leading-relaxed">
+        <Box sx={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.65 }}>
           {msg.content || (
-            <span className="text-muted">Thinking…</span>
+            <Typography component="span" variant="body2" color="text.secondary">
+              Thinking…
+            </Typography>
           )}
           {streaming && msg.content && (
-            <span className="ml-0.5 animate-pulse">▍</span>
+            <Box
+              component="span"
+              sx={{
+                ml: 0.25,
+                animation: "pulse 1s ease-in-out infinite",
+                "@keyframes pulse": {
+                  "0%, 100%": { opacity: 1 },
+                  "50%": { opacity: 0.3 },
+                },
+              }}
+            >
+              ▍
+            </Box>
           )}
-        </div>
-      </div>
-    </div>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 
-function SparkIcon({
-  large,
-  className = "text-accent",
-}: {
-  large?: boolean;
-  className?: string;
-}) {
+function SparkIcon({ large, inherit }: { large?: boolean; inherit?: boolean }) {
   const s = large ? 22 : 15;
   return (
-    <svg
+    <Box
+      component="svg"
       width={s}
       height={s}
       viewBox="0 0 24 24"
       fill="currentColor"
-      className={className}
+      sx={{ color: inherit ? "inherit" : "primary.main" }}
     >
       <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
-    </svg>
+    </Box>
   );
 }

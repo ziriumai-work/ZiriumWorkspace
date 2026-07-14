@@ -4,6 +4,21 @@
 // see only their own tasks and submit a report (text + links + files) per task.
 
 import { useEffect, useMemo, useState } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
+import Collapse from "@mui/material/Collapse";
+import Divider from "@mui/material/Divider";
+import Grid from "@mui/material/Grid";
+import IconButton from "@mui/material/IconButton";
+import MenuItem from "@mui/material/MenuItem";
+import MuiLink from "@mui/material/Link";
+import Paper from "@mui/material/Paper";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import CloseIcon from "@mui/icons-material/Close";
 import { useAuth } from "@/lib/firebase/auth-context";
 import {
   subscribeToAllTasks,
@@ -15,6 +30,8 @@ import {
 import { subscribeToDevelopers } from "@/lib/data/developers";
 import { subscribeToProjects } from "@/lib/data/projects";
 import { TaskReportEditor } from "@/components/tasks/TaskReportEditor";
+import { TASK_STATUS_COLORS } from "@/components/projectMeta";
+import { PillSelect } from "@/components/ui/PillSelect";
 import {
   DAILY_TASK_STATUSES,
   type DailyTask,
@@ -23,13 +40,6 @@ import {
   type Project,
   type TaskReport,
 } from "@/lib/data/types";
-
-const STATUS_BADGE: Record<DailyTaskStatus, string> = {
-  todo: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300",
-  in_progress:
-    "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  done: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-};
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -89,17 +99,15 @@ export default function TasksPage() {
   }, [tasks]);
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-8 py-10">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {isAdmin ? "Tasks" : "My Tasks"}
-        </h1>
-        <p className="mt-1 text-sm text-muted">
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 860, px: 4, py: 5 }}>
+      <Box component="header" sx={{ mb: 3 }}>
+        <Typography variant="h1">{isAdmin ? "Tasks" : "My Tasks"}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           {isAdmin
             ? "Assign daily tasks to employees and track their reports."
             : "Your assigned tasks. Update status and submit a report for each."}
-        </p>
-      </header>
+        </Typography>
+      </Box>
 
       {isAdmin && (
         <AssignTaskForm
@@ -109,23 +117,44 @@ export default function TasksPage() {
         />
       )}
 
-      <div className="mt-6">
+      <Box sx={{ mt: 3 }}>
         {loading ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <CircularProgress size={20} />
         ) : groups.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted">
-            {isAdmin
-              ? "No tasks yet. Assign one above."
-              : "You have no tasks yet."}
-          </p>
+          <Paper
+            variant="outlined"
+            sx={{
+              px: 2,
+              py: 4,
+              textAlign: "center",
+              borderRadius: 3,
+              borderStyle: "dashed",
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              {isAdmin
+                ? "No tasks yet. Assign one above."
+                : "You have no tasks yet."}
+            </Typography>
+          </Paper>
         ) : (
-          <div className="space-y-6">
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {groups.map((g) => (
-              <section key={g.date}>
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+              <Box component="section" key={g.date}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{
+                    mb: 1,
+                    display: "block",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
                   {g.date}
-                </h2>
-                <div className="space-y-2">
+                </Typography>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                   {g.items.map((t) => (
                     <TaskCard
                       key={t.id}
@@ -135,13 +164,13 @@ export default function TasksPage() {
                       canDelete={isAdmin}
                     />
                   ))}
-                </div>
-              </section>
+                </Box>
+              </Box>
             ))}
-          </div>
+          </Box>
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 
@@ -199,62 +228,87 @@ function AssignTaskForm({
   }
 
   return (
-    <div className="rounded-xl border border-border p-4">
-      <p className="mb-2 text-sm font-medium">Assign a task</p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Task title"
-          className="rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent sm:col-span-2"
-        />
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Details (optional)"
-          rows={2}
-          className="resize-y rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent sm:col-span-2"
-        />
-        <select
-          value={assigneeId}
-          onChange={(e) => setAssigneeId(e.target.value)}
-          className="rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-        >
-          <option value="">Assign to…</option>
-          {employees.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
-          className="rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-        >
-          <option value="">No project</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.title}
-            </option>
-          ))}
-        </select>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-        />
-        <button
-          onClick={assign}
-          disabled={saving}
-          className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-50"
-        >
-          {saving ? "Assigning…" : "Assign task"}
-        </button>
-      </div>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-    </div>
+    <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+      <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
+        Assign a task
+      </Typography>
+      <Grid container spacing={1.5}>
+        <Grid size={12}>
+          <TextField
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Task title"
+            fullWidth
+          />
+        </Grid>
+        <Grid size={12}>
+          <TextField
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Details (optional)"
+            multiline
+            minRows={2}
+            fullWidth
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            select
+            value={assigneeId}
+            onChange={(e) => setAssigneeId(e.target.value)}
+            fullWidth
+            slotProps={{ select: { displayEmpty: true } }}
+          >
+            <MenuItem value="">Assign to…</MenuItem>
+            {employees.map((e) => (
+              <MenuItem key={e.id} value={e.id}>
+                {e.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            select
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+            fullWidth
+            slotProps={{ select: { displayEmpty: true } }}
+          >
+            <MenuItem value="">No project</MenuItem>
+            {projects.map((p) => (
+              <MenuItem key={p.id} value={p.id}>
+                {p.title}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            fullWidth
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Button
+            onClick={assign}
+            disabled={saving}
+            variant="contained"
+            fullWidth
+            sx={{ height: "100%" }}
+          >
+            {saving ? "Assigning…" : "Assign task"}
+          </Button>
+        </Grid>
+      </Grid>
+      {error && (
+        <Alert severity="error" sx={{ mt: 1.5 }}>
+          {error}
+        </Alert>
+      )}
+    </Paper>
   );
 }
 
@@ -274,73 +328,89 @@ function TaskCard({
     task.report.text || task.report.links.length || task.report.files.length;
 
   return (
-    <div className="rounded-xl border border-border">
-      <div className="flex items-start gap-3 px-4 py-3">
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">{task.title}</p>
+    <Paper variant="outlined" sx={{ borderRadius: 3 }}>
+      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, px: 2, py: 1.5 }}>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            {task.title}
+          </Typography>
           {task.description && (
-            <p className="mt-0.5 text-sm text-muted">{task.description}</p>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+              {task.description}
+            </Typography>
           )}
-          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-muted">
+          <Box
+            sx={{
+              mt: 0.75,
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
             {showAssignee && (
-              <span className="rounded-full bg-accent-soft px-2 py-0.5 font-medium text-accent">
-                {task.assigneeName || "Unassigned"}
-              </span>
+              <Chip
+                label={task.assigneeName || "Unassigned"}
+                sx={{
+                  bgcolor: "accentSoft",
+                  color: "primary.main",
+                  fontWeight: 500,
+                  fontSize: 11,
+                  height: 20,
+                }}
+              />
             )}
             {task.projectTitle && (
-              <span className="rounded-full bg-surface px-2 py-0.5">
-                {task.projectTitle}
-              </span>
+              <Chip
+                label={task.projectTitle}
+                sx={{ bgcolor: "surface", fontSize: 11, height: 20 }}
+              />
             )}
-            <button
+            <MuiLink
+              component="button"
+              variant="caption"
+              color="text.secondary"
+              underline="hover"
               onClick={() => setOpen((v) => !v)}
-              className="hover:text-foreground"
             >
               {open ? "Hide report" : hasReport ? "View report" : "Add report"}
-            </button>
-          </div>
-        </div>
+            </MuiLink>
+          </Box>
+        </Box>
 
-        <select
+        <PillSelect
           value={task.status}
-          onChange={(e) =>
-            updateTask(task.id, {
-              status: e.target.value as DailyTaskStatus,
-            })
-          }
+          options={DAILY_TASK_STATUSES}
+          color={TASK_STATUS_COLORS[task.status]}
           disabled={!canEdit}
-          className={`shrink-0 cursor-pointer rounded-full border-0 px-2 py-0.5 text-[11px] font-medium outline-none disabled:cursor-default ${STATUS_BADGE[task.status]}`}
-        >
-          {DAILY_TASK_STATUSES.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+          onChange={(status: DailyTaskStatus) => updateTask(task.id, { status })}
+        />
 
         {canDelete && (
-          <button
+          <IconButton
+            size="small"
             onClick={() => {
               if (confirm(`Delete task "${task.title}"?`)) deleteTask(task.id);
             }}
-            className="shrink-0 text-xs text-muted transition hover:text-red-600"
             title="Delete task"
+            sx={{ color: "text.secondary", "&:hover": { color: "error.main" } }}
           >
-            ✕
-          </button>
+            <CloseIcon sx={{ fontSize: 16 }} />
+          </IconButton>
         )}
-      </div>
+      </Box>
 
-      {open && (
-        <div className="border-t border-border px-4 py-3">
+      <Collapse in={open}>
+        <Divider />
+        <Box sx={{ px: 2, py: 1.5 }}>
           <TaskReportEditor
             taskId={task.id}
             report={task.report}
             editable={canEdit}
             onSave={(report: TaskReport) => updateTask(task.id, { report })}
           />
-        </div>
-      )}
-    </div>
+        </Box>
+      </Collapse>
+    </Paper>
   );
 }

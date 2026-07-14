@@ -6,6 +6,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Avatar from "@mui/material/Avatar";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Divider from "@mui/material/Divider";
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
+import Typography from "@mui/material/Typography";
 import { useAuth } from "@/lib/firebase/auth-context";
 import type { AppRole } from "@/lib/data/types";
 
@@ -74,76 +83,121 @@ export function AppSidebar() {
   const nav = NAV.filter((item) => item.roles.includes(role ?? "employee"));
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-surface">
+    <Box
+      component="aside"
+      sx={{
+        width: 240,
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        borderRight: 1,
+        borderColor: "divider",
+        bgcolor: "surface",
+        borderRadius: 3,
+      }}
+    >
       {/* Brand */}
       <div className="flex items-center gap-2 px-4 py-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-sm font-bold text-accent-foreground">
-          W
-        </div>
-        <span className="text-sm font-semibold tracking-tight">Workspace</span>
+        <img src="/logo.png" alt="Logo" className="h-7 w-7 object-cover rounded-md shadow-sm" />
+        <span className="text-sm font-semibold tracking-tight">Zirium Workspace</span>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5 px-2">
+      <List dense sx={{ flex: 1, px: 1, py: 0 }}>
         {nav.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(item.href + "/");
           return (
-            <Link
+            <ListItemButton
               key={item.href}
+              component={Link}
               href={item.href}
-              className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition ${
-                active
-                  ? "bg-accent-soft font-medium text-accent"
-                  : "text-muted hover:bg-card hover:text-foreground"
-              }`}
+              selected={active}
+              sx={{
+                borderRadius: 2,
+                mb: 0.25,
+                color: "text.secondary",
+                "&.Mui-selected, &.Mui-selected:hover": {
+                  bgcolor: "accentSoft",
+                  color: "primary.main",
+                  fontWeight: 500,
+                },
+              }}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill={active ? "currentColor" : "none"}
-                stroke="currentColor"
-                strokeWidth="1.6"
-              >
-                {item.icon}
-              </svg>
-              {item.label}
-            </Link>
+              <ListItemIcon sx={{ minWidth: 30, color: "inherit" }}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill={active ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                >
+                  {item.icon}
+                </svg>
+              </ListItemIcon>
+              <ListItemText
+                primary={item.label}
+                slotProps={{
+                  primary: {
+                    sx: { fontSize: 14, fontWeight: active ? 500 : 400 },
+                  },
+                }}
+              />
+            </ListItemButton>
           );
         })}
-      </nav>
+      </List>
 
-      <div className="border-t border-border p-3">
-        <div className="flex items-center gap-2">
-          {user?.photoURL ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.photoURL}
-              alt=""
-              className="h-7 w-7 rounded-full"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-xs font-medium text-accent">
-              {(user?.displayName ?? user?.email ?? "?").charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium">
+      <Divider />
+      <Box sx={{ p: 1.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Avatar
+            src={user?.photoURL ?? undefined}
+            slotProps={{ img: { referrerPolicy: "no-referrer" } }}
+            sx={{
+              width: 28,
+              height: 28,
+              fontSize: 12,
+              fontWeight: 600,
+              bgcolor: "accentSoft",
+              color: "primary.main",
+            }}
+          >
+            {(user?.displayName ?? user?.email ?? "?").charAt(0).toUpperCase()}
+          </Avatar>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography
+              variant="caption"
+              noWrap
+              sx={{ fontWeight: 600, display: "block" }}
+            >
               {user?.displayName ?? user?.email}
-            </p>
-            <p className="truncate text-[11px] capitalize text-muted">
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              noWrap
+              sx={{ display: "block", fontSize: 11, textTransform: "capitalize" }}
+            >
               {role ?? member?.role ?? "member"}
-            </p>
-          </div>
-        </div>
-        <button
+            </Typography>
+          </Box>
+        </Box>
+        <Button
           onClick={() => signOut()}
-          className="mt-2 w-full rounded-lg px-2.5 py-1.5 text-left text-xs text-muted transition hover:bg-card hover:text-foreground"
+          fullWidth
+          color="inherit"
+          sx={{
+            mt: 1,
+            justifyContent: "flex-start",
+            color: "text.secondary",
+            fontWeight: 400,
+            fontSize: 12,
+          }}
         >
           Sign out
-        </button>
-      </div>
-    </aside>
+        </Button>
+      </Box>
+    </Box>
   );
 }

@@ -6,10 +6,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
-  devIndicators: {
-    appIsrStatus: false,
-    buildActivity: false,
-  },
+  // Next 16 replaced the per-indicator flags with a single boolean.
+  devIndicators: false,
 };
 
 export default nextConfig;

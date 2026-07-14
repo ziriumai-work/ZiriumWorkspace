@@ -4,6 +4,21 @@
 // Google login by email). Regular employees don't see this page.
 
 import { useEffect, useState } from "react";
+import Alert from "@mui/material/Alert";
+import Avatar from "@mui/material/Avatar";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Grid from "@mui/material/Grid";
+import MenuItem from "@mui/material/MenuItem";
+import Paper from "@mui/material/Paper";
+import Select from "@mui/material/Select";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import {
   subscribeToDevelopers,
   addDeveloper,
@@ -12,6 +27,8 @@ import {
   type NewEmployee,
 } from "@/lib/data/developers";
 import { useAuth } from "@/lib/firebase/auth-context";
+import { EMPLOYEE_STATUS_COLORS } from "@/components/projectMeta";
+import { PillSelect } from "@/components/ui/PillSelect";
 import {
   ACCESS_LEVELS,
   DEPARTMENTS,
@@ -20,16 +37,8 @@ import {
   type Department,
   type Employee,
   type EmployeeStatus,
-  type EmploymentType,
   type AccessLevel,
 } from "@/lib/data/types";
-
-const STATUS_BADGE: Record<EmployeeStatus, string> = {
-  active: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-  on_leave:
-    "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  terminated: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
-};
 
 const EMPTY: NewEmployee = {
   name: "",
@@ -66,12 +75,12 @@ export default function EmployeesPage() {
 
   if (!isAdmin) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-8 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight">Employees</h1>
-        <p className="mt-2 text-sm text-muted">
+      <Box sx={{ mx: "auto", width: "100%", maxWidth: 720, px: 4, py: 5 }}>
+        <Typography variant="h1">Employees</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           You don’t have permission to manage employees. Ask an admin.
-        </p>
-      </div>
+        </Typography>
+      </Box>
     );
   }
 
@@ -93,251 +102,310 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-8 py-10">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Employees</h1>
-        <p className="mt-1 text-sm text-muted">
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 5 }}>
+      <Box component="header" sx={{ mb: 3 }}>
+        <Typography variant="h1">Employees</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           Add your team. Each employee signs in with the Google account matching
           their email, then sees only their assigned projects and tasks.
-        </p>
-      </header>
+        </Typography>
+      </Box>
 
       {/* Add employee */}
-      <div className="grid grid-cols-1 gap-2 rounded-xl border border-border p-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Field label="Full name *">
-          <input
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-          />
-        </Field>
-        <Field label="Work email *">
-          <input
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="w-full rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-          />
-        </Field>
-        <Field label="Job title">
-          <input
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value })}
-            placeholder="e.g. Frontend Engineer"
-            className="w-full rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-          />
-        </Field>
-        <Field label="Department">
-          <select
-            value={form.department}
-            onChange={(e) =>
-              setForm({ ...form, department: e.target.value as Department })
-            }
-            className="w-full rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-          >
-            {DEPARTMENTS.map((d) => (
-              <option key={d.value} value={d.value}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Employment type">
-          <select
-            value={form.employmentType}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                employmentType: e.target.value as EmploymentType,
-              })
-            }
-            className="w-full rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-          >
-            {EMPLOYMENT_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Start date">
-          <input
-            type="date"
-            value={form.startDate ?? ""}
-            onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-            className="w-full rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-          />
-        </Field>
-        <Field label="Status">
-          <select
-            value={form.status}
-            onChange={(e) =>
-              setForm({ ...form, status: e.target.value as EmployeeStatus })
-            }
-            className="w-full rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-          >
-            {EMPLOYEE_STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Access level">
-          <select
-            value={form.accessLevel}
-            onChange={(e) =>
-              setForm({ ...form, accessLevel: e.target.value as AccessLevel })
-            }
-            className="w-full rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-          >
-            {ACCESS_LEVELS.map((a) => (
-              <option key={a.value} value={a.value}>
-                {a.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <div className="flex items-end">
-          <button
-            onClick={add}
-            disabled={saving}
-            className="w-full rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? "Adding…" : "Add employee"}
-          </button>
-        </div>
-      </div>
+      <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+        <Grid container spacing={1.5}>
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+            <Field label="Full name *">
+              <TextField
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                fullWidth
+              />
+            </Field>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+            <Field label="Work email *">
+              <TextField
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                fullWidth
+              />
+            </Field>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+            <Field label="Job title">
+              <TextField
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                placeholder="e.g. Frontend Engineer"
+                fullWidth
+              />
+            </Field>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+            <Field label="Department">
+              <TextField
+                select
+                value={form.department}
+                onChange={(e) =>
+                  setForm({ ...form, department: e.target.value as Department })
+                }
+                fullWidth
+              >
+                {DEPARTMENTS.map((d) => (
+                  <MenuItem key={d.value} value={d.value}>
+                    {d.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Field>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+            <Field label="Employment type">
+              <TextField
+                select
+                value={form.employmentType}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    employmentType: e.target
+                      .value as NewEmployee["employmentType"],
+                  })
+                }
+                fullWidth
+              >
+                {EMPLOYMENT_TYPES.map((t) => (
+                  <MenuItem key={t.value} value={t.value}>
+                    {t.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Field>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+            <Field label="Start date">
+              <TextField
+                type="date"
+                value={form.startDate ?? ""}
+                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                fullWidth
+              />
+            </Field>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+            <Field label="Status">
+              <TextField
+                select
+                value={form.status}
+                onChange={(e) =>
+                  setForm({ ...form, status: e.target.value as EmployeeStatus })
+                }
+                fullWidth
+              >
+                {EMPLOYEE_STATUSES.map((s) => (
+                  <MenuItem key={s.value} value={s.value}>
+                    {s.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Field>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+            <Field label="Access level">
+              <TextField
+                select
+                value={form.accessLevel}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    accessLevel: e.target.value as AccessLevel,
+                  })
+                }
+                fullWidth
+              >
+                {ACCESS_LEVELS.map((a) => (
+                  <MenuItem key={a.value} value={a.value}>
+                    {a.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Field>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }} sx={{ display: "flex", alignItems: "flex-end" }}>
+            <Button
+              onClick={add}
+              disabled={saving}
+              variant="contained"
+              fullWidth
+            >
+              {saving ? "Adding…" : "Add employee"}
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
 
       {error && (
-        <p className="mt-3 text-sm text-red-600" role="alert">
+        <Alert severity="error" sx={{ mt: 1.5 }}>
           {error}
-        </p>
+        </Alert>
       )}
 
       {/* Directory */}
-      <div className="mt-6 overflow-x-auto rounded-xl border border-border">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border bg-surface text-left text-xs text-muted">
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-3 py-2 font-medium">Title</th>
-              <th className="px-3 py-2 font-medium">Dept</th>
-              <th className="px-3 py-2 font-medium">Type</th>
-              <th className="px-3 py-2 font-medium">Start</th>
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Access</th>
-              <th className="px-2 py-2" />
-            </tr>
-          </thead>
-          <tbody>
+      <Paper variant="outlined" sx={{ mt: 3, borderRadius: 3, overflowX: "auto" }}>
+        <Table sx={{ minWidth: 760 }}>
+          <TableHead>
+            <TableRow sx={{ bgcolor: "surface" }}>
+              <TableCell>Name</TableCell>
+              <TableCell>Title</TableCell>
+              <TableCell>Dept</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Start</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Access</TableCell>
+              <TableCell />
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {loading ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-6 text-sm text-muted">
-                  Loading…
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={8}>
+                  <Typography variant="body2" color="text.secondary">
+                    Loading…
+                  </Typography>
+                </TableCell>
+              </TableRow>
             ) : employees.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-6 text-sm text-muted">
-                  No employees yet. Add your first one above.
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={8}>
+                  <Typography variant="body2" color="text.secondary">
+                    No employees yet. Add your first one above.
+                  </Typography>
+                </TableCell>
+              </TableRow>
             ) : (
               employees.map((e) => (
-                <tr
+                <TableRow
                   key={e.id}
-                  className="group border-b border-border last:border-0 hover:bg-surface"
+                  hover
+                  sx={{
+                    "& .row-actions": { opacity: 0 },
+                    "&:hover .row-actions": { opacity: 1 },
+                  }}
                 >
-                  <td className="px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent">
+                  <TableCell>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Avatar
+                        sx={{
+                          width: 28,
+                          height: 28,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          bgcolor: "accentSoft",
+                          color: "primary.main",
+                        }}
+                      >
                         {e.name.charAt(0).toUpperCase()}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{e.name}</p>
-                        <p className="truncate text-[11px] text-muted">
+                      </Avatar>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+                          {e.name}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          noWrap
+                          sx={{ display: "block", fontSize: 11 }}
+                        >
                           {e.email}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-muted">{e.role || "—"}</td>
-                  <td className="px-3 py-2">
-                    <select
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ color: "text.secondary" }}>
+                    {e.role || "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Select
                       value={e.department}
                       onChange={(ev) =>
                         updateDeveloper(e.id, {
                           department: ev.target.value as Department,
                         })
                       }
-                      className="rounded-md border border-border bg-transparent px-1.5 py-0.5 text-xs outline-none"
+                      variant="standard"
+                      disableUnderline
+                      sx={{ fontSize: 12 }}
                     >
                       {DEPARTMENTS.map((d) => (
-                        <option key={d.value} value={d.value}>
+                        <MenuItem key={d.value} value={d.value}>
                           {d.label}
-                        </option>
+                        </MenuItem>
                       ))}
-                    </select>
-                  </td>
-                  <td className="px-3 py-2 text-xs text-muted">
+                    </Select>
+                  </TableCell>
+                  <TableCell sx={{ color: "text.secondary", fontSize: 12 }}>
                     {EMPLOYMENT_TYPES.find((t) => t.value === e.employmentType)
                       ?.label ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-xs text-muted">
+                  </TableCell>
+                  <TableCell sx={{ color: "text.secondary", fontSize: 12 }}>
                     {e.startDate || "—"}
-                  </td>
-                  <td className="px-3 py-2">
-                    <select
+                  </TableCell>
+                  <TableCell>
+                    <PillSelect
                       value={e.status}
-                      onChange={(ev) =>
-                        updateDeveloper(e.id, {
-                          status: ev.target.value as EmployeeStatus,
-                        })
+                      options={EMPLOYEE_STATUSES}
+                      color={EMPLOYEE_STATUS_COLORS[e.status]}
+                      onChange={(status: EmployeeStatus) =>
+                        updateDeveloper(e.id, { status })
                       }
-                      className={`cursor-pointer rounded-full border-0 px-2 py-0.5 text-[11px] font-medium outline-none ${STATUS_BADGE[e.status]}`}
-                    >
-                      {EMPLOYEE_STATUSES.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-3 py-2">
-                    <select
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Select
                       value={e.accessLevel}
                       onChange={(ev) =>
                         updateDeveloper(e.id, {
                           accessLevel: ev.target.value as AccessLevel,
                         })
                       }
-                      className="rounded-md border border-border bg-transparent px-1.5 py-0.5 text-xs outline-none"
+                      variant="standard"
+                      disableUnderline
+                      sx={{ fontSize: 12 }}
                     >
                       {ACCESS_LEVELS.map((a) => (
-                        <option key={a.value} value={a.value}>
+                        <MenuItem key={a.value} value={a.value}>
                           {a.label}
-                        </option>
+                        </MenuItem>
                       ))}
-                    </select>
-                  </td>
-                  <td className="px-2 py-2 text-right">
-                    <button
+                    </Select>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Button
+                      className="row-actions"
+                      size="small"
+                      color="inherit"
                       onClick={() => {
                         if (confirm(`Remove ${e.name}?`)) deleteDeveloper(e.id);
                       }}
-                      className="rounded px-2 py-1 text-xs text-muted opacity-0 transition hover:text-red-600 group-hover:opacity-100"
+                      sx={{
+                        fontSize: 12,
+                        fontWeight: 400,
+                        color: "text.secondary",
+                        transition: "opacity 0.15s",
+                        "&:hover": { color: "error.main" },
+                      }}
                     >
                       Remove
-                    </button>
-                  </td>
-                </tr>
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </TableBody>
+        </Table>
+      </Paper>
+    </Box>
   );
 }
 
@@ -349,11 +417,15 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-[11px] font-medium text-muted">
+    <Box component="label" sx={{ display: "block" }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ mb: 0.5, display: "block", fontSize: 11, fontWeight: 500 }}
+      >
         {label}
-      </span>
+      </Typography>
       {children}
-    </label>
+    </Box>
   );
 }

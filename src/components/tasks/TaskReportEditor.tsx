@@ -5,6 +5,14 @@
 // aren't the assignee or an admin.
 
 import { useState } from "react";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import MuiLink from "@mui/material/Link";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import CloseIcon from "@mui/icons-material/Close";
+import AttachFileIcon from "@mui/icons-material/AttachFile";
 import { uploadTaskFile } from "@/lib/firebase/storage";
 import type { TaskReport } from "@/lib/data/types";
 
@@ -68,78 +76,110 @@ export function TaskReportEditor({
   if (!editable) {
     const empty = !text && links.length === 0 && files.length === 0;
     return (
-      <div className="text-sm">
+      <Box sx={{ fontSize: 14 }}>
         {empty ? (
-          <p className="text-muted">No report submitted yet.</p>
+          <Typography variant="body2" color="text.secondary">
+            No report submitted yet.
+          </Typography>
         ) : (
           <>
-            {text && <p className="whitespace-pre-wrap">{text}</p>}
+            {text && (
+              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                {text}
+              </Typography>
+            )}
             <LinkList links={links} />
             <FileList files={files} />
           </>
         )}
-      </div>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <textarea
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+      <TextField
         value={text}
         onChange={(e) => setText(e.target.value)}
-        rows={4}
+        multiline
+        minRows={4}
         placeholder="Write your report…"
-        className="w-full resize-y rounded-lg border border-border bg-transparent p-2.5 text-sm outline-none focus:border-accent"
+        fullWidth
       />
 
       {/* Links */}
-      <div>
-        <LinkList links={links} onRemove={(i) => setLinks(links.filter((_, j) => j !== i))} />
-        <div className="mt-1 flex gap-2">
-          <input
+      <Box>
+        <LinkList
+          links={links}
+          onRemove={(i) => setLinks(links.filter((_, j) => j !== i))}
+        />
+        <Box sx={{ mt: 0.5, display: "flex", gap: 1 }}>
+          <TextField
             value={newLink}
             onChange={(e) => setNewLink(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addLink()}
             placeholder="Add a link (e.g. Google Drive, Figma)…"
-            className="flex-1 rounded-lg border border-border bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-accent"
+            fullWidth
           />
-          <button
+          <Button
             onClick={addLink}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition hover:bg-surface"
+            variant="outlined"
+            color="inherit"
+            sx={{ borderColor: "divider", flexShrink: 0, fontSize: 12 }}
           >
             Add link
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Box>
+      </Box>
 
       {/* Files */}
-      <div>
-        <FileList files={files} onRemove={(i) => setFiles(files.filter((_, j) => j !== i))} />
-        <label className="mt-1 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted transition hover:bg-surface">
-          {uploading ? "Uploading…" : "📎 Attach files"}
+      <Box>
+        <FileList
+          files={files}
+          onRemove={(i) => setFiles(files.filter((_, j) => j !== i))}
+        />
+        <Button
+          component="label"
+          variant="outlined"
+          color="inherit"
+          disabled={uploading}
+          startIcon={<AttachFileIcon sx={{ fontSize: 14 }} />}
+          sx={{
+            mt: 0.5,
+            borderStyle: "dashed",
+            borderColor: "divider",
+            color: "text.secondary",
+            fontSize: 12,
+          }}
+        >
+          {uploading ? "Uploading…" : "Attach files"}
           <input
             type="file"
             multiple
+            hidden
             disabled={uploading}
             onChange={(e) => onFiles(e.target.files)}
-            className="hidden"
           />
-        </label>
-      </div>
+        </Button>
+      </Box>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <Typography variant="body2" color="error">
+          {error}
+        </Typography>
+      )}
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={save}
-          disabled={!dirty || uploading}
-          className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-50"
-        >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Button onClick={save} disabled={!dirty || uploading} variant="contained">
           Save report
-        </button>
-        {saved && <span className="text-xs text-green-600">Saved ✓</span>}
-      </div>
-    </div>
+        </Button>
+        {saved && (
+          <Typography variant="caption" color="success.main">
+            Saved ✓
+          </Typography>
+        )}
+      </Box>
+    </Box>
   );
 }
 
@@ -152,28 +192,31 @@ function LinkList({
 }) {
   if (links.length === 0) return null;
   return (
-    <ul className="space-y-1">
+    <Box component="ul" sx={{ m: 0, p: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 0.5 }}>
       {links.map((l, i) => (
-        <li key={i} className="flex items-center gap-2 text-sm">
-          <a
+        <Box component="li" key={i} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <MuiLink
             href={l}
             target="_blank"
             rel="noopener noreferrer"
-            className="truncate text-accent hover:underline"
+            variant="body2"
+            noWrap
+            underline="hover"
           >
             🔗 {l}
-          </a>
+          </MuiLink>
           {onRemove && (
-            <button
+            <IconButton
+              size="small"
               onClick={() => onRemove(i)}
-              className="text-xs text-muted hover:text-red-600"
+              sx={{ color: "text.secondary", "&:hover": { color: "error.main" } }}
             >
-              ✕
-            </button>
+              <CloseIcon sx={{ fontSize: 14 }} />
+            </IconButton>
           )}
-        </li>
+        </Box>
       ))}
-    </ul>
+    </Box>
   );
 }
 
@@ -186,27 +229,30 @@ function FileList({
 }) {
   if (files.length === 0) return null;
   return (
-    <ul className="space-y-1">
+    <Box component="ul" sx={{ m: 0, p: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 0.5 }}>
       {files.map((f, i) => (
-        <li key={i} className="flex items-center gap-2 text-sm">
-          <a
+        <Box component="li" key={i} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <MuiLink
             href={f.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="truncate text-accent hover:underline"
+            variant="body2"
+            noWrap
+            underline="hover"
           >
             📄 {f.name}
-          </a>
+          </MuiLink>
           {onRemove && (
-            <button
+            <IconButton
+              size="small"
               onClick={() => onRemove(i)}
-              className="text-xs text-muted hover:text-red-600"
+              sx={{ color: "text.secondary", "&:hover": { color: "error.main" } }}
             >
-              ✕
-            </button>
+              <CloseIcon sx={{ fontSize: 14 }} />
+            </IconButton>
           )}
-        </li>
+        </Box>
       ))}
-    </ul>
+    </Box>
   );
 }

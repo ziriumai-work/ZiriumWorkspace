@@ -8,6 +8,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { ROLE_HOME } from "@/lib/data/types";
 
@@ -25,8 +27,16 @@ export default function Home() {
   }, [user, role, loading, router]);
 
   return (
-    <main className="flex flex-1 items-center justify-center">
-      <p className="text-sm text-neutral-500">Loading…</p>
-    </main>
+    <Box
+      component="main"
+      sx={{
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <CircularProgress size={22} />
+    </Box>
   );
 }

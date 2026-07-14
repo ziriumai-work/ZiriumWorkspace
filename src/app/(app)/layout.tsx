@@ -13,6 +13,8 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { ROLE_HOME, type AppRole } from "@/lib/data/types";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -55,21 +57,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (loading || !user || (role && !allowedPath(role, pathname))) {
     return (
-      <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-muted">Loading…</p>
-      </main>
+      <Box
+        component="main"
+        sx={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress size={22} />
+      </Box>
     );
   }
 
   return (
     <AiProvider>
-      <div className="flex flex-1 overflow-hidden">
+      <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
         <AppSidebar />
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <Box
+          sx={{
+            display: "flex",
+            flex: 1,
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
           <AppTopbar />
-          <div className="flex-1 overflow-y-auto">{children}</div>
-        </div>
-      </div>
+          <Box sx={{ flex: 1, overflowY: "auto" }}>{children}</Box>
+        </Box>
+      </Box>
     </AiProvider>
   );
 }

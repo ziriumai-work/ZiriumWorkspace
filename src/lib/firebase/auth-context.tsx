@@ -15,9 +15,12 @@ import {
   type ReactNode,
 } from "react";
 import {
+  createUserWithEmailAndPassword,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
   signInWithPopup,
   signOut as firebaseSignOut,
+  updateProfile,
   type User,
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
@@ -36,6 +39,12 @@ interface AuthState {
   role: AppRole | null;
   loading: boolean; // true until the first auth state resolves
   signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (
+    name: string,
+    email: string,
+    password: string,
+  ) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -150,6 +159,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithPopup(auth, googleProvider);
   }
 
+  async function signInWithEmail(email: string, password: string) {
+    await signInWithEmailAndPassword(auth, email, password);
+  }
+
+  // Create an email/password account. Sets the display name so the workspace
+  // greets the user properly; profile + membership docs are created by the
+  // same onAuthStateChanged flow Google sign-in uses.
+  async function signUpWithEmail(name: string, email: string, password: string) {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const displayName = name.trim();
+    if (displayName) {
+      await updateProfile(cred.user, { displayName });
+    }
+  }
+
   async function signOut() {
     await firebaseSignOut(auth);
   }
@@ -164,6 +188,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role,
         loading,
         signInWithGoogle,
+        signInWithEmail,
+        signUpWithEmail,
         signOut,
       }}
     >

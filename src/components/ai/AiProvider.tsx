@@ -15,6 +15,19 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Collapse from "@mui/material/Collapse";
+import Dialog from "@mui/material/Dialog";
+import Divider from "@mui/material/Divider";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import Paper from "@mui/material/Paper";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import {
   AI_MODELS,
   DEFAULT_MODEL_ID,
@@ -204,182 +217,277 @@ function AiPanel({
   onStop: () => void;
   onClose: () => void;
 }) {
-  const [modelMenu, setModelMenu] = useState(false);
+  const [modelAnchor, setModelAnchor] = useState<HTMLElement | null>(null);
   const [showReasoning, setShowReasoning] = useState(false);
   const model = getModel(modelId);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 pt-[10vh] backdrop-blur-sm animate-fade-in"
-      onMouseDown={onClose}
+    <Dialog
+      open
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      slotProps={{
+        backdrop: { sx: { backdropFilter: "blur(4px)" } },
+        paper: {
+          sx: {
+            maxHeight: "80vh",
+            display: "flex",
+            flexDirection: "column",
+            mt: "10vh",
+            alignSelf: "flex-start",
+          },
+        },
+      }}
     >
-      <div
-        className="flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-pop-in"
-        onMouseDown={(e) => e.stopPropagation()}
+      {/* Header */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: 1,
+          borderColor: "divider",
+          px: 2,
+          py: 1.5,
+        }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <div className="flex items-center gap-2">
-            <SparkIcon />
-            <span className="text-sm font-semibold">
-              {opts.title ?? "AI Assistant"}
-            </span>
-          </div>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <SparkIcon />
+          <Typography variant="subtitle2">
+            {opts.title ?? "AI Assistant"}
+          </Typography>
+        </Box>
 
-          {/* Model picker */}
-          <div className="relative">
-            <button
-              onClick={() => setModelMenu((v) => !v)}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium transition hover:bg-surface"
+        {/* Model picker */}
+        <Button
+          onClick={(e) => setModelAnchor(e.currentTarget)}
+          variant="outlined"
+          color="inherit"
+          endIcon={<ExpandMoreIcon sx={{ fontSize: 14 }} />}
+          sx={{ borderColor: "divider", fontSize: 12 }}
+        >
+          {model?.label ?? modelId}
+        </Button>
+        <Menu
+          anchorEl={modelAnchor}
+          open={Boolean(modelAnchor)}
+          onClose={() => setModelAnchor(null)}
+        >
+          {AI_MODELS.map((m) => (
+            <MenuItem
+              key={m.id}
+              selected={m.id === modelId}
+              onClick={() => {
+                onChooseModel(m.id);
+                setModelAnchor(null);
+              }}
+              sx={{ display: "block", maxWidth: 300 }}
             >
-              {model?.label ?? modelId}
-              <span className="text-muted">▾</span>
-            </button>
-            {modelMenu && (
-              <div className="absolute right-0 z-10 mt-1 w-64 overflow-hidden rounded-xl border border-border bg-card shadow-xl animate-pop-in">
-                {AI_MODELS.map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => {
-                      onChooseModel(m.id);
-                      setModelMenu(false);
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {m.label}
+                </Typography>
+                {m.reasoning && (
+                  <Chip
+                    label="reasoning"
+                    sx={{
+                      height: 18,
+                      fontSize: 10,
+                      bgcolor: "accentSoft",
+                      color: "primary.main",
                     }}
-                    className={`flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition hover:bg-surface ${
-                      m.id === modelId ? "bg-accent-soft" : ""
-                    }`}
-                  >
-                    <span className="flex items-center gap-1.5 text-sm font-medium">
-                      {m.label}
-                      {m.reasoning && (
-                        <span className="rounded bg-accent-soft px-1 py-0.5 text-[10px] text-accent">
-                          reasoning
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-xs text-muted">{m.description}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Prompt */}
-        <div className="px-4 pt-4">
-          <textarea
-            ref={promptRef}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") onRun();
-            }}
-            rows={3}
-            placeholder="Ask the AI to write, summarize, plan, draft an update…"
-            className="w-full resize-none rounded-xl border border-border bg-transparent p-3 text-sm leading-relaxed outline-none focus:border-accent"
-          />
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-[11px] text-muted">
-              {streaming ? "Generating…" : "⌘↵ to generate"}
-            </span>
-            {streaming ? (
-              <button
-                onClick={onStop}
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition hover:bg-surface"
+                  />
+                )}
+              </Box>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", whiteSpace: "normal" }}
               >
-                Stop
-              </button>
-            ) : (
-              <button
-                onClick={onRun}
-                disabled={!prompt.trim()}
-                className="rounded-lg bg-accent px-4 py-1.5 text-xs font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-50"
-              >
-                Generate
-              </button>
-            )}
-          </div>
-        </div>
+                {m.description}
+              </Typography>
+            </MenuItem>
+          ))}
+        </Menu>
+      </Box>
 
-        {/* Output */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-2">
-          {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-              {error}
-            </p>
-          )}
-
-          {reasoning && (
-            <div className="mb-3 rounded-xl border border-border bg-surface">
-              <button
-                onClick={() => setShowReasoning((v) => !v)}
-                className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted"
-              >
-                <span>Reasoning</span>
-                <span>{showReasoning ? "Hide" : "Show"}</span>
-              </button>
-              {showReasoning && (
-                <pre className="whitespace-pre-wrap px-3 pb-3 font-mono text-[11px] leading-relaxed text-muted">
-                  {reasoning}
-                </pre>
-              )}
-            </div>
-          )}
-
-          {output ? (
-            <div className="whitespace-pre-wrap text-sm leading-relaxed">
-              {output}
-              {streaming && <span className="animate-pulse">▍</span>}
-            </div>
+      {/* Prompt */}
+      <Box sx={{ px: 2, pt: 2 }}>
+        <TextField
+          inputRef={promptRef}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") onRun();
+          }}
+          multiline
+          minRows={3}
+          placeholder="Ask the AI to write, summarize, plan, draft an update…"
+          fullWidth
+        />
+        <Box
+          sx={{
+            mt: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+            {streaming ? "Generating…" : "⌘↵ to generate"}
+          </Typography>
+          {streaming ? (
+            <Button
+              onClick={onStop}
+              variant="outlined"
+              color="inherit"
+              sx={{ borderColor: "divider", fontSize: 12 }}
+            >
+              Stop
+            </Button>
           ) : (
-            !streaming &&
-            !error && (
-              <p className="py-6 text-center text-xs text-muted">
-                The response will appear here.
-              </p>
-            )
+            <Button
+              onClick={onRun}
+              disabled={!prompt.trim()}
+              variant="contained"
+              sx={{ px: 2.5, fontSize: 12 }}
+            >
+              Generate
+            </Button>
           )}
-        </div>
+        </Box>
+      </Box>
 
-        {/* Footer actions */}
-        {output && !streaming && (
-          <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
-            <button
+      {/* Output */}
+      <Box sx={{ minHeight: 0, flex: 1, overflowY: "auto", px: 2, pb: 1, pt: 1 }}>
+        {error && <Alert severity="error">{error}</Alert>}
+
+        {reasoning && (
+          <Paper variant="outlined" sx={{ mb: 1.5, borderRadius: 3, bgcolor: "surface" }}>
+            <Button
+              onClick={() => setShowReasoning((v) => !v)}
+              fullWidth
+              color="inherit"
+              sx={{
+                justifyContent: "space-between",
+                px: 1.5,
+                py: 1,
+                fontSize: 12,
+                color: "text.secondary",
+                fontWeight: 500,
+              }}
+            >
+              <span>Reasoning</span>
+              <span>{showReasoning ? "Hide" : "Show"}</span>
+            </Button>
+            <Collapse in={showReasoning}>
+              <Typography
+                component="pre"
+                sx={{
+                  whiteSpace: "pre-wrap",
+                  px: 1.5,
+                  pb: 1.5,
+                  m: 0,
+                  fontFamily: "var(--font-geist-mono), monospace",
+                  fontSize: 11,
+                  lineHeight: 1.65,
+                  color: "text.secondary",
+                }}
+              >
+                {reasoning}
+              </Typography>
+            </Collapse>
+          </Paper>
+        )}
+
+        {output ? (
+          <Box sx={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.65 }}>
+            {output}
+            {streaming && (
+              <Box
+                component="span"
+                sx={{
+                  animation: "pulse 1s ease-in-out infinite",
+                  "@keyframes pulse": {
+                    "0%, 100%": { opacity: 1 },
+                    "50%": { opacity: 0.3 },
+                  },
+                }}
+              >
+                ▍
+              </Box>
+            )}
+          </Box>
+        ) : (
+          !streaming &&
+          !error && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", py: 3, textAlign: "center" }}
+            >
+              The response will appear here.
+            </Typography>
+          )
+        )}
+      </Box>
+
+      {/* Footer actions */}
+      {output && !streaming && (
+        <>
+          <Divider />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: 1,
+              px: 2,
+              py: 1.5,
+            }}
+          >
+            <Button
               onClick={() => navigator.clipboard.writeText(output)}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition hover:bg-surface"
+              variant="outlined"
+              color="inherit"
+              sx={{ borderColor: "divider", fontSize: 12 }}
             >
               Copy
-            </button>
+            </Button>
             {opts.onInsert && (
-              <button
+              <Button
                 onClick={() => {
                   opts.onInsert!(output);
                   onClose();
                 }}
-                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground transition hover:opacity-90"
+                variant="contained"
+                sx={{ fontSize: 12 }}
               >
                 {opts.insertLabel ?? "Insert"}
-              </button>
+              </Button>
             )}
-          </div>
-        )}
-      </div>
-    </div>
+          </Box>
+        </>
+      )}
+    </Dialog>
   );
 }
 
 function SparkIcon() {
   return (
-    <svg
-      width="16"
-      height="16"
+    <Box
+      component="svg"
+      width={16}
+      height={16}
       viewBox="0 0 24 24"
       fill="none"
-      className="text-accent"
+      sx={{ color: "primary.main" }}
     >
       <path
         d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"
         fill="currentColor"
       />
-    </svg>
+    </Box>
   );
 }

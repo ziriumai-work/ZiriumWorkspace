@@ -7,6 +7,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import TextField from "@mui/material/TextField";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import Typography from "@mui/material/Typography";
 import { subscribeToProjects, createProject } from "@/lib/data/projects";
 import { subscribeToDevelopers } from "@/lib/data/developers";
 import { useAuth } from "@/lib/firebase/auth-context";
@@ -119,7 +127,7 @@ export default function ProjectsPage() {
   );
 
   return (
-    <div className="flex flex-1 flex-col">
+    <Box sx={{ display: "flex", flex: 1, flexDirection: "column" }}>
       <AiProjectAgent
         open={showAgent}
         onClose={() => setShowAgent(false)}
@@ -130,93 +138,119 @@ export default function ProjectsPage() {
       />
 
       {/* Header + toolbar */}
-      <header className="flex items-center justify-between border-b border-neutral-200 px-8 py-4 dark:border-neutral-800">
-        <h1 className="text-lg font-semibold tracking-tight">Projects</h1>
-        <div className="flex items-center gap-2">
+      <Box
+        component="header"
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: 1,
+          borderColor: "divider",
+          px: 4,
+          py: 2,
+        }}
+      >
+        <Typography variant="h2">Projects</Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {isAdmin && (
             <>
-              <button
+              <Button
                 onClick={() => setShowAgent(true)}
-                className="flex items-center gap-1.5 rounded-lg bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent transition hover:opacity-90"
+                sx={{ bgcolor: "accentSoft", color: "primary.main" }}
+                startIcon={
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+                  </svg>
+                }
               >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
-                </svg>
                 Generate with AI
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={loadMark}
                 disabled={seeding}
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition hover:bg-surface disabled:opacity-50"
+                variant="outlined"
+                color="inherit"
+                sx={{ borderColor: "divider", color: "text.primary" }}
               >
                 {seeding
                   ? "Creating…"
                   : markProject
                     ? "Open MARK Architecture"
                     : "+ MARK Architecture sample"}
-              </button>
+              </Button>
             </>
           )}
-          <div className="flex rounded-lg border border-neutral-200 p-0.5 dark:border-neutral-800">
-            {(["table", "board"] as View[]).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`rounded-md px-3 py-1 text-xs font-medium capitalize transition ${
-                  view === v
-                    ? "bg-neutral-200 text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100"
-                    : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
-                }`}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-        </div>
-      </header>
+          <ToggleButtonGroup
+            value={view}
+            exclusive
+            onChange={(_, v: View | null) => v && setView(v)}
+            size="small"
+            sx={{ "& .MuiToggleButton-root": { px: 1.5, py: 0.5, fontSize: 12 } }}
+          >
+            <ToggleButton value="table">Table</ToggleButton>
+            <ToggleButton value="board">Board</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+      </Box>
 
       {/* Quick-add row (admins only) */}
-      <div
-        className={`items-center gap-2 border-b border-neutral-200 px-8 py-3 dark:border-neutral-800 ${
-          isAdmin ? "flex" : "hidden"
-        }`}
-      >
-        <input
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-          placeholder="New project title…"
-          className="flex-1 rounded-lg border border-neutral-200 bg-transparent px-3 py-1.5 text-sm outline-none placeholder:text-neutral-400 focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600"
-        />
-        <button
-          onClick={handleCreate}
-          disabled={creating || !newTitle.trim()}
-          className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-50"
+      {isAdmin && (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            borderBottom: 1,
+            borderColor: "divider",
+            px: 4,
+            py: 1.5,
+          }}
         >
-          {creating ? "Adding…" : "Add"}
-        </button>
-      </div>
+          <TextField
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+            placeholder="New project title…"
+            fullWidth
+          />
+          <Button
+            onClick={handleCreate}
+            disabled={creating || !newTitle.trim()}
+            variant="contained"
+            sx={{ px: 3, flexShrink: 0 }}
+          >
+            {creating ? "Adding…" : "Add"}
+          </Button>
+        </Box>
+      )}
 
       {error && (
-        <p className="px-8 py-2 text-sm text-red-600" role="alert">
+        <Alert severity="error" sx={{ mx: 4, my: 1 }}>
           {error}
-        </p>
+        </Alert>
       )}
 
       {/* View */}
-      <div className="flex-1 overflow-auto">
+      <Box sx={{ flex: 1, overflow: "auto" }}>
         {loading ? (
-          <p className="px-8 py-10 text-sm text-neutral-500">Loading…</p>
+          <Box sx={{ px: 4, py: 5 }}>
+            <CircularProgress size={20} />
+          </Box>
         ) : sorted.length === 0 ? (
-          <p className="px-8 py-10 text-sm text-neutral-500">
+          <Typography variant="body2" color="text.secondary" sx={{ px: 4, py: 5 }}>
             No projects yet. Add one above to get started.
-          </p>
+          </Typography>
         ) : view === "table" ? (
           <ProjectTable projects={sorted} developers={devMap} />
         ) : (
           <ProjectBoard projects={sorted} developers={devMap} />
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

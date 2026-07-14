@@ -8,6 +8,17 @@ import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Timestamp } from "firebase/firestore";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
+import InputBase from "@mui/material/InputBase";
+import MenuItem from "@mui/material/MenuItem";
+import MuiLink from "@mui/material/Link";
+import Select from "@mui/material/Select";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import {
   subscribeToProject,
   updateProject,
@@ -83,37 +94,47 @@ export default function ProjectDetailPage({
   }, [project, id]);
 
   if (loading) {
-    return <p className="px-8 py-10 text-sm text-neutral-500">Loading…</p>;
+    return (
+      <Box sx={{ px: 4, py: 5 }}>
+        <CircularProgress size={20} />
+      </Box>
+    );
   }
 
   if (!project) {
     return (
-      <div className="px-8 py-10">
-        <p className="text-sm text-neutral-500">Project not found.</p>
-        <Link
+      <Box sx={{ px: 4, py: 5 }}>
+        <Typography variant="body2" color="text.secondary">
+          Project not found.
+        </Typography>
+        <MuiLink
+          component={Link}
           href="/projects"
-          className="mt-2 inline-block text-sm text-blue-600 hover:underline"
+          variant="body2"
+          sx={{ mt: 1, display: "inline-block" }}
         >
           ← Back to Projects
-        </Link>
-      </div>
+        </MuiLink>
+      </Box>
     );
   }
 
   // Access guard: employees may only open projects they're assigned to.
   if (!isAdmin && (!employee || !project.developerIds.includes(employee.id))) {
     return (
-      <div className="px-8 py-10">
-        <p className="text-sm text-muted">
+      <Box sx={{ px: 4, py: 5 }}>
+        <Typography variant="body2" color="text.secondary">
           You don’t have access to this project.
-        </p>
-        <Link
+        </Typography>
+        <MuiLink
+          component={Link}
           href="/projects"
-          className="mt-2 inline-block text-sm text-accent hover:underline"
+          variant="body2"
+          sx={{ mt: 1, display: "inline-block" }}
         >
           ← Back to Projects
-        </Link>
-      </div>
+        </MuiLink>
+      </Box>
     );
   }
 
@@ -163,60 +184,81 @@ export default function ProjectDetailPage({
   ];
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-8 py-8">
-      <Link
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 4 }}>
+      <MuiLink
+        component={Link}
         href="/projects"
-        className="text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+        variant="caption"
+        color="text.secondary"
+        underline="hover"
       >
         ← Projects
-      </Link>
+      </MuiLink>
 
       {/* Title */}
-      <input
+      <InputBase
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onBlur={() => {
           const t = title.trim();
           if (t && t !== project.title) updateProject(id, { title: t });
         }}
-        className="mt-3 w-full bg-transparent text-3xl font-bold tracking-tight outline-none placeholder:text-neutral-300"
         placeholder="Untitled"
+        fullWidth
+        sx={{
+          mt: 1.5,
+          fontSize: "1.875rem",
+          fontWeight: 700,
+          letterSpacing: "-0.02em",
+        }}
       />
 
       {/* Properties */}
-      <dl className="mt-6 grid grid-cols-[120px_1fr] items-start gap-y-3 text-sm">
+      <Box
+        component="dl"
+        sx={{
+          mt: 3,
+          display: "grid",
+          gridTemplateColumns: "120px 1fr",
+          alignItems: "start",
+          rowGap: 1.5,
+          m: 0,
+          mb: 0,
+          fontSize: 14,
+        }}
+      >
         <PropRow label="Status">
-          <select
+          <Select
             value={project.status}
             onChange={(e) =>
               updateProject(id, { status: e.target.value as ProjectStatus })
             }
-            className="rounded-md border border-neutral-200 bg-transparent px-2 py-1 text-sm outline-none dark:border-neutral-800"
+            sx={{ fontSize: 14, minWidth: 150 }}
           >
             {PROJECT_STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>
+              <MenuItem key={s.value} value={s.value}>
                 {s.label}
-              </option>
+              </MenuItem>
             ))}
-          </select>
+          </Select>
         </PropRow>
 
         <PropRow label="Priority">
-          <select
+          <Select
             value={project.priority}
             onChange={(e) =>
               updateProject(id, {
                 priority: e.target.value as ProjectPriority,
               })
             }
-            className="rounded-md border border-neutral-200 bg-transparent px-2 py-1 text-sm outline-none dark:border-neutral-800"
+            sx={{ fontSize: 14, minWidth: 150 }}
           >
             {PROJECT_PRIORITIES.map((s) => (
-              <option key={s.value} value={s.value}>
+              <MenuItem key={s.value} value={s.value}>
                 {s.label}
-              </option>
+              </MenuItem>
             ))}
-          </select>
+          </Select>
         </PropRow>
 
         <PropRow label="Assigned to">
@@ -229,7 +271,7 @@ export default function ProjectDetailPage({
         </PropRow>
 
         <PropRow label="Due date">
-          <input
+          <TextField
             type="date"
             value={dueValue}
             onChange={(e) =>
@@ -239,42 +281,73 @@ export default function ProjectDetailPage({
                   : null,
               })
             }
-            className="rounded-md border border-neutral-200 bg-transparent px-2 py-1 text-sm outline-none dark:border-neutral-800"
+            sx={{ maxWidth: 180 }}
           />
         </PropRow>
-      </dl>
+      </Box>
 
       {/* Database (Notion-style table) */}
-      <div className="mt-8">
-        <div className="mb-2 flex items-center gap-2">
-          <span className="flex items-center gap-1.5 rounded-md bg-surface px-2 py-1 text-xs font-medium">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <path d="M3 9h18M3 15h18M9 3v18" />
-            </svg>
-            Table
-          </span>
-          <span className="text-xs text-muted">{project.rows.length} rows</span>
-        </div>
+      <Box sx={{ mt: 4 }}>
+        <Box sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+          <Chip
+            label="Table"
+            variant="outlined"
+            icon={
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18M3 15h18M9 3v18" />
+              </svg>
+            }
+            sx={{ bgcolor: "surface", border: 0, fontWeight: 500 }}
+          />
+          <Typography variant="caption" color="text.secondary">
+            {project.rows.length} rows
+          </Typography>
+        </Box>
         <NotionTable
           columns={project.columns}
           rows={project.rows}
           onColumnsChange={(cols) => updateProject(id, { columns: cols })}
           onRowsChange={(rws) => updateProject(id, { rows: rws })}
         />
-      </div>
+      </Box>
 
       {/* AI actions (admin-only, like the rest of the AI surface) */}
       {isAdmin && (
-        <div className="mt-8 flex flex-wrap items-center gap-2">
-          <span className="mr-1 flex items-center gap-1 text-xs font-medium text-accent">
+        <Box
+          sx={{
+            mt: 4,
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <Typography
+            variant="caption"
+            sx={{
+              mr: 0.5,
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              fontWeight: 500,
+              color: "primary.main",
+            }}
+          >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
             </svg>
             AI
-          </span>
+          </Typography>
           {aiActions.map((a) => (
-            <button
+            <Button
               key={a.label}
               onClick={() =>
                 openAi({
@@ -286,46 +359,61 @@ export default function ProjectDetailPage({
                   onInsert: insertIntoNotes,
                 })
               }
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition hover:bg-surface"
+              variant="outlined"
+              color="inherit"
+              sx={{ borderColor: "divider", fontSize: 12 }}
             >
               {a.label}
-            </button>
+            </Button>
           ))}
-        </div>
+        </Box>
       )}
 
       {/* Notes */}
-      <div className="mt-4">
-        <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+      <Box sx={{ mt: 2 }}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{
+            mb: 1,
+            display: "block",
+            fontWeight: 500,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+          }}
+        >
           Notes
-        </h2>
-        <textarea
+        </Typography>
+        <TextField
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           onBlur={() => {
             if (notes !== project.description)
               updateProject(id, { description: notes });
           }}
-          rows={10}
+          multiline
+          minRows={10}
           placeholder="Write anything about this project…"
-          className="w-full resize-y rounded-lg border border-neutral-200 bg-transparent p-3 text-sm leading-relaxed outline-none focus:border-neutral-400 dark:border-neutral-800 dark:focus:border-neutral-600"
+          fullWidth
         />
-      </div>
+      </Box>
 
       {/* Danger zone */}
-      <div className="mt-10 border-t border-neutral-200 pt-4 dark:border-neutral-800">
-        <button
+      <Divider sx={{ mt: 5 }} />
+      <Box sx={{ pt: 2 }}>
+        <Button
+          color="error"
           onClick={() => {
             if (confirm(`Delete "${project.title}"? This cannot be undone.`)) {
               deleteProject(id).then(() => router.replace("/projects"));
             }
           }}
-          className="text-sm text-red-600 hover:underline"
+          sx={{ fontWeight: 400 }}
         >
           Delete project
-        </button>
-      </div>
-    </div>
+        </Button>
+      </Box>
+    </Box>
   );
 }
 
@@ -338,8 +426,12 @@ function PropRow({
 }) {
   return (
     <>
-      <dt className="text-neutral-500">{label}</dt>
-      <dd>{children}</dd>
+      <Typography component="dt" variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Box component="dd" sx={{ m: 0 }}>
+        {children}
+      </Box>
     </>
   );
 }

@@ -8,11 +8,27 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Avatar from "@mui/material/Avatar";
+import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
+import Grid from "@mui/material/Grid";
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
+import MuiLink from "@mui/material/Link";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { subscribeToProjects } from "@/lib/data/projects";
 import { subscribeToTasksForEmployee, updateTask } from "@/lib/data/tasks";
 import { subscribeToDevelopers } from "@/lib/data/developers";
-import { STATUS_META } from "@/components/projectMeta";
+import {
+  STATUS_META,
+  TASK_STATUS_COLORS,
+  chipSx,
+} from "@/components/projectMeta";
+import { PillSelect } from "@/components/ui/PillSelect";
+import { red } from "@/lib/theme/colors";
 import {
   DAILY_TASK_STATUSES,
   DEPARTMENTS,
@@ -22,13 +38,6 @@ import {
   type Employee,
   type Project,
 } from "@/lib/data/types";
-
-const TASK_BADGE: Record<DailyTaskStatus, string> = {
-  todo: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300",
-  in_progress:
-    "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  done: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-};
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -108,261 +117,396 @@ export default function InternPage() {
 
   if (!employee) {
     return (
-      <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-muted">Loading…</p>
-      </main>
+      <Box
+        component="main"
+        sx={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress size={22} />
+      </Box>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-8 py-10">
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 5 }}>
       {/* Header */}
-      <header className="mb-8">
-        <div className="flex items-center gap-2.5">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Welcome, {firstName}
-          </h1>
-          <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[11px] font-semibold text-accent">
-            Intern
-          </span>
-        </div>
-        <p className="mt-1 text-sm text-muted">
+      <Box component="header" sx={{ mb: 4 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
+          <Typography variant="h1">Welcome, {firstName}</Typography>
+          <Chip
+            label="Intern"
+            sx={{
+              bgcolor: "accentSoft",
+              color: "primary.main",
+              fontWeight: 600,
+              fontSize: 11,
+            }}
+          />
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           {employee.role || "Intern"} · {deptLabel} team ·{" "}
           {new Date().toLocaleDateString(undefined, {
             weekday: "long",
             month: "long",
             day: "numeric",
           })}
-        </p>
-      </header>
+        </Typography>
+      </Box>
 
       {/* Stats */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Due today" value={dueToday} accent={dueToday > 0} />
-        <Stat label="Pending tasks" value={pending.length} />
-        <Stat label="Active projects" value={activeProjects} />
-        <Stat label="Done this week" value={doneThisWeek} />
-      </section>
+      <Grid container spacing={1.5}>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <Stat label="Due today" value={dueToday} accent={dueToday > 0} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <Stat label="Pending tasks" value={pending.length} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <Stat label="Active projects" value={activeProjects} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <Stat label="Done this week" value={doneThisWeek} />
+        </Grid>
+      </Grid>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <Grid container spacing={3} sx={{ mt: 1 }}>
         {/* Main column */}
-        <div className="space-y-8 lg:col-span-2">
-          {/* This week's tasks */}
-          <section>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                My pending tasks
-              </h2>
-              <Link
-                href="/tasks"
-                className="text-xs text-muted hover:text-foreground"
+        <Grid size={{ xs: 12, lg: 8 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {/* This week's tasks */}
+            <Box component="section">
+              <Box
+                sx={{
+                  mb: 1.5,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
               >
-                Open My Tasks →
-              </Link>
-            </div>
+                <Typography variant="subtitle2">My pending tasks</Typography>
+                <MuiLink
+                  component={Link}
+                  href="/tasks"
+                  variant="caption"
+                  color="text.secondary"
+                  underline="hover"
+                >
+                  Open My Tasks →
+                </MuiLink>
+              </Box>
 
-            {loading ? (
-              <p className="text-sm text-muted">Loading…</p>
-            ) : pending.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border p-8 text-center">
-                <p className="text-sm text-muted">
-                  All caught up — no pending tasks. 🎉
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {pending.map((t) => (
-                  <div
-                    key={t.id}
-                    className="flex items-start gap-3 rounded-xl border border-border px-4 py-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">{t.title}</p>
-                      {t.description && (
-                        <p className="mt-0.5 truncate text-sm text-muted">
-                          {t.description}
-                        </p>
-                      )}
-                      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-muted">
-                        {t.date < today ? (
-                          <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
-                            Overdue · {t.date}
-                          </span>
-                        ) : t.date === today ? (
-                          <span className="rounded-full bg-accent-soft px-2 py-0.5 font-medium text-accent">
-                            Today
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-surface px-2 py-0.5">
-                            {t.date}
-                          </span>
-                        )}
-                        {t.projectTitle && (
-                          <span className="rounded-full bg-surface px-2 py-0.5">
-                            {t.projectTitle}
-                          </span>
-                        )}
-                        <Link href="/tasks" className="hover:text-foreground">
-                          Submit report
-                        </Link>
-                      </div>
-                    </div>
-
-                    <select
-                      value={t.status}
-                      onChange={(e) =>
-                        updateTask(t.id, {
-                          status: e.target.value as DailyTaskStatus,
-                        })
-                      }
-                      className={`shrink-0 cursor-pointer rounded-full border-0 px-2 py-0.5 text-[11px] font-medium outline-none ${TASK_BADGE[t.status]}`}
+              {loading ? (
+                <CircularProgress size={20} />
+              ) : pending.length === 0 ? (
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 4,
+                    textAlign: "center",
+                    borderRadius: 3,
+                    borderStyle: "dashed",
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    All caught up — no pending tasks. 🎉
+                  </Typography>
+                </Paper>
+              ) : (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  {pending.map((t) => (
+                    <Paper
+                      key={t.id}
+                      variant="outlined"
+                      sx={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 1.5,
+                        borderRadius: 3,
+                        px: 2,
+                        py: 1.5,
+                      }}
                     >
-                      {DAILY_TASK_STATUSES.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {t.title}
+                        </Typography>
+                        {t.description && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            noWrap
+                            sx={{ mt: 0.25 }}
+                          >
+                            {t.description}
+                          </Typography>
+                        )}
+                        <Box
+                          sx={{
+                            mt: 0.75,
+                            display: "flex",
+                            flexWrap: "wrap",
+                            alignItems: "center",
+                            gap: 1,
+                          }}
+                        >
+                          {t.date < today ? (
+                            <Chip
+                              label={`Overdue · ${t.date}`}
+                              sx={[chipSx(red.main), { fontSize: 11, height: 20 }]}
+                            />
+                          ) : t.date === today ? (
+                            <Chip
+                              label="Today"
+                              sx={{
+                                bgcolor: "accentSoft",
+                                color: "primary.main",
+                                fontWeight: 500,
+                                fontSize: 11,
+                                height: 20,
+                              }}
+                            />
+                          ) : (
+                            <Chip
+                              label={t.date}
+                              sx={{ bgcolor: "surface", fontSize: 11, height: 20 }}
+                            />
+                          )}
+                          {t.projectTitle && (
+                            <Chip
+                              label={t.projectTitle}
+                              sx={{ bgcolor: "surface", fontSize: 11, height: 20 }}
+                            />
+                          )}
+                          <MuiLink
+                            component={Link}
+                            href="/tasks"
+                            variant="caption"
+                            color="text.secondary"
+                            underline="hover"
+                          >
+                            Submit report
+                          </MuiLink>
+                        </Box>
+                      </Box>
 
-          {/* My projects */}
-          <section>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                My projects
-              </h2>
-              <Link
-                href="/projects"
-                className="text-xs text-muted hover:text-foreground"
-              >
-                View all →
-              </Link>
-            </div>
-
-            {myProjects.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border p-8 text-center">
-                <p className="text-sm text-muted">
-                  You haven’t been assigned to a project yet.
-                </p>
-              </div>
-            ) : (
-              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
-                {myProjects.map((p) => (
-                  <li key={p.id}>
-                    <Link
-                      href={`/projects/${p.id}`}
-                      className="flex items-center gap-3 px-4 py-3 transition hover:bg-surface"
-                    >
-                      <span
-                        className={`h-2 w-2 shrink-0 rounded-full ${STATUS_META[p.status].dot}`}
+                      <PillSelect
+                        value={t.status}
+                        options={DAILY_TASK_STATUSES}
+                        color={TASK_STATUS_COLORS[t.status]}
+                        onChange={(status: DailyTaskStatus) =>
+                          updateTask(t.id, { status })
+                        }
                       />
-                      <span className="flex-1 truncate text-sm">{p.title}</span>
-                      {p.developerIds[0] === employee.id && (
-                        <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent">
-                          Lead
-                        </span>
-                      )}
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] ${STATUS_META[p.status].badge}`}
+                    </Paper>
+                  ))}
+                </Box>
+              )}
+            </Box>
+
+            {/* My projects */}
+            <Box component="section">
+              <Box
+                sx={{
+                  mb: 1.5,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Typography variant="subtitle2">My projects</Typography>
+                <MuiLink
+                  component={Link}
+                  href="/projects"
+                  variant="caption"
+                  color="text.secondary"
+                  underline="hover"
+                >
+                  View all →
+                </MuiLink>
+              </Box>
+
+              {myProjects.length === 0 ? (
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 4,
+                    textAlign: "center",
+                    borderRadius: 3,
+                    borderStyle: "dashed",
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    You haven’t been assigned to a project yet.
+                  </Typography>
+                </Paper>
+              ) : (
+                <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+                  <List disablePadding>
+                    {myProjects.map((p, i) => (
+                      <ListItemButton
+                        key={p.id}
+                        component={Link}
+                        href={`/projects/${p.id}`}
+                        divider={i < myProjects.length - 1}
+                        sx={{ gap: 1.5, px: 2, py: 1.5 }}
                       >
-                        {STATUS_META[p.status].label}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
+                        <Box
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            flexShrink: 0,
+                            borderRadius: "50%",
+                            bgcolor: STATUS_META[p.status].color,
+                          }}
+                        />
+                        <Typography variant="body2" noWrap sx={{ flex: 1 }}>
+                          {p.title}
+                        </Typography>
+                        {p.developerIds[0] === employee.id && (
+                          <Chip
+                            label="Lead"
+                            sx={{
+                              bgcolor: "accentSoft",
+                              color: "primary.main",
+                              fontWeight: 500,
+                              fontSize: 11,
+                              height: 20,
+                            }}
+                          />
+                        )}
+                        <Chip
+                          label={STATUS_META[p.status].label}
+                          sx={chipSx(STATUS_META[p.status].color)}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                </Paper>
+              )}
+            </Box>
+          </Box>
+        </Grid>
 
         {/* Side column */}
-        <div className="space-y-6">
-          {/* Profile */}
-          <section className="rounded-xl border border-border p-4">
-            <h2 className="mb-3 text-sm font-medium text-neutral-700 dark:text-neutral-300">
-              My profile
-            </h2>
-            <div className="flex items-center gap-3">
-              {user?.photoURL ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.photoURL}
-                  alt=""
-                  className="h-10 w-10 rounded-full"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent">
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {/* Profile */}
+            <Paper component="section" variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                My profile
+              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Avatar
+                  src={user?.photoURL ?? undefined}
+                  slotProps={{ img: { referrerPolicy: "no-referrer" } }}
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    bgcolor: "accentSoft",
+                    color: "primary.main",
+                  }}
+                >
                   {employee.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{employee.name}</p>
-                <p className="truncate text-xs text-muted">{employee.email}</p>
-              </div>
-            </div>
-            <dl className="mt-4 space-y-2 text-sm">
-              <ProfileRow label="Title" value={employee.role || "—"} />
-              <ProfileRow label="Department" value={deptLabel} />
-              <ProfileRow
-                label="Type"
-                value={
-                  EMPLOYMENT_TYPES.find(
-                    (t) => t.value === employee.employmentType,
-                  )?.label ?? "—"
-                }
-              />
-              <ProfileRow label="Started" value={employee.startDate || "—"} />
-            </dl>
-          </section>
+                </Avatar>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+                    {employee.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+                    {employee.email}
+                  </Typography>
+                </Box>
+              </Box>
+              <Box component="dl" sx={{ mt: 2, m: 0, mb: 0, display: "flex", flexDirection: "column", gap: 1 }}>
+                <ProfileRow label="Title" value={employee.role || "—"} />
+                <ProfileRow label="Department" value={deptLabel} />
+                <ProfileRow
+                  label="Type"
+                  value={
+                    EMPLOYMENT_TYPES.find(
+                      (t) => t.value === employee.employmentType,
+                    )?.label ?? "—"
+                  }
+                />
+                <ProfileRow label="Started" value={employee.startDate || "—"} />
+              </Box>
+            </Paper>
 
-          {/* Team */}
-          <section className="rounded-xl border border-border p-4">
-            <h2 className="mb-3 text-sm font-medium text-neutral-700 dark:text-neutral-300">
-              {deptLabel} team
-            </h2>
-            {team.length === 0 ? (
-              <p className="text-sm text-muted">No teammates yet.</p>
-            ) : (
-              <ul className="space-y-2.5">
-                {team.map((m) => (
-                  <li key={m.id} className="flex items-center gap-2.5">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent">
-                      {m.name.charAt(0).toUpperCase()}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm">
-                        {m.name}
-                        {m.id === employee.id && (
-                          <span className="text-muted"> (you)</span>
-                        )}
-                      </p>
-                      <p className="truncate text-[11px] text-muted">
-                        {m.role || "—"}
-                      </p>
-                    </div>
-                    {m.accessLevel === "admin" && (
-                      <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-muted">
-                        Admin
-                      </span>
-                    )}
-                    {m.accessLevel === "intern" && m.id !== employee.id && (
-                      <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-muted">
-                        Intern
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
-      </div>
-    </div>
+            {/* Team */}
+            <Paper component="section" variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                {deptLabel} team
+              </Typography>
+              {team.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No teammates yet.
+                </Typography>
+              ) : (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+                  {team.map((m) => (
+                    <Box key={m.id} sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
+                      <Avatar
+                        sx={{
+                          width: 28,
+                          height: 28,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          bgcolor: "accentSoft",
+                          color: "primary.main",
+                        }}
+                      >
+                        {m.name.charAt(0).toUpperCase()}
+                      </Avatar>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography variant="body2" noWrap>
+                          {m.name}
+                          {m.id === employee.id && (
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              color="text.secondary"
+                            >
+                              {" "}
+                              (you)
+                            </Typography>
+                          )}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          noWrap
+                          sx={{ display: "block", fontSize: 11 }}
+                        >
+                          {m.role || "—"}
+                        </Typography>
+                      </Box>
+                      {m.accessLevel === "admin" && (
+                        <Chip
+                          label="Admin"
+                          sx={{ bgcolor: "surface", fontSize: 10, height: 18, color: "text.secondary" }}
+                        />
+                      )}
+                      {m.accessLevel === "intern" && m.id !== employee.id && (
+                        <Chip
+                          label="Intern"
+                          sx={{ bgcolor: "surface", fontSize: 10, height: 18, color: "text.secondary" }}
+                        />
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Paper>
+          </Box>
+        </Grid>
+      </Grid>
+    </Box>
   );
 }
 
@@ -376,24 +520,34 @@ function Stat({
   accent?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-border p-3">
-      <p className="text-xs text-muted">{label}</p>
-      <p
-        className={`mt-1 text-2xl font-semibold tabular-nums ${
-          accent ? "text-accent" : ""
-        }`}
+    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 3 }}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography
+        variant="h5"
+        sx={{
+          mt: 0.5,
+          fontWeight: 600,
+          fontVariantNumeric: "tabular-nums",
+          color: accent ? "primary.main" : "text.primary",
+        }}
       >
         {value}
-      </p>
-    </div>
+      </Typography>
+    </Paper>
   );
 }
 
 function ProfileRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="shrink-0 text-xs text-muted">{label}</dt>
-      <dd className="truncate text-right">{value}</dd>
-    </div>
+    <Box sx={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 1.5 }}>
+      <Typography component="dt" variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+        {label}
+      </Typography>
+      <Typography component="dd" variant="body2" noWrap sx={{ m: 0, textAlign: "right" }}>
+        {value}
+      </Typography>
+    </Box>
   );
 }
