@@ -200,6 +200,7 @@ export default function ProjectDetailPage({
       {/* Title */}
       <InputBase
         value={title}
+        readOnly={!isAdmin}
         onChange={(e) => setTitle(e.target.value)}
         onBlur={() => {
           const t = title.trim();
@@ -232,6 +233,7 @@ export default function ProjectDetailPage({
         <PropRow label="Status">
           <Select
             value={project.status}
+            disabled={!isAdmin}
             onChange={(e) =>
               updateProject(id, { status: e.target.value as ProjectStatus })
             }
@@ -248,6 +250,7 @@ export default function ProjectDetailPage({
         <PropRow label="Priority">
           <Select
             value={project.priority}
+            disabled={!isAdmin}
             onChange={(e) =>
               updateProject(id, {
                 priority: e.target.value as ProjectPriority,
@@ -276,6 +279,7 @@ export default function ProjectDetailPage({
           <TextField
             type="date"
             value={dueValue}
+            disabled={!isAdmin}
             onChange={(e) =>
               updateProject(id, {
                 dueDate: e.target.value
@@ -314,6 +318,7 @@ export default function ProjectDetailPage({
           </Typography>
         </Box>
         <NotionTable
+          readonly={!isAdmin}
           columns={project.columns}
           rows={project.rows}
           onColumnsChange={(cols) => updateProject(id, { columns: cols })}

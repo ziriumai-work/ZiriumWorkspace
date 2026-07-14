@@ -105,11 +105,13 @@ export function NotionTable({
   rows,
   onColumnsChange,
   onRowsChange,
+  readonly,
 }: {
   columns: DbColumn[];
   rows: DbRow[];
   onColumnsChange: (next: DbColumn[]) => void;
   onRowsChange: (next: DbRow[]) => void;
+  readonly?: boolean;
 }) {
   const [menuAnchor, setMenuAnchor] = useState<{
     colId: string;
@@ -221,13 +223,14 @@ export function NotionTable({
                 >
                   <Box
                     component="button"
-                    onClick={(e: React.MouseEvent<HTMLElement>) =>
+                    onClick={(e: React.MouseEvent<HTMLElement>) => {
+                      if (readonly) return;
                       setMenuAnchor(
                         menuAnchor?.colId === col.id
                           ? null
                           : { colId: col.id, el: e.currentTarget },
-                      )
-                    }
+                      );
+                    }}
                     sx={{
                       display: "flex",
                       width: "100%",
@@ -239,9 +242,9 @@ export function NotionTable({
                       fontSize: 12,
                       fontFamily: "inherit",
                       color: "text.secondary",
-                      cursor: "pointer",
+                      cursor: readonly ? "default" : "pointer",
                       transition: "color 0.15s",
-                      "&:hover": { color: "text.primary" },
+                      "&:hover": { color: readonly ? "text.secondary" : "text.primary" },
                     }}
                   >
                     <Box component="span" sx={{ opacity: 0.6 }}>
@@ -256,16 +259,18 @@ export function NotionTable({
                   </Box>
                 </Box>
               ))}
-              <Box component="th" sx={{ width: 40, px: 1, py: 1 }}>
-                <IconButton
-                  size="small"
-                  onClick={() => insertColumn(columns.length)}
-                  title="Add column"
-                  sx={{ color: "text.secondary" }}
-                >
-                  +
-                </IconButton>
-              </Box>
+              {!readonly && (
+                <Box component="th" sx={{ width: 40, px: 1, py: 1 }}>
+                  <IconButton
+                    size="small"
+                    onClick={() => insertColumn(columns.length)}
+                    title="Add column"
+                    sx={{ color: "text.secondary" }}
+                  >
+                    +
+                  </IconButton>
+                </Box>
+              )}
             </Box>
           </Box>
 
@@ -306,62 +311,67 @@ export function NotionTable({
                           ? cellAnchor.el
                           : null
                       }
-                      onOpen={(el) =>
-                        setCellAnchor({ row: row.id, col: col.id, el })
-                      }
+                      onOpen={(el) => {
+                        if (readonly && col.type !== "status") return;
+                        setCellAnchor({ row: row.id, col: col.id, el });
+                      }}
                       onClose={() => setCellAnchor(null)}
                       onChange={(v) => setCell(row.id, col.id, v)}
                       onAddOption={(label) => addOption(col.id, label)}
                     />
                   </Box>
                 ))}
-                <Box component="td" sx={{ px: 1, py: 0.75, textAlign: "right", verticalAlign: "top" }}>
-                  <IconButton
-                    className="row-delete"
-                    size="small"
-                    onClick={() => deleteRow(row.id)}
-                    title="Delete row"
-                    sx={{
-                      color: "text.secondary",
-                      transition: "opacity 0.15s",
-                      "&:hover": { color: "error.main" },
-                    }}
-                  >
-                    <CloseIcon sx={{ fontSize: 14 }} />
-                  </IconButton>
-                </Box>
+                {!readonly && (
+                  <Box component="td" sx={{ px: 1, py: 0.75, textAlign: "right", verticalAlign: "top" }}>
+                    <IconButton
+                      className="row-delete"
+                      size="small"
+                      onClick={() => deleteRow(row.id)}
+                      title="Delete row"
+                      sx={{
+                        color: "text.secondary",
+                        transition: "opacity 0.15s",
+                        "&:hover": { color: "error.main" },
+                      }}
+                    >
+                      <CloseIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Box>
+                )}
               </Box>
             ))}
 
             {/* New row */}
-            <Box component="tr">
-              <Box component="td" colSpan={columns.length + 1} sx={{ px: 1.5, py: 1 }}>
-                <Box
-                  component="button"
-                  onClick={addRow}
-                  sx={{
-                    display: "flex",
-                    width: "100%",
-                    alignItems: "center",
-                    gap: 0.75,
-                    border: 0,
-                    bgcolor: "transparent",
-                    p: 0,
-                    textAlign: "left",
-                    fontSize: 12,
-                    fontFamily: "inherit",
-                    color: "text.secondary",
-                    cursor: "pointer",
-                    "&:hover": { color: "text.primary" },
-                  }}
-                >
-                  <Box component="span" sx={{ fontSize: 16, lineHeight: 1 }}>
-                    +
-                  </Box>{" "}
-                  New
+            {!readonly && (
+              <Box component="tr">
+                <Box component="td" colSpan={columns.length + 1} sx={{ px: 1.5, py: 1 }}>
+                  <Box
+                    component="button"
+                    onClick={addRow}
+                    sx={{
+                      display: "flex",
+                      width: "100%",
+                      alignItems: "center",
+                      gap: 0.75,
+                      border: 0,
+                      bgcolor: "transparent",
+                      p: 0,
+                      textAlign: "left",
+                      fontSize: 12,
+                      fontFamily: "inherit",
+                      color: "text.secondary",
+                      cursor: "pointer",
+                      "&:hover": { color: "text.primary" },
+                    }}
+                  >
+                    <Box component="span" sx={{ fontSize: 16, lineHeight: 1 }}>
+                      +
+                    </Box>{" "}
+                    New
+                  </Box>
                 </Box>
               </Box>
-            </Box>
+            )}
           </Box>
         </Box>
       </Paper>
@@ -973,11 +983,11 @@ function OptionPopover({
         fullWidth
         sx={{ mb: 0.5, "& .MuiInputBase-input": { fontSize: 14, py: 0.75 } }}
       />
-      <Box sx={{ maxHeight: 192, overflowY: "auto" }}>
+      <MenuList sx={{ maxHeight: 220, overflowY: "auto", p: 1, gap: 0.5, display: "flex", flexDirection: "column" }}>
         {!multi && value && (
           <MenuItem
             onClick={() => onPick?.("")}
-            sx={{ borderRadius: 1.5, fontSize: 12, color: "text.secondary" }}
+            sx={{ borderRadius: 1.5, fontSize: 13, color: "text.secondary", minHeight: 32 }}
           >
             Clear
           </MenuItem>
@@ -986,7 +996,7 @@ function OptionPopover({
           <MenuItem
             key={o.id}
             onClick={() => (multi ? onToggle?.(o.id) : onPick?.(o.id))}
-            sx={{ borderRadius: 1.5, justifyContent: "space-between" }}
+            sx={{ borderRadius: 1.5, justifyContent: "space-between", minHeight: 36 }}
           >
             <OptionBadge option={o} />
             {multi && selected?.includes(o.id) && (
@@ -1002,13 +1012,12 @@ function OptionPopover({
               onCreate(q.trim());
               setQ("");
             }}
-            sx={{ borderRadius: 1.5, fontSize: 14, gap: 0.75 }}
+            sx={{ borderRadius: 1.5, fontSize: 13, color: "primary.main", minHeight: 36 }}
           >
-            Create
-            <Chip label={q.trim()} sx={{ height: 20, fontSize: 11, bgcolor: "surface" }} />
+            Create &quot;{q}&quot;
           </MenuItem>
         )}
-      </Box>
+      </MenuList>
     </Popover>
   );
 }

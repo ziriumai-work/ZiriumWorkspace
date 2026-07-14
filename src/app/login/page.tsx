@@ -12,6 +12,10 @@ import MuiLink from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { ROLE_HOME } from "@/lib/data/types";
 
@@ -39,13 +43,15 @@ function friendlyAuthError(err: unknown): string {
 }
 
 export default function LoginPage() {
-  const { user, role, loading, signInWithGoogle, signInWithEmail } = useAuth();
+  const { user, role, loading, signInWithGoogle, signInWithEmail, resetPassword } = useAuth();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Already signed in → straight to the role's home screen.
   useEffect(() => {
@@ -54,6 +60,7 @@ export default function LoginPage() {
 
   async function handleGoogle() {
     setError(null);
+    setResetMessage(null);
     setBusy(true);
     try {
       await signInWithGoogle();
@@ -68,9 +75,11 @@ export default function LoginPage() {
   async function handleEmailSubmit() {
     if (!email.trim() || !password) {
       setError("Enter your email and password.");
+      setResetMessage(null);
       return;
     }
     setError(null);
+    setResetMessage(null);
     setBusy(true);
     try {
       await signInWithEmail(email.trim(), password);
@@ -78,6 +87,26 @@ export default function LoginPage() {
     } catch (err) {
       console.error(err);
       setError(friendlyAuthError(err));
+      setBusy(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    if (!email.trim()) {
+      setError("Please enter your email address first to reset your password.");
+      setResetMessage(null);
+      return;
+    }
+    setError(null);
+    setResetMessage(null);
+    setBusy(true);
+    try {
+      await resetPassword(email.trim());
+      setResetMessage("Password reset email sent! Check your inbox.");
+    } catch (err) {
+      console.error(err);
+      setError(friendlyAuthError(err));
+    } finally {
       setBusy(false);
     }
   }
@@ -153,6 +182,12 @@ export default function LoginPage() {
             </Alert>
           )}
 
+          {resetMessage && (
+            <Alert severity="success" sx={{ mb: 3 }}>
+              {resetMessage}
+            </Alert>
+          )}
+
           <Box
             component="form"
             onSubmit={(e) => {
@@ -170,15 +205,47 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               disabled={busy || loading}
             />
-            <TextField
-              label="Password"
-              type="password"
-              variant="outlined"
-              fullWidth
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={busy || loading}
-            />
+            <Box>
+              <TextField
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                variant="outlined"
+                fullWidth
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={busy || loading}
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          disabled={busy || loading}
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }
+                }}
+              />
+              <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 0.5 }}>
+                <MuiLink
+                  component="button"
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={busy || loading}
+                  variant="caption"
+                  color="primary"
+                  underline="hover"
+                  sx={{ fontWeight: 500 }}
+                >
+                  Forgot password?
+                </MuiLink>
+              </Box>
+            </Box>
             <Button
               type="submit"
               variant="contained"

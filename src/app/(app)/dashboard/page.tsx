@@ -19,6 +19,7 @@ import { subscribeToProjects } from "@/lib/data/projects";
 import { PROJECT_STATUSES, type Project } from "@/lib/data/types";
 import { STATUS_META, chipSx } from "@/components/projectMeta";
 import { useAuth } from "@/lib/firebase/auth-context";
+import { PersonalDashboard } from "@/components/dashboard/PersonalDashboard";
 
 export default function DashboardPage() {
   const { user, employee, isAdmin } = useAuth();
@@ -55,6 +56,10 @@ export default function DashboardPage() {
 
   const recent = projects.slice(0, 6);
   const firstName = (user?.displayName ?? "there").split(" ")[0];
+
+  if (!isAdmin) {
+    return <PersonalDashboard />;
+  }
 
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 5 }}>

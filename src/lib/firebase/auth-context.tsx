@@ -24,6 +24,7 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
   updateProfile,
+  sendPasswordResetEmail,
   type User,
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
@@ -48,6 +49,7 @@ interface AuthState {
     email: string,
     password: string,
   ) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -187,6 +189,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function resetPassword(email: string) {
+    await sendPasswordResetEmail(auth, email);
+  }
+
   async function signOut() {
     await firebaseSignOut(auth);
   }
@@ -219,6 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,
+        resetPassword,
         signOut,
       }}
     >

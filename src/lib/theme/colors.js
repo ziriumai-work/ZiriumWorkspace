@@ -113,6 +113,7 @@ export const dailyTaskStatus = {
   todo: neutral[400],
   in_progress: amber.main,
   done: green.main,
+  not_completed: red.main,
 };
 
 export const employeeStatus = {

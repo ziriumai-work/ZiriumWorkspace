@@ -173,7 +173,7 @@ export const ACCESS_LEVELS: { value: AccessLevel; label: string }[] = [
 // ---------------------------------------------------------------------------
 // Daily tasks assigned to employees (tasks/{id})
 // ---------------------------------------------------------------------------
-export type DailyTaskStatus = "todo" | "in_progress" | "done";
+export type DailyTaskStatus = "todo" | "in_progress" | "done" | "not_completed";
 
 export interface TaskFile {
   name: string;
@@ -215,7 +215,8 @@ export interface DailyTask {
 export const DAILY_TASK_STATUSES: { value: DailyTaskStatus; label: string }[] = [
   { value: "todo", label: "To Do" },
   { value: "in_progress", label: "In Progress" },
-  { value: "done", label: "Done" },
+  { value: "done", label: "Completed" },
+  { value: "not_completed", label: "Not Completed Yet" },
 ];
 
 export const TASK_STATUSES: { value: TaskStatus; label: string }[] = [
