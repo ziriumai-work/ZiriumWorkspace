@@ -441,105 +441,106 @@ function ColumnMenu({
   const [typeOpen, setTypeOpen] = useState(false);
   const hasOptions = OPTION_TYPES.includes(column.type);
   return (
-    <MenuList>
-      <Box sx={{ px: 2, pb: 1 }}>
+    <Box>
+      <Box sx={{ px: 1, pb: 0.5 }}>
         <TextField
-        autoFocus
-        defaultValue={column.name}
-        onChange={(e) => onRename(e.target.value)}
-        fullWidth
-        sx={{ mb: 0.5, "& .MuiInputBase-input": { fontSize: 14, py: 0.75 } }}
-      />
-
+          autoFocus
+          defaultValue={column.name}
+          onChange={(e) => onRename(e.target.value)}
+          fullWidth
+          sx={{ mb: 0.5, "& .MuiInputBase-input": { fontSize: 14, py: 0.75 } }}
+        />
       </Box>
 
-      {/* Change type — collapsible, Notion-style list */}
-      <MenuItem
-        onClick={() => setTypeOpen((v) => !v)}
-        sx={{ borderRadius: 1.5, justifyContent: "space-between", fontSize: 14 }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: "text.secondary" }}>
-          <Box component="span" sx={{ width: 16, textAlign: "center", fontSize: 12, opacity: 0.7 }}>
-            ↻
-          </Box>
-          Change type
-        </Box>
-        <Typography variant="caption" color="text.secondary">
-          {TYPE_LABELS[column.type]} {typeOpen ? "▾" : "▸"}
-        </Typography>
-      </MenuItem>
-      <Collapse in={typeOpen}>
-        <Box
-          sx={{
-            mb: 0.5,
-            maxHeight: 224,
-            overflowY: "auto",
-            borderRadius: 2,
-            bgcolor: "surface",
-            p: 0.5,
-          }}
+      <MenuList dense sx={{ px: 0.5, py: 0 }}>
+        {/* Change type — collapsible, Notion-style list */}
+        <MenuItem
+          onClick={() => setTypeOpen((v) => !v)}
+          sx={{ borderRadius: 1.5, justifyContent: "space-between", fontSize: 14 }}
         >
-          {TYPE_ORDER.map((t) => (
-            <MenuItem
-              key={t}
-              onClick={() => {
-                onType(t);
-                setTypeOpen(false);
-              }}
-              sx={{ borderRadius: 1.5, justifyContent: "space-between", fontSize: 14 }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Box component="span" sx={{ width: 16, textAlign: "center", fontSize: 12, opacity: 0.7 }}>
-                  {TYPE_ICONS[t]}
-                </Box>
-                {TYPE_LABELS[t]}
-              </Box>
-              {column.type === t && (
-                <Typography variant="caption" color="primary">
-                  ✓
-                </Typography>
-              )}
-            </MenuItem>
-          ))}
-        </Box>
-      </Collapse>
-
-      {hasOptions && (
-        <>
-          <Divider sx={{ my: 0.5 }} />
-          <OptionsEditor
-            options={column.options ?? []}
-            onChange={onOptionsChange}
-          />
-        </>
-      )}
-
-      <Divider sx={{ my: 0.5 }} />
-      <MenuItem onClick={onSortAsc} sx={{ borderRadius: 1.5, fontSize: 14 }}>
-        Sort ascending
-      </MenuItem>
-      <MenuItem onClick={onSortDesc} sx={{ borderRadius: 1.5, fontSize: 14 }}>
-        Sort descending
-      </MenuItem>
-      <Divider sx={{ my: 0.5 }} />
-      <MenuItem onClick={onInsertLeft} sx={{ borderRadius: 1.5, fontSize: 14 }}>
-        Insert left
-      </MenuItem>
-      <MenuItem onClick={onInsertRight} sx={{ borderRadius: 1.5, fontSize: 14 }}>
-        Insert right
-      </MenuItem>
-      {canDelete && (
-        <>
-          <Divider sx={{ my: 0.5 }} />
-          <MenuItem
-            onClick={onDelete}
-            sx={{ borderRadius: 1.5, fontSize: 14, color: "error.main" }}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: "text.secondary" }}>
+            <Box component="span" sx={{ width: 16, textAlign: "center", fontSize: 12, opacity: 0.7 }}>
+              ↻
+            </Box>
+            Change type
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            {TYPE_LABELS[column.type]} {typeOpen ? "▾" : "▸"}
+          </Typography>
+        </MenuItem>
+        <Collapse in={typeOpen}>
+          <Box
+            sx={{
+              mb: 0.5,
+              maxHeight: 224,
+              overflowY: "auto",
+              borderRadius: 2,
+              bgcolor: "surface",
+              p: 0.5,
+            }}
           >
-            Delete column
-          </MenuItem>
-        </>
-      )}
-    </MenuList>
+            {TYPE_ORDER.map((t) => (
+              <MenuItem
+                key={t}
+                onClick={() => {
+                  onType(t);
+                  setTypeOpen(false);
+                }}
+                sx={{ borderRadius: 1.5, justifyContent: "space-between", fontSize: 14 }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box component="span" sx={{ width: 16, textAlign: "center", fontSize: 12, opacity: 0.7 }}>
+                    {TYPE_ICONS[t]}
+                  </Box>
+                  {TYPE_LABELS[t]}
+                </Box>
+                {column.type === t && (
+                  <Typography variant="caption" color="primary">
+                    ✓
+                  </Typography>
+                )}
+              </MenuItem>
+            ))}
+          </Box>
+        </Collapse>
+
+        {hasOptions && (
+          <>
+            <Divider sx={{ my: 0.5 }} />
+            <OptionsEditor
+              options={column.options ?? []}
+              onChange={onOptionsChange}
+            />
+          </>
+        )}
+
+        <Divider sx={{ my: 0.5 }} />
+        <MenuItem onClick={onSortAsc} sx={{ borderRadius: 1.5, fontSize: 14 }}>
+          Sort ascending
+        </MenuItem>
+        <MenuItem onClick={onSortDesc} sx={{ borderRadius: 1.5, fontSize: 14 }}>
+          Sort descending
+        </MenuItem>
+        <Divider sx={{ my: 0.5 }} />
+        <MenuItem onClick={onInsertLeft} sx={{ borderRadius: 1.5, fontSize: 14 }}>
+          Insert left
+        </MenuItem>
+        <MenuItem onClick={onInsertRight} sx={{ borderRadius: 1.5, fontSize: 14 }}>
+          Insert right
+        </MenuItem>
+        {canDelete && (
+          <>
+            <Divider sx={{ my: 0.5 }} />
+            <MenuItem
+              onClick={onDelete}
+              sx={{ borderRadius: 1.5, fontSize: 14, color: "error.main" }}
+            >
+              Delete column
+            </MenuItem>
+          </>
+        )}
+      </MenuList>
+    </Box>
   );
 }
 

@@ -287,3 +287,84 @@ export const PROJECT_PRIORITIES: { value: ProjectPriority; label: string }[] = [
   { value: "urgent", label: "Urgent" },
 ];
 
+// ---------------------------------------------------------------------------
+// Office Settings (settings/office)
+// ---------------------------------------------------------------------------
+export interface OfficeSettings {
+  startHour: number; // e.g. 10
+  startMinute: number; // e.g. 0
+  endHour: number; // e.g. 18
+  endMinute: number; // e.g. 0
+  graceMinutes: number; // e.g. 60 — clock-in within this window is still "on time"
+  lateThresholdDays: number; // e.g. 3 — after this many late days, deduction kicks in
+  employeeLeavesPerMonth: number; // e.g. 2
+  internLeavesPerMonth: number; // e.g. 1
+}
+
+export const DEFAULT_OFFICE_SETTINGS: OfficeSettings = {
+  startHour: 10,
+  startMinute: 0,
+  endHour: 18,
+  endMinute: 0,
+  graceMinutes: 60,
+  lateThresholdDays: 3,
+  employeeLeavesPerMonth: 2,
+  internLeavesPerMonth: 1,
+};
+
+// ---------------------------------------------------------------------------
+// Attendance (attendance/{recordId})
+// ---------------------------------------------------------------------------
+export type AttendanceStatus =
+  | "present"
+  | "absent"
+  | "late"
+  | "half_day"
+  | "on_leave";
+
+export const ATTENDANCE_STATUSES: { value: AttendanceStatus; label: string }[] =
+  [
+    { value: "present", label: "Present" },
+    { value: "absent", label: "Absent" },
+    { value: "late", label: "Late" },
+    { value: "half_day", label: "Half Day" },
+    { value: "on_leave", label: "On Leave" },
+  ];
+
+export interface AttendanceRecord {
+  id: string;
+  uid: string; // the employee's auth uid
+  employeeName: string; // denormalised for easy display
+  date: string; // ISO yyyy-mm-dd
+  checkIn: string | null; // ISO datetime string
+  checkOut: string | null; // ISO datetime string
+  status: AttendanceStatus;
+  hoursWorked: number; // auto-calculated from check-in/out
+  isLate: boolean; // true if checked in after grace period
+  isOvertime: boolean; // true if checked out after office end time
+  overtimeMinutes: number; // extra minutes past office end time
+  createdAt: Timestamp | null;
+  updatedAt: Timestamp | null;
+}
+
+// ---------------------------------------------------------------------------
+// Attendance helpers
+// ---------------------------------------------------------------------------
+
+/** Count working days in a month (Mon–Fri only). */
+export function workingDaysInMonth(year: number, month: number): number {
+  let count = 0;
+  const d = new Date(year, month - 1, 1);
+  while (d.getMonth() === month - 1) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+/** Calculate daily salary from monthly salary and working days. */
+export function dailySalary(monthlySalary: number, year: number, month: number): number {
+  const days = workingDaysInMonth(year, month);
+  return days > 0 ? monthlySalary / days : 0;
+}

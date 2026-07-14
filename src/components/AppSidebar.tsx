@@ -74,6 +74,14 @@ const NAV: {
       <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
     ),
   },
+  {
+    href: "/attendance",
+    label: "Attendance",
+    roles: ["admin", "employee", "intern"],
+    icon: (
+      <path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 16H5V10h14v10Zm0-12H5V6h14v2Z" />
+    ),
+  },
 ];
 
 export function AppSidebar() {

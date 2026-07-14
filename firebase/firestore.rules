@@ -62,8 +62,7 @@ service cloud.firestore {
     }
 
     // Projects (the Phase 1 tracker). Any member can read and create projects
-    // and edit/delete them. (Finer-grained ownership — e.g. only the creator or
-    // an admin may delete — can be layered in later.)
+    // and edit/delete them.
     match /projects/{projectId} {
       allow read: if isMember();
 
@@ -74,22 +73,56 @@ service cloud.firestore {
       allow update, delete: if isMember();
     }
 
-    // Developers roster — people you can assign tasks to. Any member can view
-    // and manage the roster (add/edit/remove teammates).
+    // Developers roster — people you can assign tasks to.
     match /developers/{devId} {
       allow read: if isMember();
       allow create, update, delete: if isMember();
     }
 
-    // Daily tasks assigned to employees. Members can read and write; admin-only
-    // actions (assigning/deleting) are gated in the UI. Employees update their
-    // own task status + report.
+    // Daily tasks assigned to employees.
     match /tasks/{taskId} {
       allow read: if isMember();
       allow create, update, delete: if isMember();
     }
 
-    // Everything else (databases, pages, automations, ...) is locked until the
-    // phase that introduces it defines explicit rules.
+    // -----------------------------------------------------------------------
+    // Global settings (office hours, attendance policy, etc.)
+    // Only admins can change settings; all members can read them.
+    // -----------------------------------------------------------------------
+    match /settings/{settingId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    // -----------------------------------------------------------------------
+    // Attendance records — attendance/{uid}_{date}
+    //
+    // Access control:
+    //  - Admin (owner/admin): read + write ALL records.
+    //  - Employee/Intern: read + write only their OWN records.
+    //
+    // The doc ID format is "{uid}_{yyyy-mm-dd}", and every document contains a
+    // `uid` field that must match the signing-in user (unless admin).
+    // -----------------------------------------------------------------------
+    match /attendance/{recordId} {
+      // Read: admin can read everything; others only their own.
+      allow read: if isAdmin()
+        || (isMember() && resource.data.uid == request.auth.uid);
+
+      // Create: admin can create for anyone; others only for themselves.
+      allow create: if isAdmin()
+        || (isMember() && request.resource.data.uid == request.auth.uid);
+
+      // Update: admin can update any record; others only their own.
+      allow update: if isAdmin()
+        || (isMember() && resource.data.uid == request.auth.uid
+            && request.resource.data.uid == request.auth.uid);
+
+      // Delete: admin only.
+      allow delete: if isAdmin();
+    }
+
+    // Everything else is locked until the phase that introduces it defines
+    // explicit rules.
   }
 }

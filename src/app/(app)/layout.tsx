@@ -30,6 +30,7 @@ const ROUTE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: "/tasks", roles: ["admin", "employee", "intern"] },
   { prefix: "/team", roles: ["admin"] },
   { prefix: "/zirium", roles: ["admin"] },
+  { prefix: "/attendance", roles: ["admin", "employee", "intern"] },
 ];
 
 function allowedPath(role: AppRole, pathname: string): boolean {
