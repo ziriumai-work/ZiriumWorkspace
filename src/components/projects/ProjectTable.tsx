@@ -5,7 +5,7 @@
 // project detail page.
 
 import Link from "next/link";
-import { updateProject, deleteProject } from "@/lib/projects";
+import { updateProject, deleteProject } from "@/lib/data/projects";
 import {
   PROJECT_PRIORITIES,
   PROJECT_STATUSES,
@@ -13,7 +13,7 @@ import {
   type Project,
   type ProjectPriority,
   type ProjectStatus,
-} from "@/lib/types";
+} from "@/lib/data/types";
 import { PRIORITY_META, STATUS_META, formatDueDate } from "@/components/projectMeta";
 
 export function ProjectTable({

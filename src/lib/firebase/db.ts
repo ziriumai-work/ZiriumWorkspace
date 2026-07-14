@@ -6,7 +6,7 @@ import {
   type DbRow,
   type SelectOption,
   type TaskItem,
-} from "@/lib/types";
+} from "@/lib/data/types";
 
 const uuid = () => crypto.randomUUID();
 

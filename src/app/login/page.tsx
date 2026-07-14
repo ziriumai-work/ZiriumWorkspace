@@ -2,18 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { ROLE_HOME } from "@/lib/data/types";
 
 export default function LoginPage() {
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, role, loading, signInWithGoogle } = useAuth();
   const router = useRouter();
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // If already signed in, don't show the login form.
+  // Already signed in → straight to the role's home screen. Waits for the
+  // role to resolve so interns land on My Space, not the dashboard.
   useEffect(() => {
-    if (!loading && user) router.replace("/dashboard");
-  }, [user, loading, router]);
+    if (!loading && user && role) router.replace(ROLE_HOME[role]);
+  }, [user, role, loading, router]);
 
   async function handleSignIn() {
     setError(null);

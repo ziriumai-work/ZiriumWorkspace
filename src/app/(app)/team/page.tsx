@@ -10,9 +10,10 @@ import {
   updateDeveloper,
   deleteDeveloper,
   type NewEmployee,
-} from "@/lib/developers";
-import { useAuth } from "@/lib/auth-context";
+} from "@/lib/data/developers";
+import { useAuth } from "@/lib/firebase/auth-context";
 import {
+  ACCESS_LEVELS,
   DEPARTMENTS,
   EMPLOYMENT_TYPES,
   EMPLOYEE_STATUSES,
@@ -21,7 +22,7 @@ import {
   type EmployeeStatus,
   type EmploymentType,
   type AccessLevel,
-} from "@/lib/types";
+} from "@/lib/data/types";
 
 const STATUS_BADGE: Record<EmployeeStatus, string> = {
   active: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
@@ -190,8 +191,11 @@ export default function EmployeesPage() {
             }
             className="w-full rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
           >
-            <option value="employee">Employee</option>
-            <option value="admin">Admin</option>
+            {ACCESS_LEVELS.map((a) => (
+              <option key={a.value} value={a.value}>
+                {a.label}
+              </option>
+            ))}
           </select>
         </Field>
         <div className="flex items-end">
@@ -310,8 +314,11 @@ export default function EmployeesPage() {
                       }
                       className="rounded-md border border-border bg-transparent px-1.5 py-0.5 text-xs outline-none"
                     >
-                      <option value="employee">Employee</option>
-                      <option value="admin">Admin</option>
+                      {ACCESS_LEVELS.map((a) => (
+                        <option key={a.value} value={a.value}>
+                          {a.label}
+                        </option>
+                      ))}
                     </select>
                   </td>
                   <td className="px-2 py-2 text-right">

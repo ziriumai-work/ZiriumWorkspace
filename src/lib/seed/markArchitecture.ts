@@ -8,8 +8,8 @@ import {
   type DbColumn,
   type DbRow,
   type SelectOption,
-} from "@/lib/types";
-import { defaultColumns } from "@/lib/db";
+} from "@/lib/data/types";
+import { defaultColumns } from "@/lib/firebase/db";
 
 const uuid = () => crypto.randomUUID();
 

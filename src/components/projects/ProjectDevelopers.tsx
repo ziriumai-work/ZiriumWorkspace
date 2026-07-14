@@ -6,7 +6,7 @@
 // People come from the shared roster (Team page).
 
 import Link from "next/link";
-import type { Developer } from "@/lib/types";
+import type { Developer } from "@/lib/data/types";
 
 export function ProjectDevelopers({
   developerIds,

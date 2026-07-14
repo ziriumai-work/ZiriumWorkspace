@@ -2,7 +2,7 @@
 // and priority. Keeping this in one place means the dashboard, table, board,
 // and detail views stay visually consistent.
 
-import type { ProjectPriority, ProjectStatus } from "@/lib/types";
+import type { ProjectPriority, ProjectStatus } from "@/lib/data/types";
 
 export const STATUS_META: Record<
   ProjectStatus,

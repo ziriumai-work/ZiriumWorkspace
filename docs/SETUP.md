@@ -87,8 +87,8 @@ it as a team).
    firebase deploy --only firestore:rules,storage
    ```
 
-   Or paste them in the console: **Firestore → Rules** ← [firestore.rules](firestore.rules);
-   **Storage → Rules** ← [storage.rules](storage.rules). Republish whenever these
+   Or paste them in the console: **Firestore → Rules** ← [../firebase/firestore.rules](../firebase/firestore.rules);
+   **Storage → Rules** ← [../firebase/storage.rules](../firebase/storage.rules). Republish whenever these
    files change (they currently cover `users`, `members`, `teams`, `developers`
    (employees), `projects`, and `tasks`).
 
@@ -127,7 +127,7 @@ server route handler so the API key never reaches the browser.
 - Pick a model: **DeepSeek V4 Flash** (fast, general) or **DeepSeek V4 Pro**
   (shows reasoning; better for planning). Note: these are product labels — they
   map to DeepSeek's `deepseek-chat` and `deepseek-reasoner` engines (no public v4
-  API yet); see [ARCHITECTURE.md](ARCHITECTURE.md) §9.
+  API yet); see [ARCHITECTURE.md](ARCHITECTURE.md) §9 (same folder).
 - On a project page, use the **AI** quick actions (Summarize / Draft status
   update / Next steps) — results can be inserted straight into the notes.
 

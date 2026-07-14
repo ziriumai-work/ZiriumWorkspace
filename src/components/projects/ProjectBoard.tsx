@@ -6,13 +6,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { updateProject } from "@/lib/projects";
+import { updateProject } from "@/lib/data/projects";
 import {
   PROJECT_STATUSES,
   type Developer,
   type Project,
   type ProjectStatus,
-} from "@/lib/types";
+} from "@/lib/data/types";
 import { PRIORITY_META, STATUS_META, formatDueDate } from "@/components/projectMeta";
 
 export function ProjectBoard({

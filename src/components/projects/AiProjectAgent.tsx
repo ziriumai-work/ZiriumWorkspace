@@ -5,10 +5,10 @@
 // sample). Review the plan, then create it in one click.
 
 import { useState } from "react";
-import { useAuth } from "@/lib/auth-context";
-import { createProject } from "@/lib/projects";
-import { generateProjectPlan, type GeneratedPlan } from "@/lib/ai-agent";
-import { AI_MODELS, DEFAULT_MODEL_ID, getModel } from "@/lib/ai-models";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { createProject } from "@/lib/data/projects";
+import { generateProjectPlan, type GeneratedPlan } from "@/lib/ai/ai-agent";
+import { AI_MODELS, DEFAULT_MODEL_ID, getModel } from "@/lib/ai/ai-models";
 
 export function AiProjectAgent({
   open,

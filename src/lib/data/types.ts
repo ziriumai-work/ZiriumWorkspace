@@ -92,7 +92,23 @@ export interface TaskItem {
 export type Department = "web" | "ai" | "app" | "custom";
 export type EmploymentType = "full_time" | "part_time" | "contract" | "intern";
 export type EmployeeStatus = "active" | "on_leave" | "terminated";
-export type AccessLevel = "admin" | "employee"; // app-level access (UI gate)
+// App-level access (UI gate). "intern" gets the same restricted scope as
+// "employee" but lands on its own My Space screen (/intern).
+export type AccessLevel = "admin" | "employee" | "intern";
+
+// The resolved role of the signed-in user (see useAuth().role). Unlike
+// AccessLevel (a field on the employee record), this also accounts for member
+// roles and the owner fallback, so it's what UI/routing decisions key off.
+export type AppRole = "admin" | "employee" | "intern";
+
+// Where each role lands after sign-in (and when kicked off a page they can't
+// access). Employees keep the role-filtered dashboard until their dedicated
+// "My Workflow" screen ships.
+export const ROLE_HOME: Record<AppRole, string> = {
+  admin: "/dashboard",
+  employee: "/dashboard",
+  intern: "/intern",
+};
 
 export interface Developer {
   id: string;
@@ -129,6 +145,12 @@ export const EMPLOYEE_STATUSES: { value: EmployeeStatus; label: string }[] = [
   { value: "active", label: "Active" },
   { value: "on_leave", label: "On Leave" },
   { value: "terminated", label: "Terminated" },
+];
+
+export const ACCESS_LEVELS: { value: AccessLevel; label: string }[] = [
+  { value: "employee", label: "Employee" },
+  { value: "intern", label: "Intern" },
+  { value: "admin", label: "Admin" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -264,3 +286,4 @@ export const PROJECT_PRIORITIES: { value: ProjectPriority; label: string }[] = [
   { value: "high", label: "High" },
   { value: "urgent", label: "Urgent" },
 ];
+

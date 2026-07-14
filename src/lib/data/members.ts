@@ -2,8 +2,8 @@
 // assignee) and their public profiles.
 
 import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import type { Member, UserProfile } from "@/lib/types";
+import { db } from "@/lib/firebase/client";
+import type { Member, UserProfile } from "@/lib/data/types";
 
 // Subscribe to the full member list. Members can read all memberships per the
 // rules. Returns an unsubscribe fn.

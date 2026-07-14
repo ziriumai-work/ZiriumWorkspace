@@ -20,8 +20,9 @@ import {
   DEFAULT_MODEL_ID,
   MODEL_STORAGE_KEY,
   getModel,
-} from "@/lib/ai-models";
-import { streamCompletion } from "@/lib/ai-client";
+} from "@/lib/ai/ai-models";
+import { streamCompletion } from "@/lib/ai/ai-client";
+import { useAuth } from "@/lib/firebase/auth-context";
 
 interface OpenOptions {
   title?: string; // panel heading
@@ -40,6 +41,9 @@ interface AiContextValue {
 const AiContext = createContext<AiContextValue | undefined>(undefined);
 
 export function AiProvider({ children }: { children: ReactNode }) {
+  // AI is admin-only (role matrix): the assistant simply won't open for
+  // anyone else, no matter which trigger fires.
+  const { isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
   const [opts, setOpts] = useState<OpenOptions>({});
   // Lazy initializer restores the user's last model choice. Safe against SSR:
@@ -95,6 +99,7 @@ export function AiProvider({ children }: { children: ReactNode }) {
 
   const openAi = useCallback(
     (o: OpenOptions = {}) => {
+      if (!isAdmin) return;
       setOpts(o);
       setPrompt(o.prompt ?? "");
       setOutput("");
@@ -108,7 +113,7 @@ export function AiProvider({ children }: { children: ReactNode }) {
         setTimeout(() => promptRef.current?.focus(), 50);
       }
     },
-    [run],
+    [run, isAdmin],
   );
 
   const closeAi = useCallback(() => {

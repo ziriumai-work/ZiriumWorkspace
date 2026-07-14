@@ -4,16 +4,16 @@
 // see only their own tasks and submit a report (text + links + files) per task.
 
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/lib/firebase/auth-context";
 import {
   subscribeToAllTasks,
   subscribeToTasksForEmployee,
   createTask,
   updateTask,
   deleteTask,
-} from "@/lib/tasks";
-import { subscribeToDevelopers } from "@/lib/developers";
-import { subscribeToProjects } from "@/lib/projects";
+} from "@/lib/data/tasks";
+import { subscribeToDevelopers } from "@/lib/data/developers";
+import { subscribeToProjects } from "@/lib/data/projects";
 import { TaskReportEditor } from "@/components/tasks/TaskReportEditor";
 import {
   DAILY_TASK_STATUSES,
@@ -22,7 +22,7 @@ import {
   type Employee,
   type Project,
   type TaskReport,
-} from "@/lib/types";
+} from "@/lib/data/types";
 
 const STATUS_BADGE: Record<DailyTaskStatus, string> = {
   todo: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300",

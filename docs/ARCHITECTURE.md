@@ -7,7 +7,7 @@ This document is the single source of truth for new developers — read it befor
 changing code.
 
 > **Companion docs:** [SETUP.md](SETUP.md) (how to run it) ·
-> [AGENTS.md](AGENTS.md) (rules for AI coding assistants).
+> [AGENTS.md](../AGENTS.md) (rules for AI coding assistants).
 
 ---
 
@@ -105,25 +105,28 @@ src/
 │   └── tasks/
 │       └── TaskReportEditor.tsx # Task report editor: text + links + file uploads
 └── lib/
-    ├── firebase.ts             # Firebase init (build-safe; auth + db + storage; emulator support)
-    ├── auth-context.tsx        # ⭐ AuthProvider + useAuth(): user, member, employee, isAdmin
-    ├── types.ts                # ⭐ All domain types
-    ├── projects.ts             # Firestore CRUD + subscriptions for projects
-    ├── developers.ts           # Firestore CRUD + subscription for EMPLOYEES (collection name "developers")
-    ├── tasks.ts                # Firestore CRUD + subscriptions for daily tasks
-    ├── storage.ts              # uploadTaskFile() — Firebase Storage uploads
-    ├── members.ts              # Member/profile subscriptions (legacy, light use)
-    ├── db.ts                   # Database helpers: defaultColumns(), STATUS_OPTIONS, migrateTasksToDb()
-    ├── ai-models.ts            # AI model catalogue + product→DeepSeek id mapping
-    ├── ai-client.ts            # streamCompletion() — consumes /api/ai NDJSON
-    ├── ai-agent.ts             # generateProjectPlan() — brief → {title, columns, rows}
+    ├── firebase/
+    │   ├── client.ts            # Firebase init (build-safe; auth + db + storage; emulator support)
+    │   ├── auth-context.tsx     # ⭐ AuthProvider + useAuth(): user, member, employee, isAdmin
+    │   ├── db.ts                # Database helpers: defaultColumns(), STATUS_OPTIONS, migrateTasksToDb()
+    │   └── storage.ts           # uploadTaskFile() — Firebase Storage uploads
+    ├── ai/
+    │   ├── ai-models.ts         # AI model catalogue + product→DeepSeek id mapping
+    │   ├── ai-client.ts         # streamCompletion() — consumes /api/ai NDJSON
+    │   └── ai-agent.ts          # generateProjectPlan() — brief → {title, columns, rows}
+    ├── data/
+    │   ├── types.ts             # ⭐ All domain types
+    │   ├── projects.ts          # Firestore CRUD + subscriptions for projects
+    │   ├── developers.ts        # Firestore CRUD + subscription for EMPLOYEES (collection name "developers")
+    │   ├── tasks.ts             # Firestore CRUD + subscriptions for daily tasks
+    │   └── members.ts           # Member/profile subscriptions (legacy, light use)
     └── seed/markArchitecture.ts # MARK Architecture sample timeline → database
 ```
 
-Root config: [firebase.json](firebase.json), [firestore.rules](firestore.rules),
-[storage.rules](storage.rules), [firestore.indexes.json](firestore.indexes.json),
-[.firebaserc](.firebaserc), [next.config.ts](next.config.ts),
-[.env.local.example](.env.local.example).
+Root config: [firebase.json](../firebase.json), [firebase/firestore.rules](../firebase/firestore.rules),
+[firebase/storage.rules](../firebase/storage.rules), [firebase/firestore.indexes.json](../firebase/firestore.indexes.json),
+[.firebaserc](../.firebaserc), [next.config.ts](../next.config.ts),
+[.env.local.example](../.env.local.example).
 
 ---
 
@@ -162,7 +165,7 @@ There are **two identity concepts**:
    login by matching `email`.**
 
 ### How "who am I + what can I do" is resolved
-[auth-context.tsx](src/lib/auth-context.tsx) exposes via `useAuth()`:
+[auth-context.tsx](src/lib/firebase/auth-context.tsx) exposes via `useAuth()`:
 `{ user, member, employee, isAdmin, loading, signInWithGoogle, signOut }`.
 
 - `employee` = the employee record whose `email` matches `user.email`.
@@ -203,7 +206,7 @@ putting sensitive HR data in** (see §9).
 | `projects` | auto | `Project` | Carries its own Notion database inline. |
 | `tasks` | auto | `DailyTask` | Daily tasks assigned to employees, with a report. |
 
-All shapes live in [types.ts](src/lib/types.ts). Highlights:
+All shapes live in [types.ts](src/lib/data/types.ts). Highlights:
 
 ### Employee (`developers` collection)
 ```ts
@@ -262,13 +265,13 @@ client-side — **no composite index needed**.
 ### Legacy migration
 Early projects stored a fixed `tasks: TaskItem[]`. On open, the project detail
 page detects `rows.length === 0 && tasks.length > 0` and converts via
-`migrateTasksToDb()` ([db.ts](src/lib/db.ts)) — once, ref-guarded.
+`migrateTasksToDb()` ([db.ts](src/lib/firebase/db.ts)) — once, ref-guarded.
 
 ---
 
 ## 8. Feature walkthrough
 
-- **Auth/roles** — [auth-context.tsx](src/lib/auth-context.tsx) (§6).
+- **Auth/roles** — [auth-context.tsx](src/lib/firebase/auth-context.tsx) (§6).
 - **Shell** — [(app)/layout.tsx](src/app/(app)/layout.tsx) guards the route group
   + sidebar/topbar + `<AiProvider>`. Sidebar nav is role-filtered (Employees is
   admin-only).
@@ -295,26 +298,26 @@ page detects `rows.length === 0 && tasks.length > 0` and converts via
 ## 9. AI integration
 
 - **Provider:** DeepSeek (OpenAI-compatible).
-- **Models** ([ai-models.ts](src/lib/ai-models.ts)): UI shows **"DeepSeek V4
+- **Models** ([ai-models.ts](src/lib/ai/ai-models.ts)): UI shows **"DeepSeek V4
   Flash/Pro"** — ⚠️ DeepSeek has **no public v4 API**; these map via `apiId` to
   `deepseek-chat` (Flash) and `deepseek-reasoner` (Pro). Swap `apiId` when a real
   v4 ships.
 - **Endpoint** ([api/ai/route.ts](src/app/api/ai/route.ts)): `POST /api/ai` →
   validates model, maps to the real engine, streams DeepSeek SSE, re-emits clean
   **NDJSON** (`{type:"reasoning"|"text"|"error"}`).
-- **Client** ([ai-client.ts](src/lib/ai-client.ts)): `streamCompletion(...)`.
-- **Agent** ([ai-agent.ts](src/lib/ai-agent.ts)): `generateProjectPlan(brief,
+- **Client** ([ai-client.ts](src/lib/ai/ai-client.ts)): `streamCompletion(...)`.
+- **Agent** ([ai-agent.ts](src/lib/ai/ai-agent.ts)): `generateProjectPlan(brief,
   model)` → strict-JSON → `{ title, description, columns, rows }`.
 
 ---
 
 ## 10. Security (rules, storage, known gaps)
 
-- **Firestore rules** ([firestore.rules](firestore.rules)) — deny-by-default.
+- **Firestore rules** ([firebase/firestore.rules](../firebase/firestore.rules)) — deny-by-default.
   Members can read/write `projects`, `developers`, and `tasks`; self-join only
   grants `member`; role changes require owner/admin. **Must be published** to the
   live project.
-- **Storage rules** ([storage.rules](storage.rules)) — any signed-in user can
+- **Storage rules** ([firebase/storage.rules](../firebase/storage.rules)) — any signed-in user can
   read/write under `task-reports/`; everything else denied. Requires **Storage
   enabled** in the console.
 
@@ -356,19 +359,19 @@ page detects `rows.length === 0 && tasks.length > 0` and converts via
 
 ## 12. How to extend it
 
-- **Add a column type** → [types.ts](src/lib/types.ts) `ColumnType` (+ `CellValue`
+- **Add a column type** → [types.ts](src/lib/data/types.ts) `ColumnType` (+ `CellValue`
   if needed); [NotionTable.tsx](src/components/projects/NotionTable.tsx)
   `TYPE_LABELS`/`TYPE_ICONS`/`TYPE_ORDER` + a `Cell` editor.
 - **Add a page/route** → `src/app/(app)/<name>/page.tsx` (`"use client"`); add a
   nav item in [AppSidebar.tsx](src/components/AppSidebar.tsx) (set `adminOnly` if
   needed) + a breadcrumb case in [AppTopbar.tsx](src/components/AppTopbar.tsx).
 - **Add a Firestore collection** → a `lib/<name>.ts` access module + **rules** in
-  [firestore.rules](firestore.rules), then publish.
+  [firebase/firestore.rules](../firebase/firestore.rules), then publish.
 - **Gate a feature by role** → `const { isAdmin, employee } = useAuth();` and
   branch in the component.
 - **Add an AI feature** → reuse `streamCompletion` or
   `useAi().openAi({ prompt, system, onInsert })`; for structured output, prompt
-  for JSON and parse like [ai-agent.ts](src/lib/ai-agent.ts).
+  for JSON and parse like [ai-agent.ts](src/lib/ai/ai-agent.ts).
 
 ---
 

@@ -12,21 +12,21 @@ import {
   subscribeToProject,
   updateProject,
   deleteProject,
-} from "@/lib/projects";
-import { subscribeToDevelopers } from "@/lib/developers";
-import { migrateTasksToDb } from "@/lib/db";
+} from "@/lib/data/projects";
+import { subscribeToDevelopers } from "@/lib/data/developers";
+import { migrateTasksToDb } from "@/lib/firebase/db";
 import { useAi } from "@/components/ai/AiProvider";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/lib/firebase/auth-context";
 import { NotionTable } from "@/components/projects/NotionTable";
 import { ProjectDevelopers } from "@/components/projects/ProjectDevelopers";
-import type { Developer } from "@/lib/types";
+import type { Developer } from "@/lib/data/types";
 import {
   PROJECT_PRIORITIES,
   PROJECT_STATUSES,
   type Project,
   type ProjectPriority,
   type ProjectStatus,
-} from "@/lib/types";
+} from "@/lib/data/types";
 
 export default function ProjectDetailPage({
   params,
@@ -264,33 +264,35 @@ export default function ProjectDetailPage({
         />
       </div>
 
-      {/* AI actions */}
-      <div className="mt-8 flex flex-wrap items-center gap-2">
-        <span className="mr-1 flex items-center gap-1 text-xs font-medium text-accent">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
-          </svg>
-          AI
-        </span>
-        {aiActions.map((a) => (
-          <button
-            key={a.label}
-            onClick={() =>
-              openAi({
-                title: a.label,
-                prompt: a.prompt,
-                system: AI_SYSTEM,
-                autoRun: true,
-                insertLabel: "Insert into notes",
-                onInsert: insertIntoNotes,
-              })
-            }
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition hover:bg-surface"
-          >
-            {a.label}
-          </button>
-        ))}
-      </div>
+      {/* AI actions (admin-only, like the rest of the AI surface) */}
+      {isAdmin && (
+        <div className="mt-8 flex flex-wrap items-center gap-2">
+          <span className="mr-1 flex items-center gap-1 text-xs font-medium text-accent">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+            </svg>
+            AI
+          </span>
+          {aiActions.map((a) => (
+            <button
+              key={a.label}
+              onClick={() =>
+                openAi({
+                  title: a.label,
+                  prompt: a.prompt,
+                  system: AI_SYSTEM,
+                  autoRun: true,
+                  insertLabel: "Insert into notes",
+                  onInsert: insertIntoNotes,
+                })
+              }
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition hover:bg-surface"
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Notes */}
       <div className="mt-4">

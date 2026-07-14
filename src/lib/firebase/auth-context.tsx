@@ -21,15 +21,19 @@ import {
   type User,
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { auth, db, googleProvider } from "@/lib/firebase";
-import { subscribeToDevelopers, updateDeveloper } from "@/lib/developers";
-import type { Employee, Member } from "@/lib/types";
+import { auth, db, googleProvider } from "@/lib/firebase/client";
+import { subscribeToDevelopers, updateDeveloper } from "@/lib/data/developers";
+import type { AppRole, Employee, Member } from "@/lib/data/types";
 
 interface AuthState {
   user: User | null; // Firebase Auth user (null = signed out)
   member: Member | null; // company membership + role (null = not loaded / not a member yet)
   employee: Employee | null; // matching employee record (by email), if any
   isAdmin: boolean; // can manage employees/projects/tasks (UI gate)
+  // Resolved app role — what routing and nav key off. Stays null until the
+  // employee directory has loaded, so redirects never fire on a half-resolved
+  // state (e.g. sending an intern to the admin dashboard for a frame).
+  role: AppRole | null;
   loading: boolean; // true until the first auth state resolves
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -130,6 +134,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     employee?.accessLevel === "admin" ||
     (user !== null && employees !== null && employee === null);
 
+  // Resolve the app role once the directory is available. Interns are marked
+  // by their employee record's accessLevel; everyone else in the directory is
+  // an employee unless one of the admin conditions above applies.
+  const role: AppRole | null =
+    !user || employees === null
+      ? null
+      : isAdmin
+        ? "admin"
+        : employee?.accessLevel === "intern"
+          ? "intern"
+          : "employee";
+
   async function signInWithGoogle() {
     await signInWithPopup(auth, googleProvider);
   }
@@ -145,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         member,
         employee,
         isAdmin,
+        role,
         loading,
         signInWithGoogle,
         signOut,

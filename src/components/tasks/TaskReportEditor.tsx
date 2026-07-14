@@ -5,8 +5,8 @@
 // aren't the assignee or an admin.
 
 import { useState } from "react";
-import { uploadTaskFile } from "@/lib/storage";
-import type { TaskReport } from "@/lib/types";
+import { uploadTaskFile } from "@/lib/firebase/storage";
+import type { TaskReport } from "@/lib/data/types";
 
 export function TaskReportEditor({
   taskId,

@@ -7,10 +7,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { subscribeToProjects, createProject } from "@/lib/projects";
-import { subscribeToDevelopers } from "@/lib/developers";
-import { useAuth } from "@/lib/auth-context";
-import type { Developer, Project } from "@/lib/types";
+import { subscribeToProjects, createProject } from "@/lib/data/projects";
+import { subscribeToDevelopers } from "@/lib/data/developers";
+import { useAuth } from "@/lib/firebase/auth-context";
+import type { Developer, Project } from "@/lib/data/types";
 import { ProjectTable } from "@/components/projects/ProjectTable";
 import { ProjectBoard } from "@/components/projects/ProjectBoard";
 import { AiProjectAgent } from "@/components/projects/AiProjectAgent";

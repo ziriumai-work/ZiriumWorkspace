@@ -3,14 +3,14 @@
 // used everywhere else. Runs through DeepSeek via /api/ai and parses the JSON
 // the model returns.
 
-import { streamCompletion } from "@/lib/ai-client";
-import { defaultColumns } from "@/lib/db";
+import { streamCompletion } from "@/lib/ai/ai-client";
+import { defaultColumns } from "@/lib/firebase/db";
 import {
   OPTION_COLOR_CYCLE,
   type DbColumn,
   type DbRow,
   type SelectOption,
-} from "@/lib/types";
+} from "@/lib/data/types";
 
 const uuid = () => crypto.randomUUID();
 

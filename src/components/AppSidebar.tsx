@@ -6,12 +6,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/lib/firebase/auth-context";
+import type { AppRole } from "@/lib/data/types";
 
-const NAV = [
+// Each item lists the roles that see it (matches ROUTE_ACCESS in the app
+// layout, which enforces the same map on direct navigation).
+const NAV: {
+  href: string;
+  label: string;
+  roles: AppRole[];
+  icon: React.ReactNode;
+}[] = [
   {
     href: "/dashboard",
     label: "Dashboard",
+    roles: ["admin", "employee"],
+    icon: (
+      <path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z" />
+    ),
+  },
+  {
+    href: "/intern",
+    label: "My Space",
+    roles: ["intern"],
     icon: (
       <path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z" />
     ),
@@ -19,6 +36,7 @@ const NAV = [
   {
     href: "/projects",
     label: "Projects",
+    roles: ["admin", "employee", "intern"],
     icon: (
       <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
     ),
@@ -26,6 +44,7 @@ const NAV = [
   {
     href: "/tasks",
     label: "Tasks",
+    roles: ["admin", "employee", "intern"],
     icon: (
       <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.6-4.6 1.4 1.4-6 6Z" />
     ),
@@ -33,7 +52,7 @@ const NAV = [
   {
     href: "/team",
     label: "Employees",
-    adminOnly: true,
+    roles: ["admin"],
     icon: (
       <path d="M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm0 2c-2.7 0-8 1.3-8 4v3h9v-3c0-1 .4-1.9 1-2.6A13 13 0 0 0 8 13Zm8 0c-.3 0-.7 0-1.1.1A5 5 0 0 1 17 17v3h7v-3c0-2.7-5.3-4-8-4Z" />
     ),
@@ -41,6 +60,7 @@ const NAV = [
   {
     href: "/zirium",
     label: "Zirium AI",
+    roles: ["admin"],
     icon: (
       <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
     ),
@@ -49,8 +69,9 @@ const NAV = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { user, member, isAdmin, signOut } = useAuth();
-  const nav = NAV.filter((item) => !item.adminOnly || isAdmin);
+  const { user, member, role, signOut } = useAuth();
+  // While the role is still resolving, show the common items only.
+  const nav = NAV.filter((item) => item.roles.includes(role ?? "employee"));
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-surface">
@@ -112,7 +133,7 @@ export function AppSidebar() {
               {user?.displayName ?? user?.email}
             </p>
             <p className="truncate text-[11px] capitalize text-muted">
-              {member?.role ?? "member"}
+              {role ?? member?.role ?? "member"}
             </p>
           </div>
         </div>

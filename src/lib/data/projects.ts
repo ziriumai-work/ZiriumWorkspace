@@ -16,9 +16,9 @@ import {
   Timestamp,
   updateDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import type { DbColumn, DbRow, NewProject, Project, TaskItem } from "@/lib/types";
-import { defaultColumns } from "@/lib/db";
+import { db } from "@/lib/firebase/client";
+import type { DbColumn, DbRow, NewProject, Project, TaskItem } from "@/lib/data/types";
+import { defaultColumns } from "@/lib/firebase/db";
 
 const COLLECTION = "projects";
 

@@ -14,14 +14,14 @@ import {
   Timestamp,
   updateDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase/client";
 import type {
   Developer,
   Department,
   EmploymentType,
   EmployeeStatus,
   AccessLevel,
-} from "@/lib/types";
+} from "@/lib/data/types";
 
 const COLLECTION = "developers";
 

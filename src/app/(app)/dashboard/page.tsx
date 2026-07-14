@@ -6,10 +6,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { subscribeToProjects } from "@/lib/projects";
-import { PROJECT_STATUSES, type Project } from "@/lib/types";
+import { subscribeToProjects } from "@/lib/data/projects";
+import { PROJECT_STATUSES, type Project } from "@/lib/data/types";
 import { STATUS_META } from "@/components/projectMeta";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/lib/firebase/auth-context";
 
 export default function DashboardPage() {
   const { user, employee, isAdmin } = useAuth();

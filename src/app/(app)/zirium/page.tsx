@@ -12,8 +12,8 @@ import {
   DEFAULT_MODEL_ID,
   MODEL_STORAGE_KEY,
   getModel,
-} from "@/lib/ai-models";
-import { streamCompletion, type ChatMessage } from "@/lib/ai-client";
+} from "@/lib/ai/ai-models";
+import { streamCompletion, type ChatMessage } from "@/lib/ai/ai-client";
 
 interface ChatMsg {
   id: string;

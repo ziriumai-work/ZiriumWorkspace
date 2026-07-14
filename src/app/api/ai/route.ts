@@ -14,7 +14,7 @@
 // Firebase ID token (firebase-admin) or enable Firebase App Check. Tracked for a
 // later phase.
 
-import { getApiModelId } from "@/lib/ai-models";
+import { getApiModelId } from "@/lib/ai/ai-models";
 
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 

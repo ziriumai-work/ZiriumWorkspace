@@ -15,8 +15,8 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import type { DailyTask, TaskReport } from "@/lib/types";
+import { db } from "@/lib/firebase/client";
+import type { DailyTask, TaskReport } from "@/lib/data/types";
 
 const COLLECTION = "tasks";
 
