@@ -119,6 +119,7 @@ export const employeeStatus = {
   active: green.main,
   on_leave: amber.main,
   terminated: red.main,
+  offboarded: neutral[400],
 };
 
 // Notion-table select/status option palette (keys match OptionColor in types).

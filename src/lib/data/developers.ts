@@ -30,13 +30,18 @@ function toDeveloper(id: string, data: Record<string, unknown>): Developer {
     id,
     name: (data.name as string) ?? "",
     email: (data.email as string) ?? "",
+    jobTitle: (data.jobTitle as string) ?? "",
     role: (data.role as string) ?? "",
     department: (data.department as Department) ?? "custom",
+    customDepartment: (data.customDepartment as string) ?? "",
     employmentType: (data.employmentType as EmploymentType) ?? "full_time",
     startDate: (data.startDate as string | null) ?? null,
     status: (data.status as EmployeeStatus) ?? "active",
     accessLevel: (data.accessLevel as AccessLevel) ?? "employee",
     uid: (data.uid as string | null) ?? null,
+    monthlySalary: data.monthlySalary as number | undefined,
+    officeHours: data.officeHours as number | undefined,
+    flexibilityHours: data.flexibilityHours as number | undefined,
     createdAt: (data.createdAt as Timestamp | null) ?? null,
   };
 }
@@ -55,27 +60,37 @@ export function subscribeToDevelopers(
 }
 
 // What an admin supplies when adding an employee.
-export type NewEmployee = {
+export interface NewEmployee {
   name: string;
   email: string;
+  jobTitle?: string;
   role?: string;
-  department?: Department;
-  employmentType?: EmploymentType;
-  startDate?: string | null;
-  status?: EmployeeStatus;
-  accessLevel?: AccessLevel;
+  department: Department;
+  customDepartment?: string;
+  employmentType: EmploymentType;
+  startDate: string | null;
+  status: EmployeeStatus;
+  accessLevel: AccessLevel;
+  monthlySalary?: number;
+  officeHours?: number;
+  flexibilityHours?: number;
 };
 
 export async function addDeveloper(input: NewEmployee): Promise<string> {
   const ref = await addDoc(collection(db, COLLECTION), {
     name: input.name.trim(),
     email: input.email.trim().toLowerCase(),
+    jobTitle: input.jobTitle?.trim() ?? "",
     role: input.role?.trim() ?? "",
     department: input.department ?? "custom",
+    customDepartment: input.customDepartment?.trim() ?? "",
     employmentType: input.employmentType ?? "full_time",
     startDate: input.startDate ?? null,
     status: input.status ?? "active",
     accessLevel: input.accessLevel ?? "employee",
+    monthlySalary: input.monthlySalary ?? null,
+    officeHours: input.officeHours ?? null,
+    flexibilityHours: input.flexibilityHours ?? null,
     uid: null,
     createdAt: serverTimestamp(),
   });

@@ -14,6 +14,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -131,6 +133,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [employee, user]);
 
+  const [accessBlocked, setAccessBlocked] = useState<string | null>(null);
+
+  // Check for turnover statuses
+  useEffect(() => {
+    if (employee && (employee.status === "terminated" || employee.status === "offboarded")) {
+      setAccessBlocked("Your account access has been revoked. If you believe this is an error, please contact your administrator.");
+      firebaseSignOut(auth).catch(() => {});
+    } else {
+      setAccessBlocked(null);
+    }
+  }, [employee]);
+
   // Admin if EITHER:
   //  - a privileged member role, OR
   //  - listed in the employee directory with accessLevel "admin", OR
@@ -176,6 +190,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signOut() {
     await firebaseSignOut(auth);
+  }
+
+  if (accessBlocked) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', textAlign: 'center', p: 3, bgcolor: "background.default" }}>
+        <Typography variant="h4" color="error" sx={{ fontWeight: 700, mb: 2 }}>Access Denied</Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 400 }}>{accessBlocked}</Typography>
+      </Box>
+    );
   }
 
   return (

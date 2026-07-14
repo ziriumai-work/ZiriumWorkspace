@@ -16,6 +16,7 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import { useAuth } from "@/lib/firebase/auth-context";
+import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 import type { AppRole } from "@/lib/data/types";
 
 // Each item lists the roles that see it (matches ROUTE_ACCESS in the app
@@ -59,7 +60,7 @@ const NAV: {
     ),
   },
   {
-    href: "/team",
+    href: "/employees",
     label: "Employees",
     roles: ["admin"],
     icon: (
@@ -80,6 +81,14 @@ const NAV: {
     roles: ["admin", "employee", "intern"],
     icon: (
       <path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 16H5V10h14v10Zm0-12H5V6h14v2Z" />
+    ),
+  },
+  {
+    href: "/finance",
+    label: "Finance",
+    roles: ["admin"],
+    icon: (
+      <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm.9 15.5v1.3h-1.7v-1.3c-1.6-.3-2.9-1.2-3-2.9h1.9c.1.8.7 1.4 2 1.4 1.4 0 1.8-.7 1.8-1.2 0-.6-.4-1.2-2-1.6-1.9-.4-3.4-1.2-3.4-3 0-1.5 1.2-2.5 2.7-2.8V6.2h1.7v1.3c1.6.3 2.6 1.4 2.7 2.8h-1.9c0-.8-.5-1.4-1.7-1.4-1.1 0-1.7.5-1.7 1.2 0 .6.5 1 2 1.4 2 .5 3.4 1.2 3.4 3.1 0 1.6-1.2 2.6-2.8 2.9Z" />
     ),
   },
 ];
@@ -121,16 +130,16 @@ export function AppSidebar() {
               href={item.href}
               selected={active}
               sx={{
-                borderRadius: 10,
+                borderRadius: 4,
                 mb: 0.5,
                 py: 1,
                 px: 2,
                 color: "text.secondary",
+                position: "relative",
                 "&.Mui-selected, &.Mui-selected:hover": {
-                  bgcolor: "primary.main",
-                  color: "primary.contrastText",
-                  fontWeight: 600,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  bgcolor: "accentSoft",
+                  color: "primary.main",
+                  fontWeight: 500,
                 },
               }}
             >
@@ -140,8 +149,8 @@ export function AppSidebar() {
                   height="16"
                   viewBox="0 0 24 24"
                   fill={active ? "currentColor" : "none"}
-                  stroke="currentColor"
-                  strokeWidth="1.6"
+                  stroke={active ? "none" : "currentColor"}
+                  strokeWidth={active ? "0" : "1.6"}
                 >
                   {item.icon}
                 </svg>
@@ -158,6 +167,12 @@ export function AppSidebar() {
           );
         })}
       </List>
+
+      {role === "admin" && (
+        <Box sx={{ mt: "auto", display: "flex", flexDirection: "column", px: 1 }}>
+          <CurrencySwitcher />
+        </Box>
+      )}
 
       <Divider />
       <Box sx={{ p: 1.5 }}>

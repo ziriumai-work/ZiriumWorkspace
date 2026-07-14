@@ -20,6 +20,7 @@ import { ROLE_HOME, type AppRole } from "@/lib/data/types";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppTopbar } from "@/components/AppTopbar";
 import { AiProvider } from "@/components/ai/AiProvider";
+import { CurrencyProvider } from "@/lib/contexts/CurrencyContext";
 
 // Which roles may visit which top-level routes. Prefix match; routes not
 // listed (none today) are open to every signed-in user.
@@ -31,6 +32,7 @@ const ROUTE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: "/team", roles: ["admin"] },
   { prefix: "/zirium", roles: ["admin"] },
   { prefix: "/attendance", roles: ["admin", "employee", "intern"] },
+  { prefix: "/finance", roles: ["admin"] },
 ];
 
 function allowedPath(role: AppRole, pathname: string): boolean {
@@ -73,21 +75,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AiProvider>
-      <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <AppSidebar />
-        <Box
-          sx={{
-            display: "flex",
-            flex: 1,
-            flexDirection: "column",
-            overflow: "hidden",
-          }}
-        >
-          <AppTopbar />
-          <Box sx={{ flex: 1, overflowY: "auto" }}>{children}</Box>
+    <CurrencyProvider>
+      <AiProvider>
+        <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          <AppSidebar />
+          <Box
+            sx={{
+              display: "flex",
+              flex: 1,
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <AppTopbar />
+            <Box sx={{ flex: 1, overflowY: "auto" }}>{children}</Box>
+          </Box>
         </Box>
-      </Box>
-    </AiProvider>
+      </AiProvider>
+    </CurrencyProvider>
   );
 }

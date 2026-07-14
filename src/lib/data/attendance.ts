@@ -7,6 +7,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -22,6 +23,7 @@ import {
   type AttendanceRecord,
   type AttendanceStatus,
   type OfficeSettings,
+  type Developer,
 } from "@/lib/data/types";
 
 const COL = "attendance";
@@ -126,17 +128,19 @@ export function subscribeToMyAttendance(
   onData: (records: AttendanceRecord[]) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
+  // We avoid orderBy("date", "desc") here to prevent requiring a composite index
+  // (uid + date). Instead, we sort the results in memory.
   const q = query(
     collection(db, COL),
-    where("uid", "==", uid),
-    orderBy("date", "desc"),
+    where("uid", "==", uid)
   );
   return onSnapshot(
     q,
-    (snap) =>
-      onData(
-        snap.docs.map((d) => ({ id: d.id, ...d.data() }) as AttendanceRecord),
-      ),
+    (snap) => {
+      const records = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as AttendanceRecord);
+      records.sort((a, b) => b.date.localeCompare(a.date));
+      onData(records);
+    },
     onError,
   );
 }
@@ -147,30 +151,91 @@ export function subscribeToMyAttendance(
 
 /** Clock in for the current user. Auto-detects if late. */
 export async function clockIn(
-  uid: string,
-  employeeName: string,
+  employee: Developer,
   settings: OfficeSettings,
-): Promise<void> {
+): Promise<{ status: "success" | "warning"; message: string }> {
   const now = new Date();
   const date = now.toISOString().slice(0, 10);
+  const uid = employee.uid!;
   const id = recordId(uid, date);
   const checkInIso = now.toISOString();
-  const late = isCheckInLate(checkInIso, settings);
+
+  if (!employee.startDate) {
+    await updateDoc(doc(db, "developers", employee.id), {
+      startDate: date,
+    });
+  }
+
+  const officeStart = new Date(now);
+  officeStart.setHours(settings.startHour, settings.startMinute, 0, 0);
+  const diffMs = now.getTime() - officeStart.getTime();
+  const lateMinutes = Math.max(0, Math.floor(diffMs / 60000));
+
+  let isLate = isCheckInLate(checkInIso, settings);
+  let status: AttendanceStatus = isLate ? "late" : "present";
+  let flexibilityUsed = 0;
+  let returnResult: { status: "success" | "warning"; message: string } = { status: "success", message: "Clocked in successfully." };
+
+  if (isLate && employee.flexibilityHours) {
+    const weekStart = new Date(now);
+    const day = weekStart.getDay();
+    const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+    weekStart.setDate(diff);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekStartIso = weekStart.toISOString().slice(0, 10);
+
+    // We query only by uid to avoid needing a composite index, then filter in memory.
+    const q = query(
+      collection(db, COL),
+      where("uid", "==", uid)
+    );
+    const snap = await getDocs(q);
+    let usedFlex = 0;
+    snap.forEach((d) => {
+      const rec = d.data() as AttendanceRecord;
+      if (rec.date >= weekStartIso && rec.date <= date) {
+        if (rec.flexibilityUsed) usedFlex += rec.flexibilityUsed;
+      }
+    });
+
+    const allowedFlexMinutes = employee.flexibilityHours * 60;
+    const remainingFlex = allowedFlexMinutes - usedFlex;
+
+    if (remainingFlex >= lateMinutes) {
+      status = "present";
+      isLate = false;
+      flexibilityUsed = lateMinutes;
+      returnResult = {
+        status: "success",
+        message: `Clocked in! You used ${lateMinutes}m of flex time. (${remainingFlex - lateMinutes}m remaining this week)`,
+      };
+    } else {
+      status = "late";
+      flexibilityUsed = Math.max(0, remainingFlex);
+      returnResult = {
+        status: "warning",
+        message: `Clocked in late. You were late by ${lateMinutes}m but only had ${Math.max(0, remainingFlex)}m of flex time remaining.`,
+      };
+    }
+  }
 
   await setDoc(doc(db, COL, id), {
     uid,
-    employeeName,
+    employeeName: employee.name,
     date,
     checkIn: checkInIso,
     checkOut: null,
-    status: late ? ("late" as AttendanceStatus) : ("present" as AttendanceStatus),
+    status,
     hoursWorked: 0,
-    isLate: late,
+    isLate,
+    flexibilityUsed,
     isOvertime: false,
     overtimeMinutes: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+
+  return returnResult;
 }
 
 /** Clock out — sets checkOut, calculates hoursWorked and overtime. */

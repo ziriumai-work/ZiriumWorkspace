@@ -91,7 +91,7 @@ export interface TaskItem {
 // created by an admin and linked to a login by matching `email` on first sign-in.
 export type Department = "web" | "ai" | "app" | "custom";
 export type EmploymentType = "full_time" | "part_time" | "contract" | "intern";
-export type EmployeeStatus = "active" | "on_leave" | "terminated";
+export type EmployeeStatus = "active" | "on_leave" | "terminated" | "offboarded";
 // App-level access (UI gate). "intern" gets the same restricted scope as
 // "employee" but lands on its own My Space screen (/intern).
 export type AccessLevel = "admin" | "employee" | "intern";
@@ -114,14 +114,18 @@ export interface Developer {
   id: string;
   name: string;
   email: string; // used to link to the Google sign-in account
-  role: string; // job title, e.g. "Frontend Engineer"
+  jobTitle?: string; // what they actually do (e.g. "Full stack Developer")
+  role?: string; // management role (e.g. "Lead", "Manager") - making it optional as requested
   department: Department;
+  customDepartment?: string; // Name if department === "custom"
   employmentType: EmploymentType;
   startDate: string | null; // ISO yyyy-mm-dd
   status: EmployeeStatus;
   accessLevel: AccessLevel; // "admin" can manage; "employee" gets a restricted view
   uid: string | null; // bound on first matching sign-in
   monthlySalary?: number; // base monthly salary
+  officeHours?: number; // expected weekly office hours
+  flexibilityHours?: number; // weekly flexibility time allowed
   createdAt: Timestamp | null;
 }
 
@@ -146,6 +150,7 @@ export const EMPLOYEE_STATUSES: { value: EmployeeStatus; label: string }[] = [
   { value: "active", label: "Active" },
   { value: "on_leave", label: "On Leave" },
   { value: "terminated", label: "Terminated" },
+  { value: "offboarded", label: "Offboarded" },
 ];
 
 export const ACCESS_LEVELS: { value: AccessLevel; label: string }[] = [
@@ -352,6 +357,7 @@ export interface AttendanceRecord {
   status: AttendanceStatus;
   hoursWorked: number; // auto-calculated from check-in/out
   isLate: boolean; // true if checked in after grace period
+  flexibilityUsed?: number; // minutes of flexibility used today
   isOvertime: boolean; // true if checked out after office end time
   overtimeMinutes: number; // extra minutes past office end time
   createdAt: Timestamp | null;

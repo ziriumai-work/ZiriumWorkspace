@@ -30,6 +30,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { Toast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { subscribeToDevelopers } from "@/lib/data/developers";
 import {
@@ -95,6 +96,7 @@ export default function AttendancePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<{ message: string; type: "success" | "warning" | "error" | "info" } | null>(null);
 
   // Admin: filter by employee uid. "all" = show everyone.
   const [filterUid, setFilterUid] = useState<string>("all");
@@ -252,18 +254,18 @@ export default function AttendancePage() {
   // ---- actions ----
 
   async function handleClockIn() {
-    if (!user) return;
+    if (!user || !employee) {
+      setError("Employee record not found. Cannot clock in.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      const displayName =
-        employee?.name ?? user.displayName ?? user.email ?? "Unknown";
-      await clockIn(user.uid, displayName, settings);
-      setSuccess("Clocked in successfully!");
-      setTimeout(() => setSuccess(null), 3000);
+      const res = await clockIn(employee, settings);
+      setToastMsg({ message: res.message, type: res.status });
     } catch (err) {
       console.error(err);
-      setError("Failed to clock in. Make sure you're within office hours.");
+      setToastMsg({ message: err instanceof Error ? err.message : "Failed to clock in. Make sure you're within office hours.", type: "error" });
     }
     setBusy(false);
   }
@@ -370,6 +372,15 @@ export default function AttendancePage() {
           {error}
         </Alert>
       )}
+
+      <Toast 
+        open={toastMsg !== null} 
+        message={toastMsg?.message || ""} 
+        type={toastMsg?.type} 
+        onClose={() => setToastMsg(null)} 
+        autoHideDuration={5000}
+      />
+
       {success && (
         <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
           {success}
@@ -719,7 +730,11 @@ export default function AttendancePage() {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ textTransform: "uppercase", color: "text.secondary" }}>
-                          {employees.find(e => e.uid === r.uid)?.department ?? "-"}
+                          {(() => {
+                            const emp = employees.find(e => e.uid === r.uid);
+                            if (!emp) return "-";
+                            return emp.department === "custom" && emp.customDepartment ? emp.customDepartment : emp.department;
+                          })()}
                         </Typography>
                       </TableCell>
                     </>
