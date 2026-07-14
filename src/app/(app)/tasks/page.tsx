@@ -58,6 +58,8 @@ import {
   type TaskReport,
 } from "@/lib/data/types";
 
+import { useCurrency, formatCurrency } from "@/lib/contexts/CurrencyContext";
+
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -216,6 +218,8 @@ function AssignTaskForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { formatCurrency } = useCurrency();
+
   const selectedEmp = employees.find((e) => e.id === assigneeId);
   const calculatedCost = isOvertime && assignedHours > 0 
     ? overtimeCost(selectedEmp?.monthlySalary, assignedHours, date) 
@@ -358,7 +362,7 @@ function AssignTaskForm({
           />
           {isOvertime && (
             <Typography variant="caption" color="text.secondary">
-              Est. Cost: ${calculatedCost.toFixed(2)}
+              Est. Cost: {formatCurrency(calculatedCost)}
             </Typography>
           )}
         </Grid>

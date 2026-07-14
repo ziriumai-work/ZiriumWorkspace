@@ -1,7 +1,7 @@
 // Data access for company members (used by people pickers, e.g. project
 // assignee) and their public profiles.
 
-import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Member, UserProfile } from "@/lib/data/types";
 
@@ -45,4 +45,11 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   return snap.exists()
     ? ({ uid: snap.id, ...(snap.data() as object) } as UserProfile)
     : null;
+}
+
+export async function markWelcomeSeen(uid: string): Promise<void> {
+  // Update only the hasSeenWelcome field (allowed by security rules for the member themselves)
+  await updateDoc(doc(db, "members", uid), {
+    hasSeenWelcome: true,
+  });
 }

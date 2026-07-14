@@ -795,7 +795,7 @@ export default function AttendancePage() {
                       {r.isOvertime && (
                         <Chip
                           size="small"
-                          label={`+${r.overtimeMinutes}m OT`}
+                          label={`+${r.overtimeMinutes < 60 ? `${r.overtimeMinutes}m` : `${Math.floor(r.overtimeMinutes / 60)}h ${r.overtimeMinutes % 60}m`} OT`}
                           sx={{
                             height: 20,
                             fontSize: 10,

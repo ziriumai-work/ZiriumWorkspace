@@ -18,7 +18,18 @@ export interface Member {
   uid: string;
   role: Role;
   teamIds: string[];
+  hasSeenWelcome?: boolean;
   createdAt: Timestamp | null;
+}
+
+// documents/{docId} — company guidelines, NDAs, etc.
+export interface CompanyDocument {
+  id: string; // "guidelines_employee" or "guidelines_intern"
+  title: string;
+  content: string; // Markdown or plain text content
+  links: string[]; // external urls
+  files: TaskFile[]; // attached files (using TaskFile interface)
+  updatedAt: Timestamp | null;
 }
 
 // teams/{teamId} — a group inside the single company.

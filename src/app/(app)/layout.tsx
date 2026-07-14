@@ -22,6 +22,8 @@ import { AppTopbar } from "@/components/AppTopbar";
 import { AiProvider } from "@/components/ai/AiProvider";
 import { CurrencyProvider } from "@/lib/contexts/CurrencyContext";
 
+import { WelcomeScreen } from "@/components/WelcomeScreen";
+
 // Which roles may visit which top-level routes. Prefix match; routes not
 // listed (none today) are open to every signed-in user.
 const ROUTE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
@@ -29,10 +31,11 @@ const ROUTE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: "/intern", roles: ["intern"] },
   { prefix: "/projects", roles: ["admin", "employee", "intern"] },
   { prefix: "/tasks", roles: ["admin", "employee", "intern"] },
-  { prefix: "/team", roles: ["admin"] },
+  { prefix: "/employees", roles: ["admin"] },
   { prefix: "/zirium", roles: ["admin"] },
   { prefix: "/attendance", roles: ["admin", "employee", "intern"] },
   { prefix: "/finance", roles: ["admin"] },
+  { prefix: "/documents", roles: ["admin", "employee", "intern"] },
 ];
 
 function allowedPath(role: AppRole, pathname: string): boolean {
@@ -78,6 +81,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <CurrencyProvider>
       <AiProvider>
         <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          <WelcomeScreen />
           <AppSidebar />
           <Box
             sx={{

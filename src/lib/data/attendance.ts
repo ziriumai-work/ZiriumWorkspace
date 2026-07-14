@@ -205,16 +205,32 @@ export async function clockIn(
       status = "present";
       isLate = false;
       flexibilityUsed = lateMinutes;
+      
+      const formatMin = (m: number) => {
+        if (m < 60) return `${m}m`;
+        const hrs = Math.floor(m / 60);
+        const mins = m % 60;
+        return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+      };
+      
       returnResult = {
         status: "success",
-        message: `Clocked in! You used ${lateMinutes}m of flex time. (${remainingFlex - lateMinutes}m remaining this week)`,
+        message: `Clocked in! You used ${formatMin(lateMinutes)} of flex time. (${formatMin(remainingFlex - lateMinutes)} remaining this week)`,
       };
     } else {
       status = "late";
       flexibilityUsed = Math.max(0, remainingFlex);
+      
+      const formatMin = (m: number) => {
+        if (m < 60) return `${m}m`;
+        const hrs = Math.floor(m / 60);
+        const mins = m % 60;
+        return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+      };
+
       returnResult = {
         status: "warning",
-        message: `Clocked in late. You were late by ${lateMinutes}m but only had ${Math.max(0, remainingFlex)}m of flex time remaining.`,
+        message: `Clocked in late. You were late by ${formatMin(lateMinutes)} but only had ${formatMin(Math.max(0, remainingFlex))} of flex time remaining.`,
       };
     }
   }

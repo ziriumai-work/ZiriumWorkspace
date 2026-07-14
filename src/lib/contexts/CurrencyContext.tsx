@@ -7,6 +7,7 @@ interface CurrencyContextValue {
   exchangeRate: number; // e.g., 1 USD = 280 PKR. Stored as 280.
   setCurrency: (code: string, rate: number) => void;
   resetCurrency: () => void;
+  formatCurrency: (amountInPkr: number) => string;
 }
 
 const CurrencyContext = createContext<CurrencyContextValue | undefined>(undefined);
@@ -25,8 +26,19 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     setExchangeRate(1);
   };
 
+  const formatCurrency = (amountInPkr: number) => {
+    if (typeof amountInPkr !== 'number' || isNaN(amountInPkr)) return `${currencyCode === "PKR" ? "Rs " : "$"}0.00`;
+    const converted = amountInPkr / exchangeRate;
+    const prefix = currencyCode === "PKR" ? "Rs " : currencyCode === "USD" ? "$" : `${currencyCode} `;
+    
+    return `${prefix}${converted.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
   return (
-    <CurrencyContext.Provider value={{ currencyCode, exchangeRate, setCurrency, resetCurrency }}>
+    <CurrencyContext.Provider value={{ currencyCode, exchangeRate, setCurrency, resetCurrency, formatCurrency }}>
       {children}
     </CurrencyContext.Provider>
   );

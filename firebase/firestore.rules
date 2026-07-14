@@ -51,8 +51,15 @@ service cloud.firestore {
         && request.auth.uid == uid
         && request.resource.data.role == 'member';
 
-      // Only owners/admins can change roles or remove members.
-      allow update, delete: if isAdmin();
+      // Only owners/admins can change roles or remove members. Members can only update hasSeenWelcome.
+      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hasSeenWelcome']));
+      allow delete: if isAdmin();
+    }
+
+    // Company Documents (guidelines, NDAs, etc)
+    match /documents/{docId} {
+      allow read: if isMember();
+      allow write: if isMember();
     }
 
     // Teams inside the company.

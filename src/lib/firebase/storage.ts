@@ -18,3 +18,15 @@ export async function uploadTaskFile(
   const url = await getDownloadURL(r);
   return { name: file.name, url };
 }
+
+export async function uploadDocumentFile(
+  docId: string,
+  file: File,
+): Promise<TaskFile> {
+  const path = `documents/${docId}/${Date.now()}-${file.name}`;
+  const r = ref(storage, path);
+  await uploadBytes(r, file);
+  const url = await getDownloadURL(r);
+  return { name: file.name, url };
+}
+

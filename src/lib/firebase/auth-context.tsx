@@ -16,6 +16,7 @@ import {
 } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -140,8 +141,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (employee && (employee.status === "terminated" || employee.status === "offboarded")) {
       setAccessBlocked("Your account access has been revoked. If you believe this is an error, please contact your administrator.");
       firebaseSignOut(auth).catch(() => {});
-    } else {
-      setAccessBlocked(null);
     }
   }, [employee]);
 
@@ -196,7 +195,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', textAlign: 'center', p: 3, bgcolor: "background.default" }}>
         <Typography variant="h4" color="error" sx={{ fontWeight: 700, mb: 2 }}>Access Denied</Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 400 }}>{accessBlocked}</Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 400, mb: 4 }}>{accessBlocked}</Typography>
+        <Button 
+          variant="contained" 
+          onClick={() => window.location.href = '/login'}
+          sx={{ borderRadius: 2 }}
+        >
+          Return to Login
+        </Button>
       </Box>
     );
   }
