@@ -13,32 +13,38 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import CloseIcon from "@mui/icons-material/Close";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
+import DeleteIcon from "@mui/icons-material/Delete";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { uploadTaskFile } from "@/lib/firebase/storage";
-import type { TaskReport } from "@/lib/data/types";
+import type { TaskReport, TaskFile } from "@/lib/data/types";
+import { Toast } from "@/components/ui/Toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export function TaskReportEditor({
   taskId,
-  report,
+  reports,
   editable,
+  currentUser,
   onSave,
 }: {
   taskId: string;
-  report: TaskReport;
+  reports: TaskReport[];
   editable: boolean;
-  onSave: (report: TaskReport) => void | Promise<void>;
+  currentUser?: { uid: string; name: string; isAdmin: boolean };
+  onSave: (reports: TaskReport[]) => void | Promise<void>;
 }) {
-  const [text, setText] = useState(report.text);
-  const [links, setLinks] = useState<string[]>(report.links);
-  const [files, setFiles] = useState(report.files);
+  const [text, setText] = useState("");
+  const [links, setLinks] = useState<string[]>([]);
+  const [files, setFiles] = useState<TaskFile[]>([]);
   const [newLink, setNewLink] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
 
-  const dirty =
-    text !== report.text ||
-    JSON.stringify(links) !== JSON.stringify(report.links) ||
-    JSON.stringify(files) !== JSON.stringify(report.files);
+  const dirty = text.trim() !== "" || links.length > 0 || files.length > 0;
 
   function addLink() {
     const l = newLink.trim();
@@ -67,45 +73,118 @@ export function TaskReportEditor({
   }
 
   async function save() {
-    await onSave({ text, links, files });
+    const newReport: TaskReport = {
+      id: Math.random().toString(36).substring(2, 11),
+      type: currentUser?.isAdmin ? "review" : "report",
+      text,
+      links,
+      files,
+      createdAt: new Date().toISOString(),
+      createdBy: currentUser?.uid ?? "unknown",
+      createdByName: currentUser?.name ?? "Unknown User",
+    };
+    await onSave([...reports, newReport]);
     setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
+    setText("");
+    setLinks([]);
+    setFiles([]);
   }
+
+  async function handleDeleteReport() {
+    if (!reportToDelete) return;
+    const filtered = reports.filter((r) => r.id !== reportToDelete);
+    await onSave(filtered);
+    setReportToDelete(null);
+  }
+
+  // Common render for a single report item
+  const renderReportItem = (r: TaskReport, index: number) => (
+    <Box key={r.id || index} sx={{ mb: 2, p: 1.5, bgcolor: "surface", borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1, alignItems: "center" }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: r.type === "review" ? "primary.main" : "text.primary" }}>
+          {r.createdByName || "Unknown"} {r.type === "review" ? "(Admin Review)" : "(Report)"}
+        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography variant="caption" color="text.secondary">
+            {r.createdAt ? new Date(r.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : ""}
+          </Typography>
+          {(currentUser?.isAdmin || r.createdBy === currentUser?.uid) && (
+            <IconButton size="small" onClick={() => setReportToDelete(r.id ?? null)} sx={{ color: "text.secondary", "&:hover": { color: "error.main" } }}>
+              <DeleteIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+          )}
+        </Box>
+      </Box>
+      {r.text && (
+        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mb: 1 }}>
+          {r.text}
+        </Typography>
+      )}
+      <LinkList links={r.links} />
+      <FileList files={r.files} />
+    </Box>
+  );
 
   // Read-only view for non-editors.
   if (!editable) {
-    const empty = !text && links.length === 0 && files.length === 0;
+    if (reports.length === 0) {
+      return (
+        <Box sx={{ fontSize: 14 }}>
+          <Typography variant="body2" color="text.secondary">
+            No updates submitted yet.
+          </Typography>
+        </Box>
+      );
+    }
     return (
       <Box sx={{ fontSize: 14 }}>
-        {empty ? (
-          <Typography variant="body2" color="text.secondary">
-            No report submitted yet.
-          </Typography>
-        ) : (
-          <>
-            {text && (
-              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                {text}
-              </Typography>
-            )}
-            <LinkList links={links} />
-            <FileList files={files} />
-          </>
-        )}
+        {reports.map(renderReportItem)}
       </Box>
     );
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-      <TextField
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        multiline
-        minRows={4}
-        placeholder="Write your report…"
-        fullWidth
-      />
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      {reports.length > 0 && (
+        <Box>
+          <Button 
+            onClick={() => setShowHistory(!showHistory)}
+            color={showHistory ? "primary" : "inherit"}
+            variant="text"
+            endIcon={showHistory ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+            sx={{ 
+              mb: showHistory ? 1.5 : 0, 
+              fontSize: 13,
+              fontWeight: 600,
+              borderRadius: 3,
+              py: 0.5,
+              px: 2,
+              bgcolor: showHistory ? "accentSoft" : "transparent",
+              "&:hover": { bgcolor: "accentSoft", color: "primary.main" }
+            }}
+          >
+            {reports.length} previous update{reports.length > 1 ? "s" : ""}
+          </Button>
+          {showHistory && (
+            <Box sx={{ mt: 1 }}>
+              {reports.map(renderReportItem)}
+            </Box>
+          )}
+        </Box>
+      )}
+      
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, p: 2, border: "1px dashed", borderColor: "divider", borderRadius: 2 }}>
+        <Typography variant="subtitle2">
+          {currentUser?.isAdmin ? "Add Admin Review" : "Add Task Report"}
+        </Typography>
+        <TextField
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          multiline
+          minRows={3}
+          placeholder={currentUser?.isAdmin ? "Write your review..." : "Write your report..."}
+          fullWidth
+        />
 
       {/* Links */}
       <Box>
@@ -171,14 +250,27 @@ export function TaskReportEditor({
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <Button onClick={save} disabled={!dirty || uploading} variant="contained">
-          Save report
+          {currentUser?.isAdmin ? "Submit Review" : "Submit Report"}
         </Button>
-        {saved && (
-          <Typography variant="caption" color="success.main">
-            Saved ✓
-          </Typography>
-        )}
       </Box>
+
+      <Toast
+        open={saved}
+        message={currentUser?.isAdmin ? "Review submitted successfully!" : "Report submitted successfully!"}
+        type="success"
+        onClose={() => setSaved(false)}
+      />
+
+      <ConfirmDialog
+        open={!!reportToDelete}
+        title="Delete Update"
+        message="Are you sure you want to delete this update? This action cannot be undone."
+        type="error"
+        confirmLabel="Delete"
+        onConfirm={handleDeleteReport}
+        onCancel={() => setReportToDelete(null)}
+      />
+    </Box>
     </Box>
   );
 }

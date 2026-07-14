@@ -121,13 +121,16 @@ export function AppSidebar() {
               href={item.href}
               selected={active}
               sx={{
-                borderRadius: 2,
-                mb: 0.25,
+                borderRadius: 10,
+                mb: 0.5,
+                py: 1,
+                px: 2,
                 color: "text.secondary",
                 "&.Mui-selected, &.Mui-selected:hover": {
-                  bgcolor: "accentSoft",
-                  color: "primary.main",
-                  fontWeight: 500,
+                  bgcolor: "primary.main",
+                  color: "primary.contrastText",
+                  fontWeight: 600,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                 },
               }}
             >

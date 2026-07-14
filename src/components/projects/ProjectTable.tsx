@@ -4,6 +4,7 @@
 // via pill selects (writes straight to Firestore). The title links to the
 // project detail page.
 
+import { useState } from "react";
 import Link from "next/link";
 import Avatar from "@mui/material/Avatar";
 import AvatarGroup from "@mui/material/AvatarGroup";
@@ -32,6 +33,7 @@ import {
   formatDueDate,
 } from "@/components/projectMeta";
 import { PillSelect } from "@/components/ui/PillSelect";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export function ProjectTable({
   projects,
@@ -40,127 +42,142 @@ export function ProjectTable({
   projects: Project[];
   developers: Record<string, Developer>;
 }) {
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+
   return (
-    <Table>
-      <TableHead>
-        <TableRow>
-          <TableCell sx={{ pl: 4 }}>Title</TableCell>
-          <TableCell>Status</TableCell>
-          <TableCell>Priority</TableCell>
-          <TableCell>Developers</TableCell>
-          <TableCell>Due</TableCell>
-          <TableCell />
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {projects.map((p) => {
-          const devs = p.developerIds
-            .map((did) => developers[did])
-            .filter(Boolean);
-          return (
-            <TableRow
-              key={p.id}
-              hover
-              sx={{
-                "& .row-actions": { opacity: 0 },
-                "&:hover .row-actions": { opacity: 1 },
-              }}
-            >
-              <TableCell sx={{ pl: 4 }}>
-                <MuiLink
-                  component={Link}
-                  href={`/projects/${p.id}`}
-                  color="inherit"
-                  underline="hover"
-                  sx={{ fontWeight: 500 }}
-                >
-                  {p.title}
-                </MuiLink>
-              </TableCell>
+    <Box>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ pl: 4 }}>Title</TableCell>
+            <TableCell>Status</TableCell>
+            <TableCell>Priority</TableCell>
+            <TableCell>Developers</TableCell>
+            <TableCell>Due</TableCell>
+            <TableCell />
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {projects.map((p) => {
+            const devs = p.developerIds
+              .map((did) => developers[did])
+              .filter(Boolean);
+            return (
+              <TableRow
+                key={p.id}
+                hover
+                sx={{
+                  "& .row-actions": { opacity: 0 },
+                  "&:hover .row-actions": { opacity: 1 },
+                }}
+              >
+                <TableCell sx={{ pl: 4 }}>
+                  <MuiLink
+                    component={Link}
+                    href={`/projects/${p.id}`}
+                    color="inherit"
+                    underline="hover"
+                    sx={{ fontWeight: 500 }}
+                  >
+                    {p.title}
+                  </MuiLink>
+                </TableCell>
 
-              <TableCell>
-                <PillSelect
-                  value={p.status}
-                  options={PROJECT_STATUSES}
-                  color={STATUS_META[p.status].color}
-                  onChange={(status: ProjectStatus) =>
-                    updateProject(p.id, { status })
-                  }
-                />
-              </TableCell>
+                <TableCell>
+                  <PillSelect
+                    value={p.status}
+                    options={PROJECT_STATUSES}
+                    color={STATUS_META[p.status].color}
+                    onChange={(status: ProjectStatus) =>
+                      updateProject(p.id, { status })
+                    }
+                  />
+                </TableCell>
 
-              <TableCell>
-                <PillSelect
-                  value={p.priority}
-                  options={PROJECT_PRIORITIES}
-                  color={PRIORITY_META[p.priority].color}
-                  onChange={(priority: ProjectPriority) =>
-                    updateProject(p.id, { priority })
-                  }
-                />
-              </TableCell>
+                <TableCell>
+                  <PillSelect
+                    value={p.priority}
+                    options={PROJECT_PRIORITIES}
+                    color={PRIORITY_META[p.priority].color}
+                    onChange={(priority: ProjectPriority) =>
+                      updateProject(p.id, { priority })
+                    }
+                  />
+                </TableCell>
 
-              <TableCell>
-                {devs.length > 0 ? (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <AvatarGroup
-                      max={3}
-                      sx={{
-                        "& .MuiAvatar-root": {
-                          width: 24,
-                          height: 24,
-                          fontSize: 10,
-                          fontWeight: 600,
-                          bgcolor: "accentSoft",
-                          color: "primary.main",
-                        },
-                      }}
-                    >
-                      {devs.map((d) => (
-                        <Tooltip key={d.id} title={d.name}>
-                          <Avatar>{d.name.charAt(0).toUpperCase()}</Avatar>
-                        </Tooltip>
-                      ))}
-                    </AvatarGroup>
-                    <Typography variant="caption" color="text.secondary" noWrap>
-                      {devs[0].name}
-                      {devs.length > 1 ? ` +${devs.length - 1}` : ""}
+                <TableCell>
+                  {devs.length > 0 ? (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <AvatarGroup
+                        max={3}
+                        sx={{
+                          "& .MuiAvatar-root": {
+                            width: 24,
+                            height: 24,
+                            fontSize: 10,
+                            fontWeight: 600,
+                            bgcolor: "accentSoft",
+                            color: "primary.main",
+                          },
+                        }}
+                      >
+                        {devs.map((d) => (
+                          <Tooltip key={d.id} title={d.name}>
+                            <Avatar>{d.name.charAt(0).toUpperCase()}</Avatar>
+                          </Tooltip>
+                        ))}
+                      </AvatarGroup>
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {devs[0].name}
+                        {devs.length > 1 ? ` +${devs.length - 1}` : ""}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.disabled">
+                      —
                     </Typography>
-                  </Box>
-                ) : (
-                  <Typography variant="body2" color="text.disabled">
-                    —
-                  </Typography>
-                )}
-              </TableCell>
+                  )}
+                </TableCell>
 
-              <TableCell sx={{ color: "text.secondary" }}>
-                {formatDueDate(p.dueDate)}
-              </TableCell>
+                <TableCell sx={{ color: "text.secondary" }}>
+                  {formatDueDate(p.dueDate)}
+                </TableCell>
 
-              <TableCell align="right">
-                <Button
-                  className="row-actions"
-                  size="small"
-                  color="inherit"
-                  onClick={() => {
-                    if (confirm(`Delete "${p.title}"?`)) deleteProject(p.id);
-                  }}
-                  sx={{
-                    fontSize: 12,
-                    fontWeight: 400,
-                    color: "text.secondary",
-                    transition: "opacity 0.15s",
-                    "&:hover": { color: "error.main" },
-                  }}
-                >
-                  Delete
-                </Button>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                <TableCell align="right">
+                  <Button
+                    className="row-actions"
+                    size="small"
+                    color="inherit"
+                    onClick={() => setProjectToDelete(p)}
+                    sx={{
+                      fontSize: 12,
+                      fontWeight: 400,
+                      color: "text.secondary",
+                      transition: "opacity 0.15s",
+                      "&:hover": { color: "error.main" },
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+
+      <ConfirmDialog
+        open={!!projectToDelete}
+        title="Delete Project"
+        message={`Are you sure you want to delete "${projectToDelete?.title}"?`}
+        type="error"
+        confirmLabel="Delete Project"
+        onConfirm={() => {
+          if (projectToDelete) deleteProject(projectToDelete.id);
+          setProjectToDelete(null);
+        }}
+        onCancel={() => setProjectToDelete(null)}
+      />
+    </Box>
   );
 }

@@ -121,6 +121,7 @@ export interface Developer {
   status: EmployeeStatus;
   accessLevel: AccessLevel; // "admin" can manage; "employee" gets a restricted view
   uid: string | null; // bound on first matching sign-in
+  monthlySalary?: number; // base monthly salary
   createdAt: Timestamp | null;
 }
 
@@ -164,9 +165,14 @@ export interface TaskFile {
 }
 
 export interface TaskReport {
+  id?: string;
+  type?: "report" | "review"; // user submits report, admin submits review
   text: string;
   links: string[];
   files: TaskFile[];
+  createdAt?: string; // ISO yyyy-mm-ddThh:mm:ss
+  createdBy?: string; // UID of user who submitted
+  createdByName?: string; // Name of user
 }
 
 export interface DailyTask {
@@ -179,7 +185,12 @@ export interface DailyTask {
   assigneeName: string; // denormalized
   date: string; // ISO yyyy-mm-dd (the day it's due/for)
   status: DailyTaskStatus;
-  report: TaskReport;
+  report: TaskReport; // legacy fallback
+  reports?: TaskReport[]; // ordered history of reports/reviews
+  assignedHours?: number; // specific number of hours assigned
+  isOvertime?: boolean; // toggle to mark as overtime
+  overtimeCost?: number; // computed overtime cost
+  attachments?: TaskFile[]; // admin attached docs
   createdBy: string; // uid of the admin who assigned it
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
@@ -351,20 +362,4 @@ export interface AttendanceRecord {
 // Attendance helpers
 // ---------------------------------------------------------------------------
 
-/** Count working days in a month (Mon–Fri only). */
-export function workingDaysInMonth(year: number, month: number): number {
-  let count = 0;
-  const d = new Date(year, month - 1, 1);
-  while (d.getMonth() === month - 1) {
-    const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) count++;
-    d.setDate(d.getDate() + 1);
-  }
-  return count;
-}
-
-/** Calculate daily salary from monthly salary and working days. */
-export function dailySalary(monthlySalary: number, year: number, month: number): number {
-  const days = workingDaysInMonth(year, month);
-  return days > 0 ? monthlySalary / days : 0;
-}
+// ---------------------------------------------------------------------------

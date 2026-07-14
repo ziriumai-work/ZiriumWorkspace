@@ -3,7 +3,6 @@
 // Access is gated by firestore.rules; admin-only actions are gated in the UI.
 
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -11,12 +10,13 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   Timestamp,
   updateDoc,
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import type { DailyTask, TaskReport } from "@/lib/data/types";
+import type { DailyTask, TaskReport, TaskFile } from "@/lib/data/types";
 
 const COLLECTION = "tasks";
 
@@ -24,6 +24,21 @@ const EMPTY_REPORT: TaskReport = { text: "", links: [], files: [] };
 
 function toTask(id: string, data: Record<string, unknown>): DailyTask {
   const report = (data.report as Partial<TaskReport>) ?? {};
+  const legacyReport: TaskReport = {
+    text: report.text ?? "",
+    links: report.links ?? [],
+    files: report.files ?? [],
+    type: report.type ?? "report",
+    createdAt: report.createdAt ?? "",
+    createdBy: report.createdBy ?? "",
+    createdByName: report.createdByName ?? "",
+  };
+  
+  let reports = (data.reports as TaskReport[]) ?? [];
+  if (reports.length === 0 && (legacyReport.text || legacyReport.links.length > 0 || legacyReport.files.length > 0)) {
+    reports = [legacyReport];
+  }
+
   return {
     id,
     title: (data.title as string) ?? "",
@@ -34,11 +49,12 @@ function toTask(id: string, data: Record<string, unknown>): DailyTask {
     assigneeName: (data.assigneeName as string) ?? "",
     date: (data.date as string) ?? "",
     status: (data.status as DailyTask["status"]) ?? "todo",
-    report: {
-      text: report.text ?? "",
-      links: report.links ?? [],
-      files: report.files ?? [],
-    },
+    report: legacyReport,
+    reports,
+    assignedHours: (data.assignedHours as number) ?? 0,
+    isOvertime: (data.isOvertime as boolean) ?? false,
+    overtimeCost: (data.overtimeCost as number) ?? 0,
+    attachments: (data.attachments as TaskFile[]) ?? [],
     createdBy: (data.createdBy as string) ?? "",
     createdAt: (data.createdAt as Timestamp | null) ?? null,
     updatedAt: (data.updatedAt as Timestamp | null) ?? null,
@@ -81,6 +97,7 @@ export function subscribeToTasksForEmployee(
 }
 
 export type NewTask = {
+  taskId?: string; // If pre-generated for file uploads
   title: string;
   description?: string;
   projectId?: string | null;
@@ -88,13 +105,19 @@ export type NewTask = {
   assigneeId: string;
   assigneeName: string;
   date: string;
+  assignedHours?: number;
+  isOvertime?: boolean;
+  overtimeCost?: number;
+  attachments?: TaskFile[];
 };
 
 export async function createTask(
   input: NewTask,
   createdByUid: string,
 ): Promise<string> {
-  const ref = await addDoc(collection(db, COLLECTION), {
+  const id = input.taskId ?? doc(collection(db, COLLECTION)).id;
+  const ref = doc(db, COLLECTION, id);
+  await setDoc(ref, {
     title: input.title.trim(),
     description: input.description?.trim() ?? "",
     projectId: input.projectId ?? null,
@@ -104,17 +127,22 @@ export async function createTask(
     date: input.date,
     status: "todo",
     report: EMPTY_REPORT,
+    reports: [],
+    assignedHours: input.assignedHours ?? 0,
+    isOvertime: input.isOvertime ?? false,
+    overtimeCost: input.overtimeCost ?? 0,
+    attachments: input.attachments ?? [],
     createdBy: createdByUid,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  return ref.id;
+  return id;
 }
 
 export async function updateTask(
   id: string,
   patch: Partial<
-    Pick<DailyTask, "title" | "description" | "status" | "report" | "date">
+    Pick<DailyTask, "title" | "description" | "status" | "report" | "reports" | "date">
   >,
 ): Promise<void> {
   await updateDoc(doc(db, COLLECTION, id), {

@@ -30,6 +30,7 @@ import { useAi } from "@/components/ai/AiProvider";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { NotionTable } from "@/components/projects/NotionTable";
 import { ProjectDevelopers } from "@/components/projects/ProjectDevelopers";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Developer } from "@/lib/data/types";
 import {
   PROJECT_PRIORITIES,
@@ -57,6 +58,7 @@ export default function ProjectDetailPage({
   // write to Firestore on every keystroke — we save on blur.
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeToProject(
@@ -403,16 +405,27 @@ export default function ProjectDetailPage({
       <Box sx={{ pt: 2 }}>
         <Button
           color="error"
-          onClick={() => {
-            if (confirm(`Delete "${project.title}"? This cannot be undone.`)) {
-              deleteProject(id).then(() => router.replace("/projects"));
-            }
-          }}
+          onClick={() => setDeleteDialogOpen(true)}
           sx={{ fontWeight: 400 }}
         >
           Delete project
         </Button>
       </Box>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title="Delete Project"
+        message={`Delete "${project.title}"? This cannot be undone.`}
+        type="error"
+        confirmLabel="Delete Project"
+        onConfirm={() => {
+          deleteProject(id).then(() => {
+            setDeleteDialogOpen(false);
+            router.replace("/projects");
+          });
+        }}
+        onCancel={() => setDeleteDialogOpen(false)}
+      />
     </Box>
   );
 }

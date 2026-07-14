@@ -19,6 +19,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   subscribeToDevelopers,
   addDeveloper,
@@ -38,6 +39,7 @@ import {
   type Employee,
   type EmployeeStatus,
   type AccessLevel,
+  type Developer,
 } from "@/lib/data/types";
 
 const EMPTY: NewEmployee = {
@@ -58,6 +60,7 @@ export default function EmployeesPage() {
   const [form, setForm] = useState<NewEmployee>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [developerToDelete, setDeveloperToDelete] = useState<Developer | null>(null);
 
   useEffect(() => {
     const unsub = subscribeToDevelopers(
@@ -385,9 +388,7 @@ export default function EmployeesPage() {
                       className="row-actions"
                       size="small"
                       color="inherit"
-                      onClick={() => {
-                        if (confirm(`Remove ${e.name}?`)) deleteDeveloper(e.id);
-                      }}
+                      onClick={() => setDeveloperToDelete(e)}
                       sx={{
                         fontSize: 12,
                         fontWeight: 400,
@@ -405,6 +406,18 @@ export default function EmployeesPage() {
           </TableBody>
         </Table>
       </Paper>
+      <ConfirmDialog
+        open={!!developerToDelete}
+        title="Remove Employee"
+        message={`Are you sure you want to remove ${developerToDelete?.name}?`}
+        type="error"
+        confirmLabel="Remove"
+        onConfirm={() => {
+          if (developerToDelete) deleteDeveloper(developerToDelete.id);
+          setDeveloperToDelete(null);
+        }}
+        onCancel={() => setDeveloperToDelete(null)}
+      />
     </Box>
   );
 }

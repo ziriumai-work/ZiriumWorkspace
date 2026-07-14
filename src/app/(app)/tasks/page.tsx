@@ -5,33 +5,50 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
-import Collapse from "@mui/material/Collapse";
-import Divider from "@mui/material/Divider";
-import Grid from "@mui/material/Grid";
-import IconButton from "@mui/material/IconButton";
-import MenuItem from "@mui/material/MenuItem";
+import {
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
+  IconButton,
+  MenuItem,
+  Paper,
+  Select,
+  TextField,
+  Typography,
+  Switch,
+  FormControlLabel,
+  Collapse,
+  Divider,
+} from "@mui/material";
 import MuiLink from "@mui/material/Link";
-import Paper from "@mui/material/Paper";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import CloseIcon from "@mui/icons-material/Close";
+import AttachFileIcon from "@mui/icons-material/AttachFile";
 import { useAuth } from "@/lib/firebase/auth-context";
 import {
+  createTask,
+  deleteTask,
   subscribeToAllTasks,
   subscribeToTasksForEmployee,
-  createTask,
   updateTask,
-  deleteTask,
+  type NewTask,
 } from "@/lib/data/tasks";
+import { uploadTaskFile } from "@/lib/firebase/storage";
+import { doc, collection } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
+import { overtimeCost } from "@/lib/utils/salaryMath";
 import { subscribeToDevelopers } from "@/lib/data/developers";
 import { subscribeToProjects } from "@/lib/data/projects";
 import { TaskReportEditor } from "@/components/tasks/TaskReportEditor";
 import { TASK_STATUS_COLORS } from "@/components/projectMeta";
 import { PillSelect } from "@/components/ui/PillSelect";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   DAILY_TASK_STATUSES,
   type DailyTask,
@@ -162,6 +179,11 @@ export default function TasksPage() {
                       showAssignee={isAdmin}
                       canEdit={isAdmin || employee?.id === t.assigneeId}
                       canDelete={isAdmin}
+                      currentUser={{
+                        uid: user?.uid ?? "",
+                        name: employee?.name ?? user?.displayName ?? "User",
+                        isAdmin,
+                      }}
                     />
                   ))}
                 </Box>
@@ -181,23 +203,23 @@ function AssignTaskForm({
 }: {
   employees: Employee[];
   projects: Project[];
-  onAssign: (input: {
-    title: string;
-    description: string;
-    assigneeId: string;
-    assigneeName: string;
-    projectId: string | null;
-    projectTitle: string | null;
-    date: string;
-  }) => Promise<unknown>;
+  onAssign: (input: NewTask) => Promise<unknown>;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [date, setDate] = useState(today());
+  const [assignedHours, setAssignedHours] = useState<number>(0);
+  const [isOvertime, setIsOvertime] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const selectedEmp = employees.find((e) => e.id === assigneeId);
+  const calculatedCost = isOvertime && assignedHours > 0 
+    ? overtimeCost(selectedEmp?.monthlySalary, assignedHours, date) 
+    : 0;
 
   async function assign() {
     if (!title.trim() || !assigneeId) {
@@ -207,19 +229,35 @@ function AssignTaskForm({
     setSaving(true);
     setError(null);
     try {
-      const emp = employees.find((e) => e.id === assigneeId);
       const proj = projects.find((p) => p.id === projectId);
+      
+      const newId = doc(collection(db, "tasks")).id;
+      const uploadedFiles = [];
+      if (files.length > 0) {
+        for (const file of files) {
+          uploadedFiles.push(await uploadTaskFile(newId, file));
+        }
+      }
+      
       await onAssign({
+        taskId: newId,
         title,
         description,
         assigneeId,
-        assigneeName: emp?.name ?? "",
+        assigneeName: selectedEmp?.name ?? "",
         projectId: proj?.id ?? null,
         projectTitle: proj?.title ?? null,
         date,
+        assignedHours,
+        isOvertime,
+        overtimeCost: calculatedCost,
+        attachments: uploadedFiles,
       });
       setTitle("");
       setDescription("");
+      setAssignedHours(0);
+      setIsOvertime(false);
+      setFiles([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to assign task");
     } finally {
@@ -275,7 +313,7 @@ function AssignTaskForm({
             fullWidth
             slotProps={{ select: { displayEmpty: true } }}
           >
-            <MenuItem value="">No project</MenuItem>
+            <MenuItem value="">One-time task (No project)</MenuItem>
             {projects.map((p) => (
               <MenuItem key={p.id} value={p.id}>
                 {p.title}
@@ -283,21 +321,95 @@ function AssignTaskForm({
             ))}
           </TextField>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             fullWidth
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                transition: "all 0.2s ease-in-out",
+                "&:hover": {
+                  boxShadow: "0 0 12px var(--mui-palette-primary-main)",
+                  borderColor: "var(--mui-palette-primary-main)",
+                },
+                "&.Mui-focused": {
+                  boxShadow: "0 0 16px var(--mui-palette-primary-main)",
+                }
+              }
+            }}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            label="Assigned Hours"
+            type="number"
+            value={assignedHours || ""}
+            onChange={(e) => setAssignedHours(parseFloat(e.target.value) || 0)}
+            fullWidth
+            slotProps={{ htmlInput: { min: 0, step: 0.5 } }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }} sx={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <FormControlLabel
+            control={<Switch checked={isOvertime} onChange={(e) => setIsOvertime(e.target.checked)} color="primary" />}
+            label="Mark as Overtime"
+          />
+          {isOvertime && (
+            <Typography variant="caption" color="text.secondary">
+              Est. Cost: ${calculatedCost.toFixed(2)}
+            </Typography>
+          )}
+        </Grid>
+        <Grid size={12} sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Button variant="outlined" component="label" sx={{ borderRadius: 2 }}>
+              Attach Files
+              <input 
+                type="file" 
+                multiple 
+                hidden 
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                  }
+                  e.target.value = ''; // reset to allow picking same file again
+                }} 
+              />
+            </Button>
+          </Box>
+          {files.length > 0 && (
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 0.5 }}>
+              {files.map((file, idx) => {
+                const parts = file.name.split('.');
+                const ext = parts.pop() || '';
+                const base = parts.join('.');
+                const shortName = base.split(/[\s-_]+/).slice(0, 3).join(' ') || base.substring(0, 15);
+                return (
+                  <Chip 
+                    key={idx}
+                    label={`${shortName}.${ext}`}
+                    onDelete={() => setFiles(prev => prev.filter((_, i) => i !== idx))}
+                    size="small"
+                    sx={{ bgcolor: "surface", border: "1px solid", borderColor: "divider" }}
+                  />
+                );
+              })}
+            </Box>
+          )}
+        </Grid>
+        {error && (
+          <Grid size={12}>
+            <Typography color="error" variant="body2">{error}</Typography>
+          </Grid>
+        )}
+        <Grid size={12} sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
           <Button
             onClick={assign}
             disabled={saving}
             variant="contained"
-            fullWidth
-            sx={{ height: "100%" }}
+            sx={{ px: 4, py: 1, borderRadius: 2 }}
           >
             {saving ? "Assigning…" : "Assign task"}
           </Button>
@@ -317,15 +429,18 @@ function TaskCard({
   showAssignee,
   canEdit,
   canDelete,
+  currentUser,
 }: {
   task: DailyTask;
   showAssignee: boolean;
   canEdit: boolean;
   canDelete: boolean;
+  currentUser: { uid: string; name: string; isAdmin: boolean };
 }) {
   const [open, setOpen] = useState(false);
-  const hasReport =
-    task.report.text || task.report.links.length || task.report.files.length;
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const reportsCount = task.reports ? task.reports.length : (task.report.text || task.report.links.length || task.report.files.length ? 1 : 0);
+  const hasReport = reportsCount > 0;
 
   return (
     <Paper variant="outlined" sx={{ borderRadius: 3 }}>
@@ -366,6 +481,25 @@ function TaskCard({
                 sx={{ bgcolor: "surface", fontSize: 11, height: 20 }}
               />
             )}
+            {!!task.assignedHours && task.assignedHours > 0 && (
+              <Chip
+                label={`${task.assignedHours}h assigned`}
+                sx={{ bgcolor: "surface", fontSize: 11, height: 20 }}
+              />
+            )}
+            {task.isOvertime && (
+              <Chip
+                label={`Overtime ($${task.overtimeCost?.toFixed(2) ?? "0.00"})`}
+                sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 500, fontSize: 11, height: 20 }}
+              />
+            )}
+            {task.attachments && task.attachments.length > 0 && (
+              <Chip
+                label={`${task.attachments.length} doc(s)`}
+                sx={{ bgcolor: "surface", fontSize: 11, height: 20, cursor: "pointer" }}
+                onClick={() => setOpen(true)}
+              />
+            )}
             <MuiLink
               component="button"
               variant="caption"
@@ -373,7 +507,7 @@ function TaskCard({
               underline="hover"
               onClick={() => setOpen((v) => !v)}
             >
-              {open ? "Hide report" : hasReport ? "View report" : "Add report"}
+              {open ? "Hide updates" : hasReport ? `View ${reportsCount} update${reportsCount > 1 ? "s" : ""}` : "Add update"}
             </MuiLink>
           </Box>
         </Box>
@@ -389,9 +523,7 @@ function TaskCard({
         {canDelete && (
           <IconButton
             size="small"
-            onClick={() => {
-              if (confirm(`Delete task "${task.title}"?`)) deleteTask(task.id);
-            }}
+            onClick={() => setDeleteDialogOpen(true)}
             title="Delete task"
             sx={{ color: "text.secondary", "&:hover": { color: "error.main" } }}
           >
@@ -402,15 +534,63 @@ function TaskCard({
 
       <Collapse in={open}>
         <Divider />
+        {task.attachments && task.attachments.length > 0 && (
+          <Box sx={{ px: 2, pt: 1.5 }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, display: "block", mb: 1, color: "text.secondary" }}>
+              Assigned Documents:
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+              {task.attachments.map((f, i) => (
+                <MuiLink
+                  key={i}
+                  href={f.url}
+                  target="_blank"
+                  rel="noopener"
+                  variant="body2"
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    bgcolor: "surface",
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 1,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    "&:hover": { bgcolor: "action.hover" },
+                    textDecoration: "none"
+                  }}
+                >
+                  <AttachFileIcon sx={{ fontSize: 16 }} />
+                  {f.name}
+                </MuiLink>
+              ))}
+            </Box>
+          </Box>
+        )}
         <Box sx={{ px: 2, py: 1.5 }}>
           <TaskReportEditor
             taskId={task.id}
-            report={task.report}
+            reports={task.reports ?? (task.report.text || task.report.links.length || task.report.files.length ? [task.report] : [])}
             editable={canEdit}
-            onSave={(report: TaskReport) => updateTask(task.id, { report })}
+            currentUser={currentUser}
+            onSave={(reports: TaskReport[]) => updateTask(task.id, { reports })}
           />
         </Box>
       </Collapse>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title="Delete Task"
+        message={`Are you sure you want to delete "${task.title}"?`}
+        type="error"
+        confirmLabel="Delete Task"
+        onConfirm={() => {
+          deleteTask(task.id);
+          setDeleteDialogOpen(false);
+        }}
+        onCancel={() => setDeleteDialogOpen(false)}
+      />
     </Paper>
   );
 }
