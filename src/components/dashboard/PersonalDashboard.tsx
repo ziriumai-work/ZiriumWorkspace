@@ -343,7 +343,7 @@ export function PersonalDashboard() {
                   }}
                 >
                   <Typography variant="body2" color="text.secondary">
-                    You haven’t been assigned to a project yet.
+                    Not assigned to any project
                   </Typography>
                 </Paper>
               ) : (
@@ -369,9 +369,9 @@ export function PersonalDashboard() {
                         <Typography variant="body2" noWrap sx={{ flex: 1, fontWeight: 500 }}>
                           {p.title}
                         </Typography>
-                        {p.developerIds[0] === employee.id && (
+                        {p.projectRoles?.[employee.id] && (
                           <Chip
-                            label="Lead"
+                            label={p.projectRoles[employee.id]}
                             sx={{
                               bgcolor: "accentSoft",
                               color: "primary.main",

@@ -39,6 +39,7 @@ import {
   type ProjectPriority,
   type ProjectStatus,
 } from "@/lib/data/types";
+import { STATUS_META, PRIORITY_META, chipSx } from "@/components/projectMeta";
 
 export default function ProjectDetailPage({
   params,
@@ -223,7 +224,7 @@ export default function ProjectDetailPage({
           mt: 3,
           display: "grid",
           gridTemplateColumns: "120px 1fr",
-          alignItems: "start",
+          alignItems: "center",
           rowGap: 1.5,
           m: 0,
           mb: 0,
@@ -231,39 +232,57 @@ export default function ProjectDetailPage({
         }}
       >
         <PropRow label="Status">
-          <Select
-            value={project.status}
-            disabled={!isAdmin}
-            onChange={(e) =>
-              updateProject(id, { status: e.target.value as ProjectStatus })
-            }
-            sx={{ fontSize: 14, minWidth: 150 }}
-          >
-            {PROJECT_STATUSES.map((s) => (
-              <MenuItem key={s.value} value={s.value}>
-                {s.label}
-              </MenuItem>
-            ))}
-          </Select>
+          {!isAdmin ? (
+            <Chip
+              label={STATUS_META[project.status]?.label || project.status}
+              sx={[
+                chipSx(STATUS_META[project.status]?.color || "#888"),
+                { height: 28, px: 0.5, fontSize: 13, fontWeight: 500 }
+              ]}
+            />
+          ) : (
+            <Select
+              value={project.status}
+              onChange={(e) =>
+                updateProject(id, { status: e.target.value as ProjectStatus })
+              }
+              sx={{ fontSize: 14, minWidth: 150 }}
+            >
+              {PROJECT_STATUSES.map((s) => (
+                <MenuItem key={s.value} value={s.value}>
+                  {s.label}
+                </MenuItem>
+              ))}
+            </Select>
+          )}
         </PropRow>
 
         <PropRow label="Priority">
-          <Select
-            value={project.priority}
-            disabled={!isAdmin}
-            onChange={(e) =>
-              updateProject(id, {
-                priority: e.target.value as ProjectPriority,
-              })
-            }
-            sx={{ fontSize: 14, minWidth: 150 }}
-          >
-            {PROJECT_PRIORITIES.map((s) => (
-              <MenuItem key={s.value} value={s.value}>
-                {s.label}
-              </MenuItem>
-            ))}
-          </Select>
+          {!isAdmin ? (
+            <Chip
+              label={PRIORITY_META[project.priority]?.label || project.priority}
+              sx={[
+                chipSx(PRIORITY_META[project.priority]?.color || "#888"),
+                { height: 28, px: 0.5, fontSize: 13, fontWeight: 500 }
+              ]}
+            />
+          ) : (
+            <Select
+              value={project.priority}
+              onChange={(e) =>
+                updateProject(id, {
+                  priority: e.target.value as ProjectPriority,
+                })
+              }
+              sx={{ fontSize: 14, minWidth: 150 }}
+            >
+              {PROJECT_PRIORITIES.map((s) => (
+                <MenuItem key={s.value} value={s.value}>
+                  {s.label}
+                </MenuItem>
+              ))}
+            </Select>
+          )}
         </PropRow>
 
         <PropRow label="Assigned to">
@@ -272,23 +291,35 @@ export default function ProjectDetailPage({
             roster={developers}
             editable={isAdmin}
             onChange={(ids) => updateProject(id, { developerIds: ids })}
+            projectRoles={project.projectRoles}
+            onRoleChange={(devId, role) =>
+              updateProject(id, {
+                projectRoles: { ...project.projectRoles, [devId]: role },
+              })
+            }
           />
         </PropRow>
 
         <PropRow label="Due date">
-          <TextField
-            type="date"
-            value={dueValue}
-            disabled={!isAdmin}
-            onChange={(e) =>
-              updateProject(id, {
-                dueDate: e.target.value
-                  ? Timestamp.fromDate(new Date(e.target.value))
-                  : null,
-              })
-            }
-            sx={{ maxWidth: 180 }}
-          />
+          {!isAdmin ? (
+            <Chip
+              label={dueValue || "Not set"}
+              sx={{ height: 28, px: 0.5, bgcolor: "surface", fontSize: 13, fontWeight: 500 }}
+            />
+          ) : (
+            <TextField
+              type="date"
+              value={dueValue}
+              onChange={(e) =>
+                updateProject(id, {
+                  dueDate: e.target.value
+                    ? Timestamp.fromDate(new Date(e.target.value))
+                    : null,
+                })
+              }
+              sx={{ maxWidth: 180 }}
+            />
+          )}
         </PropRow>
       </Box>
 

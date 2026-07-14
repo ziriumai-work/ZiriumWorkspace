@@ -36,6 +36,7 @@ function toProject(id: string, data: Record<string, unknown>): Project {
     dueDate: (data.dueDate as Timestamp | null) ?? null,
     order: (data.order as number) ?? 0,
     developerIds: (data.developerIds as string[]) ?? [],
+    projectRoles: (data.projectRoles as Record<string, string>) ?? {},
     columns: (data.columns as DbColumn[]) ?? [],
     rows: (data.rows as DbRow[]) ?? [],
     tasks: (data.tasks as TaskItem[]) ?? [],
@@ -93,6 +94,7 @@ export async function createProject(
     dueDate: input.dueDate ?? null,
     order: Date.now(), // simple monotonically-increasing default sort key
     developerIds: [],
+    projectRoles: {},
     columns: init?.columns ?? defaultColumns(),
     rows: init?.rows ?? [],
     createdBy: createdByUid,

@@ -70,8 +70,9 @@ export interface Project {
   order: number; // manual sort within a status column (board view)
   // Developers assigned to the WHOLE project (references developers/{id}). Start
   // with one; add or remove people as the team changes (e.g. someone leaves).
-  // By convention developerIds[0] is the lead.
   developerIds: string[];
+  // Custom roles per developer for this specific project (e.g. { devId: "Project Lead" })
+  projectRoles?: Record<string, string>;
   // Notion-style database: customizable columns + rows (see below).
   columns: DbColumn[];
   rows: DbRow[];
