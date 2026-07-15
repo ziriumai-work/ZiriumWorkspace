@@ -58,12 +58,15 @@ export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
       const ratio = Math.min(maxW / logoW, maxH / logoH);
       const w = logoW * ratio;
       const h = logoH * ratio;
-      doc.addImage(logoDataUrl, "PNG", x, y - h / 2, w, h);
+      // y is treated as top edge
+      doc.addImage(logoDataUrl, "PNG", x, y, w, h);
+      return h;
     } else {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(22);
       doc.setTextColor(TEXT_MAIN);
-      doc.text("ZIRIUM AI", x, y);
+      doc.text("ZIRIUM AI", x, y + 16);
+      return 22;
     }
   };
 
@@ -74,24 +77,24 @@ export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
   doc.rect(0, 0, pageWidth, 16, "F");
 
   // Top Section: Logo & INVOICE title
-  let y = 60;
-  renderLogo(margin, y - 8, 110, 36);
+  let y = 48;
+  const logoH1 = renderLogo(margin, y, 180, 56);
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(26);
-  doc.setTextColor(CYAN);
-  doc.text("INVOICE", pageWidth - margin, y, { align: "right" });
+  doc.setFontSize(28);
+  doc.setTextColor(TEXT_MAIN);
+  doc.text("INVOICE", pageWidth - margin, y + 24, { align: "right" });
 
-  y += 24;
+  y = y + Math.max(logoH1, 24) + 16;
 
   const created = invoice.createdAt?.toDate() ?? new Date();
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(TEXT_MUTED);
   doc.text(`Invoice No: ${invoice.number}`, pageWidth - margin, y, { align: "right" });
-  y += 14;
+  y += 16;
   doc.text(
-    `Date: ${created.toLocaleDateString(undefined, {
+    `Invoice Date: ${created.toLocaleDateString(undefined, {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -101,38 +104,38 @@ export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
     { align: "right" }
   );
 
-  y += 20;
+  y += 24;
   // Cyan rule
   doc.setDrawColor(CYAN);
   doc.setLineWidth(1.5);
   doc.line(margin, y, pageWidth - margin, y);
-  y += 24;
+  y += 30;
 
   // Bill To & From
   const splitY = y;
   
   // Bill To (Left)
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(CYAN);
   doc.text("Bill To:", margin, y);
-  y += 14;
+  y += 18;
   
   doc.setFont("helvetica", "bold");
   doc.setTextColor(TEXT_MAIN);
   doc.text(invoice.clientName || "—", margin, y);
-  y += 14;
+  y += 16;
   
   doc.setFont("helvetica", "normal");
   doc.setTextColor(TEXT_MUTED);
   if (invoice.clientCompany) {
     doc.text(invoice.clientCompany, margin, y);
-    y += 14;
+    y += 16;
   }
   if (invoice.clientAddress) {
     const lines = doc.splitTextToSize(invoice.clientAddress, (pageWidth / 2) - margin - 20);
     doc.text(lines, margin, y);
-    y += lines.length * 14;
+    y += lines.length * 16;
   }
 
   // From (Right)
@@ -142,24 +145,24 @@ export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
   doc.setFont("helvetica", "bold");
   doc.setTextColor(CYAN);
   doc.text("From:", rightX, rightY);
-  rightY += 14;
+  rightY += 18;
 
   doc.setFont("helvetica", "bold");
   doc.setTextColor(TEXT_MAIN);
   doc.text("ZIRIUM AI SMC PVT LTD", rightX, rightY);
-  rightY += 14;
+  rightY += 16;
 
   doc.setFont("helvetica", "normal");
   doc.setTextColor(TEXT_MUTED);
   doc.text("Office E-29, 3rd Floor, GS Towers,", rightX, rightY);
-  rightY += 14;
+  rightY += 16;
   doc.text("Ring Road, Adjacent Hayatabad Toll Plaza,", rightX, rightY);
-  rightY += 14;
+  rightY += 16;
   doc.text("Peshawar, Pakistan — 25000", rightX, rightY);
-  rightY += 14;
+  rightY += 16;
   doc.text("NTN: I979681-4", rightX, rightY);
   
-  y = Math.max(y, rightY) + 24;
+  y = Math.max(y, rightY) + 36;
 
   // Items Table
   const total = invoiceTotal(invoice);
@@ -175,34 +178,63 @@ export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
         money(it.qty * it.unitPrice, invoice.currency),
       ];
     }),
-    styles: { font: "helvetica", fontSize: 10, cellPadding: 8, textColor: TEXT_MAIN },
+    styles: { font: "helvetica", fontSize: 10, cellPadding: 10, textColor: TEXT_MAIN },
     headStyles: { fillColor: CYAN, textColor: "#ffffff", fontStyle: "bold" },
     columnStyles: {
+      0: { halign: "left" },
       1: { cellWidth: 70, halign: "center" },
-      2: { cellWidth: 100, halign: "right" },
+      2: { cellWidth: 120, halign: "right" },
     },
+    didParseCell: (data) => {
+      // Force header alignments
+      if (data.section === "head") {
+        if (data.column.index === 0) data.cell.styles.halign = "left";
+        if (data.column.index === 1) data.cell.styles.halign = "center";
+        if (data.column.index === 2) data.cell.styles.halign = "right";
+      }
+    }
   });
 
-  const afterTableY = (doc as any).lastAutoTable.finalY + 24;
+  const afterTableY = (doc as any).lastAutoTable.finalY + 36;
 
   // Amount Due
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
+  doc.setFontSize(15);
+  
+  const amtDueStr = "Amount Due: ";
+  const currStr = `${invoice.currency} `;
+  const valStr = formatAmount(total);
+  
+  const wAmtDue = doc.getTextWidth(amtDueStr);
+  const wCurr = doc.getTextWidth(currStr);
+  const wVal = doc.getTextWidth(valStr);
+  
+  const totalW = wAmtDue + wCurr + wVal;
+  let startX = pageWidth - margin - totalW;
+  
+  doc.setTextColor(TEXT_MAIN);
+  doc.text(amtDueStr, startX, afterTableY);
+  startX += wAmtDue;
+  
   doc.setTextColor(CYAN);
-  doc.text(`Amount Due: ${money(total, invoice.currency)}`, pageWidth - margin, afterTableY, { align: "right" });
+  doc.text(currStr, startX, afterTableY);
+  startX += wCurr;
+  
+  doc.setTextColor(TEXT_MAIN);
+  doc.text(valStr, startX, afterTableY);
 
-  y = afterTableY + 24;
+  y = afterTableY + 32;
   doc.setDrawColor(CYAN);
   doc.setLineWidth(1.5);
   doc.line(margin, y, pageWidth - margin, y);
-  y += 24;
+  y += 48; // Extra breathing room before payment details
 
   // Payment Details
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.setTextColor(CYAN);
   doc.text("Payment Details:", margin, y);
-  y += 18;
+  y += 22;
 
   const renderPaymentRow = (label: string, value: string, rowY: number) => {
     doc.setFont("helvetica", "normal");
@@ -210,32 +242,39 @@ export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
     doc.setTextColor(CYAN);
     doc.text(label, margin, rowY);
     doc.setTextColor(TEXT_MAIN);
-    doc.text(value, margin + 80, rowY);
+    doc.text(value, margin + 85, rowY);
   };
 
   if (invoice.paymentMethod === "wise") {
-    renderPaymentRow("Account Title:", "Muhammad Ehsan", y); y += 14;
-    renderPaymentRow("Account Type:", "Deposit", y); y += 14;
-    renderPaymentRow("Routing:", "084009519", y); y += 14;
-    renderPaymentRow("Account #:", "725862270691556", y); y += 14;
-    renderPaymentRow("Address:", "Wise US Inc, 108 W 13th St, Wilmington, DE, 19801, United States", y); y += 14;
-    renderPaymentRow("Swift/BIC:", "TRWIUS35XXX", y); y += 14;
+    renderPaymentRow("Account Title:", "Muhammad Ehsan", y); y += 18;
+    renderPaymentRow("Account Type:", "Deposit", y); y += 18;
+    renderPaymentRow("Routing:", "084009519", y); y += 18;
+    renderPaymentRow("Account #:", "725862270691556", y); y += 18;
+    renderPaymentRow("Address:", "Wise US Inc, 108 W 13th St, Wilmington, DE, 19801", y); y += 18;
+    renderPaymentRow("Swift/BIC:", "TRWIUS35XXX", y); y += 18;
   } else {
-    renderPaymentRow("Account Title:", "ZIRIUM AI SMC PVT LTD", y); y += 14;
-    renderPaymentRow("Account #:", "367138578", y); y += 14;
-    renderPaymentRow("IBAN:", "PK18UNIL0109000367138578", y); y += 14;
-    renderPaymentRow("Swift Code:", "UNILPKKA", y); y += 14;
-    renderPaymentRow("Bank Name:", "UBL (United Bank Limited)", y); y += 14;
+    renderPaymentRow("Account Title:", "ZIRIUM AI SMC PVT LTD", y); y += 18;
+    renderPaymentRow("Account #:", "367138578", y); y += 18;
+    renderPaymentRow("IBAN:", "PK18UNIL0109000367138578", y); y += 18;
+    renderPaymentRow("Swift Code:", "UNILPKKA", y); y += 18;
+    renderPaymentRow("Bank Name:", "UBL (United Bank Limited)", y); y += 18;
   }
 
-  y += 16;
+  y += 24;
 
   // Notes Box
   if (invoice.notes) {
     doc.setDrawColor(CYAN);
-    doc.setLineWidth(1);
-    const lines = doc.splitTextToSize(`Note: ${invoice.notes}`, pageWidth - margin * 2 - 20);
-    const boxHeight = lines.length * 14 + 16;
+    doc.setLineWidth(1.2);
+    
+    doc.setFont("times", "bold");
+    doc.setFontSize(11);
+    const titleStr = "Notes: ";
+    const titleW = doc.getTextWidth(titleStr);
+    
+    doc.setFont("times", "italic");
+    const lines = doc.splitTextToSize(invoice.notes, pageWidth - margin * 2 - 24 - titleW);
+    const boxHeight = Math.max(34, lines.length * 16 + 20);
     
     // Check if it fits, else add page
     if (y + boxHeight > pageHeight - margin) {
@@ -246,9 +285,13 @@ export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
     // Draw border only (no fill)
     doc.rect(margin, y, pageWidth - margin * 2, boxHeight, "S");
     
-    doc.setFontSize(10);
+    doc.setFont("times", "bold");
     doc.setTextColor(TEXT_MAIN);
-    doc.text(lines, margin + 10, y + 16);
+    doc.text(titleStr, margin + 12, y + 22);
+    
+    doc.setFont("times", "italic");
+    doc.setTextColor(TEXT_MUTED);
+    doc.text(lines, margin + 12 + titleW, y + 22);
   }
 
   // --- Page 2: Standard Company Footer / Information ------------------------
@@ -261,12 +304,13 @@ export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
   page2Y += 40;
   
   // Left side: Logo & Slogan
-  renderLogo(margin, page2Y + 8, 80, 26);
+  const logoH2 = renderLogo(margin, page2Y, 120, 40);
   
   doc.setFont("helvetica", "italic");
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setTextColor(TEXT_MUTED);
-  doc.text("From Element To Intelligence", margin, page2Y + 36);
+  // Slogan directly beneath logo
+  doc.text("From Element To Intelligence", margin, page2Y + logoH2 + 16);
 
   // Right side: Address
   doc.setFont("helvetica", "normal");
@@ -274,9 +318,10 @@ export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
   doc.setTextColor(TEXT_MUTED);
   
   const addrRightX = pageWidth - margin;
-  doc.text("Office E-29, 3rd Floor, GS Towers, Ring Road,", addrRightX, page2Y, { align: "right" });
-  doc.text("Adjacent Hayatabad Toll Plaza,", addrRightX, page2Y + 14, { align: "right" });
-  doc.text("Peshawar, Pakistan – 25000", addrRightX, page2Y + 28, { align: "right" });
+  // Perfectly aligned with the top of the logo
+  doc.text("Office E-29, 3rd Floor, GS Towers, Ring Road,", addrRightX, page2Y + 12, { align: "right" });
+  doc.text("Adjacent Hayatabad Toll Plaza,", addrRightX, page2Y + 28, { align: "right" });
+  doc.text("Peshawar, Pakistan – 25000", addrRightX, page2Y + 44, { align: "right" });
 
   doc.save(`${invoice.number}.pdf`);
 }

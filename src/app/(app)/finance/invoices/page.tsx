@@ -89,7 +89,6 @@ export default function InvoicesPage() {
   const [clientAddress, setClientAddress] = useState("");
   const [currency, setCurrency] = useState("PKR");
   const [paymentMethod, setPaymentMethod] = useState<"ubl" | "wise">("ubl");
-  const [exchangeRate, setExchangeRate] = useState("");
   const [linkedInvoice, setLinkedInvoice] = useState<Invoice | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([emptyItem()]);
   const [notes, setNotes] = useState("");
@@ -170,7 +169,7 @@ export default function InvoicesPage() {
         paymentMethod,
         actualReceived: null,
         actualReceivedNote: null,
-        exchangeRateToPkr: exchangeRate ? Number(exchangeRate) : null,
+        exchangeRateToPkr: null,
         linkedInvoiceId: linkedInvoice?.id || null,
         linkedInvoiceNumber: linkedInvoice?.number || null,
       });
@@ -179,7 +178,6 @@ export default function InvoicesPage() {
       setClientAddress("");
       setItems([emptyItem()]);
       setNotes("");
-      setExchangeRate("");
       setLinkedInvoice(null);
       setToast("Invoice saved");
     } catch (err) {
@@ -271,17 +269,6 @@ export default function InvoicesPage() {
               ))}
             </TextField>
           </Grid>
-          {currency !== "PKR" && (
-            <Grid size={{ xs: 12, sm: 4 }}>
-              <TextField
-                value={exchangeRate}
-                onChange={(e) => setExchangeRate(e.target.value)}
-                label="Exchange Rate to PKR"
-                type="number"
-                fullWidth
-              />
-            </Grid>
-          )}
           <Grid size={{ xs: 12, sm: 4 }}>
             <TextField
               select
