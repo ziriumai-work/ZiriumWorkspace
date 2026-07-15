@@ -165,12 +165,13 @@ Enjoy your time at Zirium, and let's build something great together!`;
       });
 
       // Optimistic update in case the background listener was detached due to previous errors
-      const updatedDoc = { 
-        id: activeDocId, 
-        content, 
-        files: allFiles, 
-        title: currentDoc?.title || "", 
-        updatedAt: currentDoc?.updatedAt || null 
+      const updatedDoc = {
+        id: activeDocId,
+        content,
+        files: allFiles,
+        links: currentDoc?.links || [],
+        title: currentDoc?.title || "",
+        updatedAt: currentDoc?.updatedAt || null
       };
       if (activeTab === 0) setEmployeeDoc(updatedDoc);
       else setInternDoc(updatedDoc);

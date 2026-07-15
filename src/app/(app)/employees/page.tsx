@@ -43,6 +43,7 @@ import {
   type EmployeeStatus,
   type AccessLevel,
   type Developer,
+  type EmploymentType,
 } from "@/lib/data/types";
 
 const EMPTY: NewEmployee = {
@@ -198,7 +199,7 @@ export default function EmployeesPage() {
             <Field label="Monthly Salary (PKR)">
               <TextField
                 type="number"
-                inputProps={{ min: 0 }}
+                slotProps={{ htmlInput: { min: 0 } }}
                 value={form.monthlySalary ?? ""}
                 onChange={(e) => setForm({ ...form, monthlySalary: e.target.value ? Number(e.target.value) : undefined })}
                 fullWidth
@@ -209,7 +210,7 @@ export default function EmployeesPage() {
             <Field label="Weekly Office Hours">
               <TextField
                 type="number"
-                inputProps={{ min: 0 }}
+                slotProps={{ htmlInput: { min: 0 } }}
                 value={form.officeHours ?? ""}
                 onChange={(e) => setForm({ ...form, officeHours: e.target.value ? Number(e.target.value) : undefined })}
                 fullWidth
@@ -220,7 +221,7 @@ export default function EmployeesPage() {
             <Field label="Flexibility (Hours/week)">
               <TextField
                 type="number"
-                inputProps={{ min: 0 }}
+                slotProps={{ htmlInput: { min: 0 } }}
                 value={form.flexibilityHours ?? ""}
                 onChange={(e) => setForm({ ...form, flexibilityHours: e.target.value ? Number(e.target.value) : undefined })}
                 fullWidth
@@ -450,8 +451,8 @@ export default function EmployeesPage() {
         onClose={() => setEditForm(null)}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: { borderRadius: 4, p: 1 }
+        slotProps={{
+          paper: { sx: { borderRadius: 4, p: 1 } },
         }}
       >
         <DialogTitle sx={{ fontWeight: 700 }}>Edit Team Member</DialogTitle>
@@ -524,7 +525,7 @@ export default function EmployeesPage() {
                 <Field label="Monthly Salary (PKR)">
                   <TextField
                     type="number"
-                    inputProps={{ min: 0 }}
+                    slotProps={{ htmlInput: { min: 0 } }}
                     value={editForm.monthlySalary ?? ""}
                     onChange={(e) => setEditForm({ ...editForm, monthlySalary: e.target.value ? Number(e.target.value) : undefined })}
                     fullWidth
@@ -535,7 +536,7 @@ export default function EmployeesPage() {
                 <Field label="Weekly Office Hours">
                   <TextField
                     type="number"
-                    inputProps={{ min: 0 }}
+                    slotProps={{ htmlInput: { min: 0 } }}
                     value={editForm.officeHours ?? ""}
                     onChange={(e) => setEditForm({ ...editForm, officeHours: e.target.value ? Number(e.target.value) : undefined })}
                     fullWidth
@@ -546,7 +547,7 @@ export default function EmployeesPage() {
                 <Field label="Flexibility (Hours/week)">
                   <TextField
                     type="number"
-                    inputProps={{ min: 0 }}
+                    slotProps={{ htmlInput: { min: 0 } }}
                     value={editForm.flexibilityHours ?? ""}
                     onChange={(e) => setEditForm({ ...editForm, flexibilityHours: e.target.value ? Number(e.target.value) : undefined })}
                     fullWidth
@@ -605,6 +606,15 @@ export default function EmployeesPage() {
                   try {
                     const { id, ...patch } = editForm;
                     await updateDeveloper(id, patch);
+
+                    // Sync Admin status with the strict Firebase rules database
+                    if (editForm.uid && patch.accessLevel) {
+                      const newRole = patch.accessLevel === "admin" ? "admin" : "member";
+                      const { doc, updateDoc } = await import("firebase/firestore");
+                      const { db } = await import("@/lib/firebase/client");
+                      await updateDoc(doc(db, "members", editForm.uid), { role: newRole }).catch(() => {});
+                    }
+
                     setEditForm(null);
                   } catch(e) {
                     // handle

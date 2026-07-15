@@ -38,6 +38,7 @@ export interface FinanceProject {
   received: number; //       money received so far
   milestoneCount: number;
   status: FinanceProjectStatus;
+  currency: string; //       "PKR" | "USD" | "EUR" etc.
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 }
@@ -57,13 +58,19 @@ export interface InvoiceItem {
 
 export interface Invoice {
   id: string;
-  number: string; //         e.g. INV-20260714-001
+  number: string; //         e.g. INV-2026-001
   clientName: string;
   clientCompany: string;
   clientAddress: string;
   currency: string; //       ISO code from CURRENCIES
   items: InvoiceItem[];
   notes: string;
+  paymentMethod: "ubl" | "wise";
+  actualReceived: number | null;
+  actualReceivedNote: string | null;
+  exchangeRateToPkr: number | null;
+  linkedInvoiceId: string | null;
+  linkedInvoiceNumber: string | null;
   createdAt: Timestamp | null;
 }
 
@@ -75,8 +82,10 @@ export interface Allotment {
   id: string;
   month: string; //          "yyyy-MM"
   label: string; //          where the money goes, e.g. "Marketing"
-  amount: number; //         stored positive; always displayed as an expense (−)
+  amount: number; //         amount in PKR (converted from invoice using exchange rate)
   note: string;
+  invoiceId: string | null; // which invoice funded this
+  invoiceNumber: string | null;
   createdAt: Timestamp | null;
 }
 
@@ -85,7 +94,7 @@ export interface MonthlyExpense {
   month: string; //          "yyyy-MM"
   type: string; //           "Salaries" | "Utilities" | ... (free-form allowed)
   label: string;
-  amount: number; //         stored positive; displayed as an expense (−)
+  amount: number; //         amount in PKR
   createdAt: Timestamp | null;
 }
 
@@ -153,6 +162,7 @@ export function subscribeToFinanceProjects(
             received: (data.received as number) ?? 0,
             milestoneCount: (data.milestoneCount as number) ?? 0,
             status: (data.status as FinanceProjectStatus) ?? "ongoing",
+            currency: (data.currency as string) ?? "PKR",
             createdAt: (data.createdAt as Timestamp | null) ?? null,
             updatedAt: (data.updatedAt as Timestamp | null) ?? null,
           };
@@ -168,6 +178,7 @@ export async function addFinanceProject(input: {
   received: number;
   milestoneCount: number;
   status: FinanceProjectStatus;
+  currency: string;
 }): Promise<string> {
   const ref = await addDoc(collection(db, PROJECTS), {
     ...input,
@@ -217,6 +228,12 @@ export function subscribeToInvoices(
             currency: (data.currency as string) ?? "PKR",
             items: (data.items as InvoiceItem[]) ?? [],
             notes: (data.notes as string) ?? "",
+            paymentMethod: (data.paymentMethod as "ubl" | "wise") ?? "ubl",
+            actualReceived: (data.actualReceived as number | null) ?? null,
+            actualReceivedNote: (data.actualReceivedNote as string | null) ?? null,
+            exchangeRateToPkr: (data.exchangeRateToPkr as number | null) ?? null,
+            linkedInvoiceId: (data.linkedInvoiceId as string | null) ?? null,
+            linkedInvoiceNumber: (data.linkedInvoiceNumber as string | null) ?? null,
             createdAt: (data.createdAt as Timestamp | null) ?? null,
           };
         }),
@@ -235,14 +252,22 @@ export async function addInvoice(
   return ref.id;
 }
 
+export async function updateInvoice(
+  id: string,
+  patch: Partial<Omit<Invoice, "id" | "createdAt">>,
+): Promise<void> {
+  await updateDoc(doc(db, INVOICES, id), patch);
+}
+
 export async function deleteInvoice(id: string): Promise<void> {
   await deleteDoc(doc(db, INVOICES, id));
 }
 
-/** Generate the next invoice number, e.g. INV-20260714-3 (count-based suffix). */
+/** Generate the next invoice number, e.g. INV-2026-001 */
 export function nextInvoiceNumber(existingCount: number): string {
-  const today = new Date().toISOString().slice(0, 10).replaceAll("-", "");
-  return `INV-${today}-${existingCount + 1}`;
+  const year = new Date().getFullYear();
+  const num = String(existingCount + 1).padStart(3, '0');
+  return `INV-${year}-${num}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -268,6 +293,8 @@ export function subscribeToAllotments(
             label: (data.label as string) ?? "",
             amount: (data.amount as number) ?? 0,
             note: (data.note as string) ?? "",
+            invoiceId: (data.invoiceId as string | null) ?? null,
+            invoiceNumber: (data.invoiceNumber as string | null) ?? null,
             createdAt: (data.createdAt as Timestamp | null) ?? null,
           };
         }),
@@ -281,6 +308,8 @@ export async function addAllotment(input: {
   label: string;
   amount: number;
   note: string;
+  invoiceId?: string | null;
+  invoiceNumber?: string | null;
 }): Promise<string> {
   const ref = await addDoc(collection(db, ALLOTMENTS), {
     ...input,
@@ -361,9 +390,9 @@ export async function deleteMonthlyExpense(id: string): Promise<void> {
 
 export interface BalanceBreakdown {
   totalReceived: number; //   money in (all finance projects)
-  totalAllotted: number; //   money out via allotments (all months)
+  totalAllotted: number; //   money in via allotments (all months)
   totalExpenses: number; //   money out via the monthly sheet (all months)
-  available: number; //       received − allotted − expenses
+  available: number; //       received + allotted − expenses
 }
 
 export function computeBalance(
@@ -378,6 +407,6 @@ export function computeBalance(
     totalReceived,
     totalAllotted,
     totalExpenses,
-    available: totalReceived - totalAllotted - totalExpenses,
+    available: totalReceived + totalAllotted - totalExpenses,
   };
 }

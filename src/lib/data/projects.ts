@@ -122,6 +122,7 @@ export async function updateProject(
       | "columns"
       | "rows"
       | "tasks"
+      | "projectRoles"
     >
   >,
 ): Promise<void> {

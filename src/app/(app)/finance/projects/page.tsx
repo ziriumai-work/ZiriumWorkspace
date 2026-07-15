@@ -33,6 +33,7 @@ import { amber, green } from "@/lib/theme/colors";
 import {
   addFinanceProject,
   deleteFinanceProject,
+  currencySymbol,
   pendingOf,
   subscribeToFinanceProjects,
   updateFinanceProject,
@@ -53,6 +54,7 @@ export default function FinanceProjectsPage() {
   const [received, setReceived] = useState("");
   const [milestones, setMilestones] = useState("");
   const [status, setStatus] = useState<FinanceProjectStatus>("ongoing");
+  const [currency, setCurrency] = useState("PKR");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -68,12 +70,6 @@ export default function FinanceProjectsPage() {
     );
   }, []);
 
-  const totals = useMemo(() => {
-    const worthSum = projects.reduce((s, p) => s + p.worth, 0);
-    const receivedSum = projects.reduce((s, p) => s + p.received, 0);
-    return { worthSum, receivedSum, pendingSum: worthSum - receivedSum };
-  }, [projects]);
-
   async function add() {
     if (!name.trim()) {
       setError("A project name is required.");
@@ -88,12 +84,14 @@ export default function FinanceProjectsPage() {
         received: Number(received) || 0,
         milestoneCount: Number(milestones) || 0,
         status,
+        currency,
       });
       setName("");
       setWorth("");
       setReceived("");
       setMilestones("");
       setStatus("ongoing");
+      setCurrency("PKR");
       setToast("Project added");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add project");
@@ -112,12 +110,12 @@ export default function FinanceProjectsPage() {
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 4 }}>
       {/* Add a project */}
-      <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
-        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
-          Add a project
+      <Paper variant="outlined" sx={{ p: 4, borderRadius: 4, mb: 4, bgcolor: "surface" }}>
+        <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+          Create New Project
         </Typography>
-        <Grid container spacing={1.5}>
-          <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -125,34 +123,23 @@ export default function FinanceProjectsPage() {
               fullWidth
             />
           </Grid>
-          <Grid size={{ xs: 6, sm: 3, lg: 2 }}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField
-              value={worth}
-              onChange={(e) => setWorth(e.target.value)}
-              label="Worth"
-              type="number"
+              select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              label="Currency"
               fullWidth
-            />
+            >
+              <MenuItem value="PKR">PKR</MenuItem>
+              <MenuItem value="USD">USD</MenuItem>
+              <MenuItem value="EUR">EUR</MenuItem>
+              <MenuItem value="GBP">GBP</MenuItem>
+              <MenuItem value="AED">AED</MenuItem>
+              <MenuItem value="SAR">SAR</MenuItem>
+            </TextField>
           </Grid>
-          <Grid size={{ xs: 6, sm: 3, lg: 2 }}>
-            <TextField
-              value={received}
-              onChange={(e) => setReceived(e.target.value)}
-              label="Received"
-              type="number"
-              fullWidth
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 3, lg: 2 }}>
-            <TextField
-              value={milestones}
-              onChange={(e) => setMilestones(e.target.value)}
-              label="Milestones"
-              type="number"
-              fullWidth
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 3, lg: 1.5 }}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               select
               value={status}
@@ -164,134 +151,136 @@ export default function FinanceProjectsPage() {
               <MenuItem value="completed">Completed</MenuItem>
             </TextField>
           </Grid>
-          <Grid size={{ xs: 6, sm: 3, lg: 1.5 }} sx={{ display: "flex", alignItems: "center" }}>
-            <Button onClick={add} disabled={saving} variant="contained" fullWidth>
-              {saving ? "Adding…" : "Add"}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              value={worth}
+              onChange={(e) => setWorth(e.target.value)}
+              label="Worth"
+              type="number"
+              fullWidth
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              value={received}
+              onChange={(e) => setReceived(e.target.value)}
+              label="Received"
+              type="number"
+              fullWidth
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              value={milestones}
+              onChange={(e) => setMilestones(e.target.value)}
+              label="Milestones"
+              type="number"
+              fullWidth
+            />
+          </Grid>
+          <Grid size={{ xs: 12 }} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Box>
+              {(Number(worth) || 0) > 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  Pending:{" "}
+                  <Typography component="span" variant="body2" sx={{ fontWeight: 600, color: (Number(worth) || 0) - (Number(received) || 0) > 0 ? "warning.main" : "success.main" }}>
+                    {currencySymbol(currency)} {((Number(worth) || 0) - (Number(received) || 0)).toLocaleString()}
+                  </Typography>
+                </Typography>
+              )}
+            </Box>
+            <Button onClick={add} disabled={saving} variant="contained" sx={{ px: 4, py: 1 }}>
+              {saving ? "Creating…" : "Create Project"}
             </Button>
           </Grid>
         </Grid>
-        {(Number(worth) || 0) > 0 && (
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-            Pending is calculated automatically: worth − received ={" "}
-            <Money
-              value={(Number(worth) || 0) - (Number(received) || 0)}
-              variant="caption"
-            />
-          </Typography>
-        )}
       </Paper>
 
       {error && (
-        <Alert severity="error" sx={{ mt: 1.5 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
 
-      {/* Totals strip */}
-      <Box sx={{ mt: 3, display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center" }}>
-        <Typography variant="subtitle2">
-          {projects.length} {projects.length === 1 ? "project" : "projects"} total
-        </Typography>
-        <Box sx={{ display: "flex", gap: 2, ml: "auto", flexWrap: "wrap" }}>
-          <Typography variant="caption" color="text.secondary">
-            Worth <Money value={totals.worthSum} variant="caption" />
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Received <Money value={totals.receivedSum} balance variant="caption" />
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Pending{" "}
-            <Money
-              value={totals.pendingSum}
-              variant="caption"
-              sx={{ color: totals.pendingSum > 0 ? "warning.main" : "success.main" }}
-            />
-          </Typography>
-        </Box>
-      </Box>
+      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+        {projects.length} {projects.length === 1 ? "Project" : "Projects"}
+      </Typography>
 
-      {/* Editable list */}
-      <Paper variant="outlined" sx={{ mt: 1.5, borderRadius: 3, overflowX: "auto" }}>
-        <Table sx={{ minWidth: 720 }}>
-          <TableHead>
-            <TableRow sx={{ bgcolor: "surface" }}>
-              <TableCell>Name</TableCell>
-              <TableCell align="right">Worth</TableCell>
-              <TableCell align="right">Received</TableCell>
-              <TableCell align="right">Pending</TableCell>
-              <TableCell align="right">Milestones</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell />
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7}>
-                  <CircularProgress size={18} />
-                </TableCell>
-              </TableRow>
-            ) : projects.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7}>
-                  <Typography variant="body2" color="text.secondary">
-                    No projects yet. Add your first one above.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              projects.map((p) => (
-                <TableRow
-                  key={p.id}
-                  hover
+      {/* Editable list as Cards */}
+      {loading ? (
+        <CircularProgress size={24} sx={{ mt: 4 }} />
+      ) : projects.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          No projects yet. Add your first one above.
+        </Typography>
+      ) : (
+        <Grid container spacing={2}>
+          {projects.map((p) => (
+            <Grid key={p.id} size={{ xs: 12, sm: 6, md: 4 }}>
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
+                <IconButton
+                  size="small"
+                  onClick={() => setToDelete(p)}
                   sx={{
-                    "& .row-actions": { opacity: 0 },
-                    "&:hover .row-actions": { opacity: 1 },
+                    position: "absolute",
+                    top: 12,
+                    right: 12,
+                    color: "text.secondary",
+                    "&:hover": { color: "error.main", bgcolor: "error.50" },
                   }}
                 >
-                  <TableCell sx={{ minWidth: 180 }}>
-                    <EditableText
-                      value={p.name}
-                      onCommit={(v) =>
-                        v.trim() && updateFinanceProject(p.id, { name: v.trim() })
-                      }
-                    />
-                  </TableCell>
-                  <TableCell align="right" sx={{ width: 130 }}>
-                    <EditableNumber
-                      value={p.worth}
-                      onCommit={(v) => updateFinanceProject(p.id, { worth: v })}
-                    />
-                  </TableCell>
-                  <TableCell align="right" sx={{ width: 130 }}>
-                    <EditableNumber
-                      value={p.received}
-                      onCommit={(v) => updateFinanceProject(p.id, { received: v })}
-                    />
-                  </TableCell>
-                  <TableCell align="right" sx={{ width: 130 }}>
-                    <Money
-                      value={pendingOf(p)}
+                  <DeleteIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+                <Box sx={{ pr: 4, mb: 2 }}>
+                  <EditableText
+                    value={p.name}
+                    onCommit={(v) => v.trim() && updateFinanceProject(p.id, { name: v.trim() })}
+                  />
+                </Box>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, flexGrow: 1 }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography variant="caption" color="text.secondary">Worth</Typography>
+                    <Box sx={{ width: 120 }}>
+                      <EditableNumber
+                        value={p.worth}
+                        currency={p.currency}
+                        onCommit={(v) => updateFinanceProject(p.id, { worth: v })}
+                      />
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography variant="caption" color="text.secondary">Received</Typography>
+                    <Box sx={{ width: 120 }}>
+                      <EditableNumber
+                        value={p.received}
+                        currency={p.currency}
+                        onCommit={(v) => updateFinanceProject(p.id, { received: v })}
+                      />
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography variant="caption" color="text.secondary">Pending</Typography>
+                    <Typography
                       variant="body2"
-                      sx={{ color: pendingOf(p) > 0 ? "warning.main" : "success.main" }}
-                    />
-                  </TableCell>
-                  <TableCell align="right" sx={{ width: 110 }}>
-                    <EditableNumber
-                      value={p.milestoneCount}
-                      onCommit={(v) =>
-                        updateFinanceProject(p.id, { milestoneCount: Math.round(v) })
-                      }
-                    />
-                  </TableCell>
-                  <TableCell sx={{ width: 140 }}>
+                      sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: pendingOf(p) > 0 ? "warning.main" : "success.main" }}
+                    >
+                      {currencySymbol(p.currency)} {pendingOf(p).toLocaleString()}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography variant="caption" color="text.secondary">Milestones</Typography>
+                    <Box sx={{ width: 60 }}>
+                      <EditableNumber
+                        value={p.milestoneCount}
+                        onCommit={(v) => updateFinanceProject(p.id, { milestoneCount: Math.round(v) })}
+                      />
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: "auto", pt: 1 }}>
+                    <Typography variant="caption" color="text.secondary">Status</Typography>
                     <Select
                       value={p.status}
-                      onChange={(e) =>
-                        updateFinanceProject(p.id, {
-                          status: e.target.value as FinanceProjectStatus,
-                        })
-                      }
+                      onChange={(e) => updateFinanceProject(p.id, { status: e.target.value as FinanceProjectStatus })}
                       variant="standard"
                       disableUnderline
                       renderValue={(v) => (
@@ -299,7 +288,7 @@ export default function FinanceProjectsPage() {
                           label={v === "ongoing" ? "Ongoing" : "Completed"}
                           sx={[
                             chipSx(v === "ongoing" ? amber.main : green.main),
-                            { height: 20, fontSize: 11 },
+                            { height: 24, fontSize: 12, fontWeight: 500 },
                           ]}
                         />
                       )}
@@ -308,27 +297,13 @@ export default function FinanceProjectsPage() {
                       <MenuItem value="ongoing">Ongoing</MenuItem>
                       <MenuItem value="completed">Completed</MenuItem>
                     </Select>
-                  </TableCell>
-                  <TableCell align="right" sx={{ width: 60 }}>
-                    <IconButton
-                      className="row-actions"
-                      size="small"
-                      onClick={() => setToDelete(p)}
-                      sx={{
-                        color: "text.secondary",
-                        transition: "opacity 0.15s",
-                        "&:hover": { color: "error.main" },
-                      }}
-                    >
-                      <DeleteIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Paper>
+                  </Box>
+                </Box>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+      )}
 
       <ConfirmDialog
         open={Boolean(toDelete)}
@@ -378,9 +353,11 @@ function EditableText({
 // Inline number editor with the same buffer-on-blur behavior.
 function EditableNumber({
   value,
+  currency,
   onCommit,
 }: {
   value: number;
+  currency?: string;
   onCommit: (v: number) => void;
 }) {
   const [draft, setDraft] = useState(String(value));
@@ -406,6 +383,13 @@ function EditableNumber({
         fontSize: 14,
         "& input": { textAlign: "right", fontVariantNumeric: "tabular-nums" },
       }}
+      endAdornment={
+        currency && (
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+            {currency}
+          </Typography>
+        )
+      }
     />
   );
 }

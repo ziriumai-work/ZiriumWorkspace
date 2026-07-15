@@ -27,7 +27,7 @@ import {
   sendPasswordResetEmail,
   type User,
 } from "firebase/auth";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "@/lib/firebase/client";
 import { subscribeToDevelopers, updateDeveloper } from "@/lib/data/developers";
 import type { AppRole, Employee, Member } from "@/lib/data/types";

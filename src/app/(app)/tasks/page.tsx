@@ -58,7 +58,7 @@ import {
   type TaskReport,
 } from "@/lib/data/types";
 
-import { useCurrency, formatCurrency } from "@/lib/contexts/CurrencyContext";
+import { useCurrency } from "@/lib/contexts/CurrencyContext";
 
 function today() {
   return new Date().toISOString().slice(0, 10);

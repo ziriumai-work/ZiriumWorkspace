@@ -129,6 +129,24 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // -----------------------------------------------------------------------
+    // Finance (admin-only): commercial projects, invoices, money allotments,
+    // and the monthly expense sheet. Sensitive data — no member-level access.
+    // Requires members/{uid}.role to be 'owner' or 'admin'.
+    // -----------------------------------------------------------------------
+    match /financeProjects/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /invoices/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /allotments/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /monthlyExpenses/{id} {
+      allow read, write: if isAdmin();
+    }
+
     // Everything else is locked until the phase that introduces it defines
     // explicit rules.
   }

@@ -8,9 +8,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Grid from "@mui/material/Grid";
+import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
+import Select from "@mui/material/Select";
+import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
@@ -36,6 +40,9 @@ export default function FinanceDashboardPage() {
   const [expenses, setExpenses] = useState<MonthlyExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("all");
+  const [viewMode, setViewMode] = useState<"split" | "unified">("split");
+  const [unifiedCurrency, setUnifiedCurrency] = useState<string>("PKR");
+  const [exchangeRates, setExchangeRates] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const u1 = subscribeToFinanceProjects((p) => {
@@ -57,11 +64,37 @@ export default function FinanceDashboardPage() {
     [projects, filter],
   );
 
-  const totals = useMemo(() => {
-    const worth = filtered.reduce((s, p) => s + p.worth, 0);
-    const received = filtered.reduce((s, p) => s + p.received, 0);
-    return { worth, received, pending: worth - received };
+  const byCurrency = useMemo(() => {
+    const map = new Map<string, { projects: FinanceProject[]; worth: number; received: number; pending: number }>();
+    for (const p of filtered) {
+      const c = p.currency;
+      if (!map.has(c)) {
+        map.set(c, { projects: [], worth: 0, received: 0, pending: 0 });
+      }
+      const data = map.get(c)!;
+      data.projects.push(p);
+      data.worth += p.worth;
+      data.received += p.received;
+      data.pending += pendingOf(p);
+    }
+    return map;
   }, [filtered]);
+
+  const remainingCurrencies = Array.from(byCurrency.keys()).filter((c) => c !== unifiedCurrency);
+
+  const unifiedTotals = useMemo(() => {
+    let worth = 0;
+    let received = 0;
+    for (const p of filtered) {
+      let multiplier = 1;
+      if (p.currency !== unifiedCurrency) {
+        multiplier = Number(exchangeRates[p.currency]) || 0;
+      }
+      worth += p.worth * multiplier;
+      received += p.received * multiplier;
+    }
+    return { worth, received, pending: worth - received };
+  }, [filtered, unifiedCurrency, exchangeRates]);
 
   const balance = useMemo(
     () => computeBalance(projects, allotments, expenses),
@@ -111,26 +144,115 @@ export default function FinanceDashboardPage() {
         </ToggleButtonGroup>
       </Box>
 
-      {/* Headline stats for the current filter */}
-      <Grid container spacing={1.5}>
-        <StatCard label="Projects" color={blue[500]}>
-          <Typography variant="h5" sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-            {filtered.length}
-          </Typography>
-        </StatCard>
-        <StatCard label="Total worth" color={blue[600]}>
-          <Money value={totals.worth} sx={{ fontSize: "1.35rem" }} />
-        </StatCard>
-        <StatCard label="Received" color={green.main}>
-          <Money value={totals.received} balance sx={{ fontSize: "1.35rem" }} />
-        </StatCard>
-        <StatCard label="Pending" color={amber.main}>
-          <Money
-            value={totals.pending}
-            sx={{ fontSize: "1.35rem", color: totals.pending > 0 ? "warning.main" : "success.main" }}
-          />
-        </StatCard>
-      </Grid>
+      <Box sx={{ mb: 3, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+        <ToggleButtonGroup
+          value={viewMode}
+          exclusive
+          onChange={(_, v) => v && setViewMode(v)}
+          size="small"
+        >
+          <ToggleButton value="split">Currency Split</ToggleButton>
+          <ToggleButton value="unified">Unified</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+
+      {viewMode === "unified" && (
+        <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 3, bgcolor: "surface" }}>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center" }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>Target Currency:</Typography>
+              <Select
+                size="small"
+                value={unifiedCurrency}
+                onChange={(e) => setUnifiedCurrency(e.target.value)}
+                sx={{ minWidth: 100, bgcolor: "background.paper" }}
+              >
+                <MenuItem value="PKR">PKR</MenuItem>
+                <MenuItem value="USD">USD</MenuItem>
+                <MenuItem value="EUR">EUR</MenuItem>
+                <MenuItem value="GBP">GBP</MenuItem>
+                <MenuItem value="AED">AED</MenuItem>
+                <MenuItem value="SAR">SAR</MenuItem>
+              </Select>
+            </Box>
+            
+            {remainingCurrencies.length > 0 && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", ml: "auto" }}>
+                <Typography variant="body2" color="text.secondary">Exchange Rates:</Typography>
+                {remainingCurrencies.map((c) => (
+                  <TextField
+                    key={c}
+                    label={`${c} to ${unifiedCurrency}`}
+                    size="small"
+                    type="number"
+                    value={exchangeRates[c] || ""}
+                    onChange={(e) => setExchangeRates(prev => ({ ...prev, [c]: e.target.value }))}
+                    sx={{ width: 140, bgcolor: "background.paper" }}
+                  />
+                ))}
+                <Button size="small" variant="outlined" onClick={() => setExchangeRates({})}>Reset</Button>
+              </Box>
+            )}
+          </Box>
+        </Paper>
+      )}
+
+      {/* Headline stats */}
+      {viewMode === "unified" ? (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1.5 }}>Unified Totals (converted to {unifiedCurrency})</Typography>
+          <Grid container spacing={1.5}>
+            <StatCard label="Projects" color={blue[500]}>
+              <Typography variant="h5" sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                {filtered.length}
+              </Typography>
+            </StatCard>
+            <StatCard label={`Total worth (${unifiedCurrency})`} color={blue[600]}>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+                {unifiedCurrency} {unifiedTotals.worth.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+              </Typography>
+            </StatCard>
+            <StatCard label={`Received (${unifiedCurrency})`} color={green.main}>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "success.main" }}>
+                {unifiedCurrency} {unifiedTotals.received.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+              </Typography>
+            </StatCard>
+            <StatCard label={`Pending (${unifiedCurrency})`} color={amber.main}>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: unifiedTotals.pending > 0 ? "warning.main" : "success.main" }}>
+                {unifiedCurrency} {unifiedTotals.pending.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+              </Typography>
+            </StatCard>
+          </Grid>
+        </Box>
+      ) : (
+        Array.from(byCurrency.entries()).map(([curr, data]) => (
+          <Box key={curr} sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1.5 }}>{curr} Projects</Typography>
+            <Grid container spacing={1.5}>
+              <StatCard label="Projects" color={blue[500]}>
+                <Typography variant="h5" sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                  {data.projects.length}
+                </Typography>
+              </StatCard>
+              <StatCard label={`Total worth (${curr})`} color={blue[600]}>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+                  {curr} {data.worth.toLocaleString()}
+                </Typography>
+              </StatCard>
+              <StatCard label={`Received (${curr})`} color={green.main}>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "success.main" }}>
+                  {curr} {data.received.toLocaleString()}
+                </Typography>
+              </StatCard>
+              <StatCard label={`Pending (${curr})`} color={amber.main}>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: data.pending > 0 ? "warning.main" : "success.main" }}>
+                  {curr} {data.pending.toLocaleString()}
+                </Typography>
+              </StatCard>
+            </Grid>
+          </Box>
+        ))
+      )}
 
       {/* Company-wide available balance (always across ALL projects/expenses) */}
       <Paper
@@ -139,7 +261,7 @@ export default function FinanceDashboardPage() {
       >
         <Box>
           <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-            Available balance
+            Available balance (PKR only based on PKR Projects + Allotments)
           </Typography>
           <Money value={balance.available} balance sx={{ fontSize: "1.6rem" }} />
         </Box>
@@ -188,17 +310,22 @@ export default function FinanceDashboardPage() {
                 </Box>
                 <Box sx={{ mt: 1.5, display: "flex", flexDirection: "column", gap: 0.5 }}>
                   <Row label="Worth">
-                    <Money value={p.worth} variant="body2" />
+                    <Typography variant="body2" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                      {p.currency} {p.worth.toLocaleString()}
+                    </Typography>
                   </Row>
                   <Row label="Received">
-                    <Money value={p.received} balance variant="body2" />
+                    <Typography variant="body2" sx={{ fontVariantNumeric: "tabular-nums", color: "success.main" }}>
+                      {p.currency} {p.received.toLocaleString()}
+                    </Typography>
                   </Row>
                   <Row label="Pending">
-                    <Money
-                      value={pendingOf(p)}
+                    <Typography
                       variant="body2"
-                      sx={{ color: pendingOf(p) > 0 ? "warning.main" : "success.main" }}
-                    />
+                      sx={{ fontVariantNumeric: "tabular-nums", color: pendingOf(p) > 0 ? "warning.main" : "success.main" }}
+                    >
+                      {p.currency} {pendingOf(p).toLocaleString()}
+                    </Typography>
                   </Row>
                   <Row label="Milestones">
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
