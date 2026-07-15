@@ -34,6 +34,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import InfoIcon from "@mui/icons-material/InfoOutlined";
 import { Toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useLocalStorage } from "@/lib/hooks/useLocalStorage";
 import { downloadInvoicePdf } from "@/lib/utils/invoicePdf";
 import {
   addInvoice,
@@ -47,6 +48,8 @@ import {
   updateInvoice,
   subscribeToAllotments,
   updateAllotment,
+  invoiceOwnTotal,
+  invoicePendingBalanceItem,
   type Invoice,
   type InvoiceItem,
   type Allotment,
@@ -84,14 +87,14 @@ export default function InvoicesPage() {
   const [toDelete, setToDelete] = useState<Invoice | null>(null);
 
   // Builder state.
-  const [clientName, setClientName] = useState("");
-  const [clientCompany, setClientCompany] = useState("");
-  const [clientAddress, setClientAddress] = useState("");
-  const [currency, setCurrency] = useState("PKR");
-  const [paymentMethod, setPaymentMethod] = useState<"ubl" | "wise">("ubl");
-  const [linkedInvoice, setLinkedInvoice] = useState<Invoice | null>(null);
-  const [items, setItems] = useState<InvoiceItem[]>([emptyItem()]);
-  const [notes, setNotes] = useState("");
+  const [clientName, setClientName] = useLocalStorage("zirium_draft_inv_clientName", "");
+  const [clientCompany, setClientCompany] = useLocalStorage("zirium_draft_inv_clientCompany", "");
+  const [clientAddress, setClientAddress] = useLocalStorage("zirium_draft_inv_clientAddress", "");
+  const [currency, setCurrency] = useLocalStorage("zirium_draft_inv_currency", "PKR");
+  const [paymentMethod, setPaymentMethod] = useLocalStorage<"ubl" | "wise">("zirium_draft_inv_payment", "ubl");
+  const [linkedInvoice, setLinkedInvoice] = useLocalStorage<Invoice | null>("zirium_draft_inv_linked", null);
+  const [items, setItems] = useLocalStorage<InvoiceItem[]>("zirium_draft_inv_items", [emptyItem()]);
+  const [notes, setNotes] = useLocalStorage("zirium_draft_inv_notes", "");
   const [saving, setSaving] = useState(false);
 
   // Update Received state.
@@ -116,10 +119,38 @@ export default function InvoicesPage() {
     );
   }, []);
 
-  const total = useMemo(
-    () => items.reduce((s, it) => s + it.qty * it.unitPrice, 0),
-    [items],
-  );
+  // Helper to compute the true unpaid balance of an invoice and all its parents
+  const getInvoiceGrossOutstanding = (inv: Invoice, allInvoices: Invoice[]): number => {
+    let outstanding = 0;
+    let current: Invoice | undefined = inv;
+    while (current) {
+      const ownOut = Math.max(0, invoiceOwnTotal(current) - (current.actualReceived || 0));
+      outstanding += ownOut;
+      if (current.linkedInvoiceId) {
+        current = allInvoices.find(i => i.id === current!.linkedInvoiceId);
+      } else {
+        current = undefined;
+      }
+    }
+    return outstanding;
+  };
+
+  const availableInvoices = useMemo(() => {
+    return invoices.filter((inv) => getInvoiceGrossOutstanding(inv, invoices) > 0);
+  }, [invoices]);
+
+  const realItems = useMemo(() => items.filter(
+    (it) => it.description.trim() || it.category.trim() || it.unitPrice > 0,
+  ), [items]);
+
+  const total = useMemo(() => {
+    let t = realItems.reduce((s, it) => s + Number(it.qty) * Number(it.unitPrice), 0);
+    if (linkedInvoice) {
+      const pending = getInvoiceGrossOutstanding(linkedInvoice, invoices);
+      if (pending > 0) t += pending;
+    }
+    return t;
+  }, [realItems, linkedInvoice]);
 
   function patchItem(id: string, patch: Partial<InvoiceItem>) {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
@@ -127,12 +158,9 @@ export default function InvoicesPage() {
 
   async function save() {
     if (!clientName.trim()) {
-      setError("A client name is required.");
+      setError("Client name is required.");
       return;
     }
-    const realItems = items.filter(
-      (it) => it.description.trim() || it.category.trim() || it.unitPrice > 0,
-    );
     if (realItems.length === 0) {
       setError("Add at least one line item.");
       return;
@@ -143,7 +171,7 @@ export default function InvoicesPage() {
       let finalItems = realItems;
       if (linkedInvoice) {
         // Add pending balance as a line item if linked invoice has a pending balance
-        const pending = invoiceTotal(linkedInvoice) - (linkedInvoice.actualReceived ?? 0);
+        const pending = getInvoiceGrossOutstanding(linkedInvoice, invoices);
         if (pending > 0) {
           finalItems = [
             ...realItems,
@@ -159,7 +187,7 @@ export default function InvoicesPage() {
       }
 
       await addInvoice({
-        number: nextInvoiceNumber(invoices.length),
+        number: nextInvoiceNumber(invoices),
         clientName: clientName.trim(),
         clientCompany: clientCompany.trim(),
         clientAddress: clientAddress.trim(),
@@ -193,18 +221,32 @@ export default function InvoicesPage() {
     if (isNaN(n) || n < 0) return;
 
     try {
+      let payToLinked = 0;
+      let payToCurrent = n;
+
+      if (updateReceivedFor.linkedInvoiceId) {
+        const linkedInv = invoices.find(inv => inv.id === updateReceivedFor.linkedInvoiceId);
+        if (linkedInv) {
+          const truePendingForLinked = getInvoiceGrossOutstanding(linkedInv, invoices);
+          payToLinked = Math.min(n, truePendingForLinked);
+          payToCurrent = Math.max(0, n - payToLinked);
+
+          if (payToLinked > 0) {
+            await updateInvoice(linkedInv.id, {
+              actualReceived: (linkedInv.actualReceived || 0) + payToLinked,
+            });
+          }
+        }
+      }
+
       await updateInvoice(updateReceivedFor.id, { 
-        actualReceived: n,
+        actualReceived: payToCurrent,
         actualReceivedNote: actualReceivedNote.trim() || null,
       });
-      
-      // Auto-adjust linked allotment if one exists
-      const linkedAllotment = allotments.find(a => a.invoiceId === updateReceivedFor.id);
-      if (linkedAllotment && updateReceivedFor.exchangeRateToPkr) {
-        await updateAllotment(linkedAllotment.id, {
-          amount: n * updateReceivedFor.exchangeRateToPkr,
-        });
-      }
+
+      // Auto-adjust logic for allotments has been removed as Allotments now handle
+      // multiple invoices dynamically and store their own exchange rates.
+      // If a decrease happens, the admin must manually adjust the allotment if needed.
 
       setUpdateReceivedFor(null);
       setActualReceived("");
@@ -281,14 +323,14 @@ export default function InvoicesPage() {
               <MenuItem value="wise">Wise (Ehsan)</MenuItem>
             </TextField>
           </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <Autocomplete
-              options={invoices}
-              getOptionLabel={(o) => o.number}
+              options={availableInvoices}
+              getOptionLabel={(o) => `${o.number} — ${currencySymbol(o.currency)} ${formatAmount(getInvoiceGrossOutstanding(o, invoices))} pending`}
               value={linkedInvoice}
               onChange={(_, v) => setLinkedInvoice(v)}
               renderOption={(props, option) => {
-                const pending = invoiceTotal(option) - (option.actualReceived ?? 0);
+                const pending = getInvoiceGrossOutstanding(option, invoices);
                 return (
                   <li {...props} key={option.id}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
@@ -475,7 +517,18 @@ export default function InvoicesPage() {
                       : "—"}
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
-                    {currencySymbol(inv.currency)} {formatAmount(invoiceTotal(inv))}
+                    {inv.linkedInvoiceNumber ? (
+                      <>
+                        {currencySymbol(inv.currency)} {formatAmount(invoiceOwnTotal(inv))} / {formatAmount(invoicePendingBalanceItem(inv))}
+                        <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
+                          / {inv.linkedInvoiceNumber}
+                        </Typography>
+                      </>
+                    ) : (
+                      <>
+                        {currencySymbol(inv.currency)} {formatAmount(invoiceTotal(inv))}
+                      </>
+                    )}
                   </TableCell>
                   <TableCell align="right">
                     {inv.actualReceived !== null ? (

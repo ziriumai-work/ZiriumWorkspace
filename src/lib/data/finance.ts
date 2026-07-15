@@ -78,14 +78,33 @@ export function invoiceTotal(inv: Pick<Invoice, "items">): number {
   return inv.items.reduce((sum, it) => sum + it.qty * it.unitPrice, 0);
 }
 
+export function invoiceOwnTotal(inv: Pick<Invoice, "items">): number {
+  return inv.items
+    .filter((it) => it.category !== "Pending Balance")
+    .reduce((sum, it) => sum + it.qty * it.unitPrice, 0);
+}
+
+export function invoicePendingBalanceItem(inv: Pick<Invoice, "items">): number {
+  return inv.items
+    .filter((it) => it.category === "Pending Balance")
+    .reduce((sum, it) => sum + it.qty * it.unitPrice, 0);
+}
+
+export interface AllotmentInvoice {
+  id: string;
+  number: string;
+  currency: string;
+  amountUsed: number; // in original currency
+  exchangeRate: number; // to PKR
+}
+
 export interface Allotment {
   id: string;
   month: string; //          "yyyy-MM"
   label: string; //          where the money goes, e.g. "Marketing"
-  amount: number; //         amount in PKR (converted from invoice using exchange rate)
+  amount: number; //         amount in PKR (automatically computed from invoices)
   note: string;
-  invoiceId: string | null; // which invoice funded this
-  invoiceNumber: string | null;
+  invoices: AllotmentInvoice[]; // Replaces invoiceId/invoiceNumber
   createdAt: Timestamp | null;
 }
 
@@ -264,10 +283,23 @@ export async function deleteInvoice(id: string): Promise<void> {
 }
 
 /** Generate the next invoice number, e.g. INV-2026-001 */
-export function nextInvoiceNumber(existingCount: number): string {
+export function nextInvoiceNumber(invoices: Pick<Invoice, "number">[]): string {
   const year = new Date().getFullYear();
-  const num = String(existingCount + 1).padStart(3, '0');
-  return `INV-${year}-${num}`;
+  const prefix = `INV-${year}-`;
+  
+  let maxNum = 0;
+  for (const inv of invoices) {
+    if (inv.number && inv.number.startsWith(prefix)) {
+      const numPart = inv.number.slice(prefix.length);
+      const parsed = parseInt(numPart, 10);
+      if (!isNaN(parsed) && parsed > maxNum) {
+        maxNum = parsed;
+      }
+    }
+  }
+  
+  const nextNum = String(maxNum + 1).padStart(3, '0');
+  return `${prefix}${nextNum}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -293,8 +325,7 @@ export function subscribeToAllotments(
             label: (data.label as string) ?? "",
             amount: (data.amount as number) ?? 0,
             note: (data.note as string) ?? "",
-            invoiceId: (data.invoiceId as string | null) ?? null,
-            invoiceNumber: (data.invoiceNumber as string | null) ?? null,
+            invoices: (data.invoices as AllotmentInvoice[]) ?? [],
             createdAt: (data.createdAt as Timestamp | null) ?? null,
           };
         }),
@@ -308,8 +339,7 @@ export async function addAllotment(input: {
   label: string;
   amount: number;
   note: string;
-  invoiceId?: string | null;
-  invoiceNumber?: string | null;
+  invoices: AllotmentInvoice[];
 }): Promise<string> {
   const ref = await addDoc(collection(db, ALLOTMENTS), {
     ...input,

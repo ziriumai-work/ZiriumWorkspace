@@ -24,9 +24,18 @@ import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import DeleteIcon from "@mui/icons-material/Delete";
+import Tooltip from "@mui/material/Tooltip";
+import InfoIcon from "@mui/icons-material/InfoOutlined";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import CloseIcon from "@mui/icons-material/Close";
+import EditNoteIcon from "@mui/icons-material/EditNote";
 import { Money } from "@/components/finance/Money";
 import { Toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useLocalStorage } from "@/lib/hooks/useLocalStorage";
 import {
   addAllotment,
   currentMonth,
@@ -34,6 +43,8 @@ import {
   subscribeToAllotments,
   subscribeToInvoices,
   updateAllotment,
+  updateInvoice,
+  formatAmount,
   type Allotment,
   type Invoice,
 } from "@/lib/data/finance";
@@ -46,11 +57,14 @@ export default function AllotmentPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Allotment | null>(null);
 
-  const [month, setMonth] = useState(currentMonth());
-  const [label, setLabel] = useState("");
-  const [amount, setAmount] = useState("");
-  const [note, setNote] = useState("");
-  const [linkedInvoice, setLinkedInvoice] = useState<Invoice | null>(null);
+  // Form state.
+  const [month, setMonth] = useLocalStorage("zirium_draft_allot_month", currentMonth());
+  const [label, setLabel] = useLocalStorage("zirium_draft_allot_label", "");
+  const [amount, setAmount] = useLocalStorage("zirium_draft_allot_amount", "");
+  const [note, setNote] = useLocalStorage("zirium_draft_allot_note", "");
+  const [linkedInvoices, setLinkedInvoices] = useLocalStorage<{ inv: Invoice; rate: string }[]>("zirium_draft_allot_linked", []);
+
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -82,31 +96,68 @@ export default function AllotmentPage() {
   );
   const monthTotal = monthEntries.reduce((s, a) => s + a.amount, 0);
 
+  // Compute how much of an invoice has been used by allotments
+  const getInvoiceUsed = (invoiceId: string) => {
+    return allotments.reduce((sum, a) => {
+      const found = (a.invoices || []).find((ai) => ai.id === invoiceId);
+      return sum + (found ? found.amountUsed : 0);
+    }, 0);
+  };
+
+  const getOutstanding = (inv: Invoice) => {
+    const used = getInvoiceUsed(inv.id);
+    return Math.max(0, (inv.actualReceived || 0) - used);
+  };
+
+  const availableInvoices = useMemo(() => {
+    return invoices.filter((inv) => getOutstanding(inv) > 0);
+  }, [invoices, allotments]);
+
+  const computedAmount = useMemo(() => {
+    return linkedInvoices.reduce((sum, item) => {
+      const outstanding = getOutstanding(item.inv);
+      const rate = Number(item.rate) || 1; // Default to 1 if PKR or missing
+      return sum + outstanding * rate;
+    }, 0);
+  }, [linkedInvoices, allotments]);
+
   async function add() {
     if (!label.trim()) {
       setError("Write where the money goes (a section name).");
       return;
     }
-    const n = Number(amount);
-    if (!n || n <= 0) {
+    const finalAmount = linkedInvoices.length > 0 ? computedAmount : Number(amount);
+    if (!finalAmount || finalAmount <= 0) {
       setError("Enter a positive amount.");
       return;
     }
     setSaving(true);
     setError(null);
     try {
+      // Save exchange rates to the invoice if provided and not PKR
+      for (const item of linkedInvoices) {
+        if (item.inv.currency !== "PKR" && item.rate) {
+          await updateInvoice(item.inv.id, { exchangeRateToPkr: Number(item.rate) });
+        }
+      }
+
       await addAllotment({
         month,
         label: label.trim(),
-        amount: n,
+        amount: finalAmount,
         note: note.trim(),
-        invoiceId: linkedInvoice?.id || null,
-        invoiceNumber: linkedInvoice?.number || null,
+        invoices: linkedInvoices.map((item) => ({
+          id: item.inv.id,
+          number: item.inv.number,
+          currency: item.inv.currency,
+          amountUsed: getOutstanding(item.inv),
+          exchangeRate: Number(item.rate) || 1,
+        })),
       });
       setLabel("");
       setAmount("");
       setNote("");
-      setLinkedInvoice(null);
+      setLinkedInvoices([]);
       setToast("Allotment added");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add allotment");
@@ -130,6 +181,7 @@ export default function AllotmentPage() {
           Allot money for a month
         </Typography>
         <Grid container spacing={1.5}>
+          {/* First Row */}
           <Grid size={{ xs: 6, sm: 3, lg: 2 }}>
             <TextField
               type="month"
@@ -139,7 +191,7 @@ export default function AllotmentPage() {
               fullWidth
             />
           </Grid>
-          <Grid size={{ xs: 6, sm: 4, lg: 3 }}>
+          <Grid size={{ xs: 6, sm: 4, lg: 4 }}>
             <Autocomplete
               freeSolo
               options={uniqueSections}
@@ -154,35 +206,87 @@ export default function AllotmentPage() {
               )}
             />
           </Grid>
-          <Grid size={{ xs: 6, sm: 4, lg: 3 }}>
-            <Autocomplete
-              options={invoices}
-              getOptionLabel={(o) => `${o.number} — ${o.createdAt ? o.createdAt.toDate().toLocaleDateString() : ""}`}
-              value={linkedInvoice}
-              onChange={(_, v) => setLinkedInvoice(v)}
-              renderInput={(params) => (
-                <TextField {...params} label="Link Invoice (Source of funds)" />
-              )}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 3, lg: 2 }}>
+          <Grid size={{ xs: 6, sm: 3, lg: 3 }}>
             <TextField
-              value={amount}
+              value={linkedInvoices.length > 0 ? computedAmount : amount}
               onChange={(e) => setAmount(e.target.value)}
               label="Amount (PKR) *"
               type="number"
               fullWidth
+              disabled={linkedInvoices.length > 0}
             />
           </Grid>
-          <Grid size={{ xs: 6, sm: 4, lg: 3 }}>
-            <TextField
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              label="Note (optional)"
+          <Grid size={{ xs: 6, sm: 2, lg: 3 }}>
+            <Button
+              variant="outlined"
               fullWidth
-            />
+              sx={{ height: 56, textTransform: "none" }}
+              startIcon={<EditNoteIcon />}
+              onClick={() => setNoteDialogOpen(true)}
+            >
+              {note ? "Edit Note" : "Add Note"}
+            </Button>
           </Grid>
-          <Grid size={12} sx={{ display: "flex", justifyContent: "flex-end" }}>
+
+          {/* Second Row: Invoices Linkage */}
+          <Grid size={12}>
+            <Autocomplete
+              multiple
+              options={availableInvoices}
+              getOptionLabel={(o) => `${o.number} — ${o.currency} ${formatAmount(getOutstanding(o))} outstanding`}
+              value={linkedInvoices.map((i) => i.inv)}
+              isOptionEqualToValue={(opt, val) => opt.id === val.id}
+              onChange={(_, vals) => {
+                const newArr = vals.map((inv) => {
+                  const existing = linkedInvoices.find((l) => l.inv.id === inv.id);
+                  return existing || { inv, rate: inv.exchangeRateToPkr ? String(inv.exchangeRateToPkr) : "" };
+                });
+                setLinkedInvoices(newArr);
+              }}
+              sx={{ "& .MuiAutocomplete-tag": { display: "none" } }}
+              renderInput={(params) => (
+                <TextField {...params} label="Link Invoices (Source of funds)" placeholder="Select invoices to use..." />
+              )}
+            />
+            {linkedInvoices.length > 0 && (
+              <Box sx={{ mt: 1.5, display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+                {linkedInvoices.map((item, index) => {
+                  const outstanding = getOutstanding(item.inv);
+                  return (
+                    <Paper key={item.inv.id} variant="outlined" sx={{ p: 1.5, display: "flex", alignItems: "center", gap: 2, borderRadius: 2 }}>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {item.inv.number}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {item.inv.currency} {formatAmount(outstanding)} available
+                        </Typography>
+                      </Box>
+                      {item.inv.currency !== "PKR" && (
+                        <TextField
+                          size="small"
+                          label={`Rate to PKR`}
+                          type="number"
+                          value={item.rate}
+                          onChange={(e) => {
+                            const newArr = [...linkedInvoices];
+                            newArr[index].rate = e.target.value;
+                            setLinkedInvoices(newArr);
+                          }}
+                          sx={{ width: 120 }}
+                        />
+                      )}
+                      <IconButton size="small" onClick={() => setLinkedInvoices(linkedInvoices.filter((_, i) => i !== index))}>
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </Paper>
+                  );
+                })}
+              </Box>
+            )}
+          </Grid>
+          
+          <Grid size={12} sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
             <Button onClick={add} disabled={saving} variant="contained" sx={{ px: 4 }}>
               {saving ? "Adding…" : "Add Allotment"}
             </Button>
@@ -246,23 +350,27 @@ export default function AllotmentPage() {
                   }}
                 >
                   <TableCell sx={{ minWidth: 160 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1 }}>
                       <EditableText
                         value={a.label}
                         bold
                         onCommit={(v) => v.trim() && updateAllotment(a.id, { label: v.trim() })}
                       />
-                      {a.invoiceNumber && (
-                        <Chip label={a.invoiceNumber} size="small" sx={{ fontSize: 10, height: 18 }} />
-                      )}
+                      {(a.invoices || []).map((inv) => (
+                        <Chip key={inv.id} label={inv.number} size="small" sx={{ fontSize: 10, height: 18 }} />
+                      ))}
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ minWidth: 180 }}>
-                    <EditableText
-                      value={a.note}
-                      placeholder="Add a note…"
-                      onCommit={(v) => updateAllotment(a.id, { note: v })}
-                    />
+                  <TableCell sx={{ minWidth: 80 }}>
+                    {a.note ? (
+                      <Tooltip title={a.note}>
+                        <IconButton size="small">
+                          <InfoIcon fontSize="small" color="info" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : (
+                      <Typography variant="body2" color="text.disabled">—</Typography>
+                    )}
                   </TableCell>
                   <TableCell align="right" sx={{ width: 160 }}>
                     <EditableExpense
@@ -299,6 +407,28 @@ export default function AllotmentPage() {
         onConfirm={confirmDelete}
         onCancel={() => setToDelete(null)}
       />
+
+      <Dialog open={noteDialogOpen} onClose={() => setNoteDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add Note</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            multiline
+            rows={4}
+            fullWidth
+            margin="dense"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            slotProps={{ htmlInput: { maxLength: 300 } }}
+            helperText={`${note.length}/300`}
+            placeholder="Enter up to 300 characters..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNoteDialogOpen(false)}>Done</Button>
+        </DialogActions>
+      </Dialog>
+
       <Toast open={Boolean(toast)} message={toast ?? ""} onClose={() => setToast(null)} />
     </Box>
   );

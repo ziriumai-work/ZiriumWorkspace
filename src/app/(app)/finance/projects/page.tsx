@@ -25,9 +25,11 @@ import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import DeleteIcon from "@mui/icons-material/Delete";
+import InfoIcon from "@mui/icons-material/InfoOutlined";
 import { Money } from "@/components/finance/Money";
 import { Toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useLocalStorage } from "@/lib/hooks/useLocalStorage";
 import { chipSx } from "@/components/projectMeta";
 import { amber, green } from "@/lib/theme/colors";
 import {
@@ -49,12 +51,12 @@ export default function FinanceProjectsPage() {
   const [toDelete, setToDelete] = useState<FinanceProject | null>(null);
 
   // Add-project form.
-  const [name, setName] = useState("");
-  const [worth, setWorth] = useState("");
-  const [received, setReceived] = useState("");
-  const [milestones, setMilestones] = useState("");
-  const [status, setStatus] = useState<FinanceProjectStatus>("ongoing");
-  const [currency, setCurrency] = useState("PKR");
+  const [name, setName] = useLocalStorage("zirium_draft_project_name", "");
+  const [worth, setWorth] = useLocalStorage("zirium_draft_project_worth", "");
+  const [received, setReceived] = useLocalStorage("zirium_draft_project_received", "");
+  const [milestones, setMilestones] = useLocalStorage("zirium_draft_project_milestones", "");
+  const [status, setStatus] = useLocalStorage<FinanceProjectStatus>("zirium_draft_project_status", "ongoing");
+  const [currency, setCurrency] = useLocalStorage("zirium_draft_project_currency", "PKR");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {

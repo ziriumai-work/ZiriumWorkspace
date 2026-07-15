@@ -28,6 +28,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { Money } from "@/components/finance/Money";
 import { Toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useLocalStorage } from "@/lib/hooks/useLocalStorage";
 import {
   addMonthlyExpense,
   computeBalance,
@@ -52,10 +53,10 @@ export default function MonthlySheetPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<MonthlyExpense | null>(null);
 
-  const [month, setMonth] = useState(currentMonth());
-  const [type, setType] = useState<string>("Salaries");
-  const [label, setLabel] = useState("");
-  const [amount, setAmount] = useState("");
+  const [month, setMonth] = useLocalStorage("zirium_draft_sheet_month", currentMonth());
+  const [type, setType] = useLocalStorage<string>("zirium_draft_sheet_type", "Salaries");
+  const [label, setLabel] = useLocalStorage("zirium_draft_sheet_label", "");
+  const [amount, setAmount] = useLocalStorage("zirium_draft_sheet_amount", "");
   const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(false);
 
