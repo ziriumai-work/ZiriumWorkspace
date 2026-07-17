@@ -17,7 +17,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import type { DbColumn, DbRow, NewProject, Project, TaskItem } from "@/lib/data/types";
+import type { DbColumn, DbRow, NewProject, Project, TaskItem, TaskFile } from "@/lib/data/types";
 import { defaultColumns } from "@/lib/firebase/db";
 
 const COLLECTION = "projects";
@@ -40,6 +40,7 @@ function toProject(id: string, data: Record<string, unknown>): Project {
     columns: (data.columns as DbColumn[]) ?? [],
     rows: (data.rows as DbRow[]) ?? [],
     tasks: (data.tasks as TaskItem[]) ?? [],
+    financeFiles: (data.financeFiles as TaskFile[]) ?? [],
     createdBy: (data.createdBy as string) ?? "",
     createdAt: (data.createdAt as Timestamp | null) ?? null,
     updatedAt: (data.updatedAt as Timestamp | null) ?? null,
@@ -123,6 +124,7 @@ export async function updateProject(
       | "rows"
       | "tasks"
       | "projectRoles"
+      | "financeFiles"
     >
   >,
 ): Promise<void> {

@@ -13,6 +13,14 @@ import Chip from "@mui/material/Chip";
 import Paper from "@mui/material/Paper";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import IconButton from "@mui/material/IconButton";
+import Button from "@mui/material/Button";
+import Badge from "@mui/material/Badge";
+import CloseIcon from "@mui/icons-material/Close";
+import AttachFileIcon from "@mui/icons-material/AttachFile";
 import { updateProject } from "@/lib/data/projects";
 import {
   PROJECT_STATUSES,
@@ -30,12 +38,15 @@ import {
 export function ProjectBoard({
   projects,
   developers,
+  isAdmin,
 }: {
   projects: Project[];
   developers: Record<string, Developer>;
+  isAdmin?: boolean;
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overStatus, setOverStatus] = useState<ProjectStatus | null>(null);
+  const [docsProject, setDocsProject] = useState<Project | null>(null);
 
   function onDrop(status: ProjectStatus) {
     if (draggingId) {
@@ -144,6 +155,23 @@ export function ProjectBoard({
                           gap: 0.75,
                         }}
                       >
+                        {isAdmin && (
+                          <Badge badgeContent={p.financeFiles?.length || 0} color="primary" sx={{ mr: 1, "& .MuiBadge-badge": { transform: "scale(0.7) translate(50%, -50%)" } }}>
+                            <Button
+                              size="small"
+                              variant="text"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDocsProject(p);
+                              }}
+                              startIcon={<AttachFileIcon sx={{ fontSize: 14 }} />}
+                              sx={{ minWidth: 0, p: 0, color: "text.secondary", fontSize: 10, fontWeight: 500, "& .MuiButton-startIcon": { mr: 0.5 } }}
+                            >
+                              Docs
+                            </Button>
+                          </Badge>
+                        )}
                         <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>
                           {formatDueDate(p.dueDate)}
                         </Typography>
@@ -175,6 +203,34 @@ export function ProjectBoard({
           </Box>
         );
       })}
+
+      <Dialog open={!!docsProject} onClose={() => setDocsProject(null)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          Project Documents
+          <IconButton onClick={() => setDocsProject(null)} size="small"><CloseIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {docsProject?.financeFiles?.length ? (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {docsProject.financeFiles.map((f, i) => (
+                <Button
+                  key={i}
+                  component="a"
+                  href={f.url}
+                  target="_blank"
+                  variant="outlined"
+                  startIcon={<AttachFileIcon />}
+                  sx={{ justifyContent: "flex-start", textAlign: "left" }}
+                >
+                  {f.name}
+                </Button>
+              ))}
+            </Box>
+          ) : (
+            <Typography color="text.secondary">No documents attached.</Typography>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

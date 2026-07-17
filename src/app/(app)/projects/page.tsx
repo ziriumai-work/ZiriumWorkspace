@@ -20,15 +20,7 @@ import { subscribeToDevelopers } from "@/lib/data/developers";
 import { useAuth } from "@/lib/firebase/auth-context";
 import type { Developer, Project } from "@/lib/data/types";
 import { ProjectTable } from "@/components/projects/ProjectTable";
-import { ProjectBoard } from "@/components/projects/ProjectBoard";
 import { AiProjectAgent } from "@/components/projects/AiProjectAgent";
-import {
-  buildMarkDatabase,
-  MARK_PROJECT_DESCRIPTION,
-  MARK_PROJECT_TITLE,
-} from "@/lib/seed/markArchitecture";
-
-type View = "table" | "board";
 
 export default function ProjectsPage() {
   const { user, employee, isAdmin } = useAuth();
@@ -37,11 +29,11 @@ export default function ProjectsPage() {
   const [seeding, setSeeding] = useState(false);
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<View>("table");
   const [showAgent, setShowAgent] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"pending" | "completed">("pending");
 
   useEffect(() => {
     const unsubProjects = subscribeToProjects(
@@ -82,48 +74,22 @@ export default function ProjectsPage() {
     }
   }
 
-  // One-click sample: the MARK Architecture timeline. If it already exists, just
-  // open it (idempotent — avoids duplicates).
-  const markProject = projects.find((p) => p.title === MARK_PROJECT_TITLE);
-  async function loadMark() {
-    if (!user) return;
-    if (markProject) {
-      router.push(`/projects/${markProject.id}`);
-      return;
-    }
-    setSeeding(true);
-    setError(null);
-    try {
-      const newId = await createProject(
-        {
-          title: MARK_PROJECT_TITLE,
-          description: MARK_PROJECT_DESCRIPTION,
-          status: "in_progress",
-          priority: "high",
-        },
-        user.uid,
-        buildMarkDatabase(),
-      );
-      router.push(`/projects/${newId}`);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to create the project",
-      );
-    } finally {
-      setSeeding(false);
-    }
-  }
-
   // Admins see all projects; employees see only the ones they're assigned to.
   const visibleProjects = useMemo(() => {
-    if (isAdmin) return projects;
-    if (!employee) return [];
-    return projects.filter((p) => p.developerIds.includes(employee.id));
-  }, [projects, isAdmin, employee]);
+    if (!user) return [];
+    return projects.filter(p => isAdmin || p.developerIds.includes(user.uid) || p.assigneeUid === user.uid);
+  }, [projects, user, isAdmin]);
+
+  const displayedProjects = useMemo(() => {
+    if (tab === "pending") {
+      return visibleProjects.filter((p) => p.status !== "done" && p.status !== "archived");
+    }
+    return visibleProjects.filter((p) => p.status === "done" || p.status === "archived");
+  }, [visibleProjects, tab]);
 
   const sorted = useMemo(
-    () => [...visibleProjects].sort((a, b) => a.order - b.order),
-    [visibleProjects],
+    () => [...displayedProjects].sort((a, b) => a.order - b.order),
+    [displayedProjects],
   );
 
   return (
@@ -153,47 +119,32 @@ export default function ProjectsPage() {
         <Typography variant="h2">Projects</Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {isAdmin && (
-            <>
-              <Button
-                onClick={() => setShowAgent(true)}
-                sx={{ bgcolor: "accentSoft", color: "primary.main" }}
-                startIcon={
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
-                  </svg>
-                }
-              >
-                Generate with AI
-              </Button>
-              <Button
-                onClick={loadMark}
-                disabled={seeding}
-                variant="outlined"
-                color="inherit"
-                sx={{ borderColor: "divider", color: "text.primary" }}
-              >
-                {seeding
-                  ? "Creating…"
-                  : markProject
-                    ? "Open MARK Architecture"
-                    : "+ MARK Architecture sample"}
-              </Button>
-            </>
+            <Button
+              onClick={() => setShowAgent(true)}
+              sx={{ bgcolor: "accentSoft", color: "primary.main" }}
+              startIcon={
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+                </svg>
+              }
+            >
+              Generate with AI
+            </Button>
           )}
           <ToggleButtonGroup
-            value={view}
+            value={tab}
             exclusive
-            onChange={(_, v: View | null) => v && setView(v)}
+            onChange={(_, v: "pending" | "completed" | null) => v && setTab(v)}
             size="small"
-            sx={{ "& .MuiToggleButton-root": { px: 1.5, py: 0.5, fontSize: 12 } }}
+            sx={{ ml: 2, "& .MuiToggleButton-root": { px: 1.5, py: 0.5, fontSize: 12 } }}
           >
-            <ToggleButton value="table">Table</ToggleButton>
-            <ToggleButton value="board">Board</ToggleButton>
+            <ToggleButton value="pending">Pending</ToggleButton>
+            <ToggleButton value="completed">Completed</ToggleButton>
           </ToggleButtonGroup>
         </Box>
       </Box>
@@ -241,14 +192,18 @@ export default function ProjectsPage() {
           <Box sx={{ px: 4, py: 5 }}>
             <CircularProgress size={20} />
           </Box>
-        ) : sorted.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" sx={{ px: 4, py: 5 }}>
-            No projects yet. Add one above to get started.
-          </Typography>
-        ) : view === "table" ? (
-          <ProjectTable projects={sorted} developers={devMap} />
+        ) : displayedProjects.length === 0 ? (
+          <Box sx={{ p: 4 }}>
+            <Typography color="text.secondary">
+              No {tab} projects found.
+            </Typography>
+          </Box>
         ) : (
-          <ProjectBoard projects={sorted} developers={devMap} />
+          <ProjectTable
+            projects={sorted}
+            developers={devMap}
+            isAdmin={isAdmin}
+          />
         )}
       </Box>
     </Box>

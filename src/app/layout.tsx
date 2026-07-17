@@ -5,6 +5,8 @@ import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import "./globals.css";
 import { AuthProvider } from "@/lib/firebase/auth-context";
+import { AiProvider } from "@/components/ai/AiProvider";
+import { UploadProvider } from "@/lib/contexts/UploadContext";
 import theme from "@/lib/theme/theme";
 
 const geistSans = Geist({
@@ -41,7 +43,13 @@ export default function RootLayout({
             <CssBaseline />
             {/* AuthProvider is a Client Component; it wraps only children so the
                 rest of the static layout stays server-rendered. */}
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <AiProvider>
+                <UploadProvider>
+                  {children}
+                </UploadProvider>
+              </AiProvider>
+            </AuthProvider>
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>

@@ -19,11 +19,13 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   Timestamp,
   updateDoc,
   type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
+import { defaultColumns } from "@/lib/firebase/db";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,6 +41,7 @@ export interface FinanceProject {
   milestoneCount: number;
   status: FinanceProjectStatus;
   currency: string; //       "PKR" | "USD" | "EUR" etc.
+  files?: import("./types").TaskFile[]; // attached service agreements/docs
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 }
@@ -182,6 +185,7 @@ export function subscribeToFinanceProjects(
             milestoneCount: (data.milestoneCount as number) ?? 0,
             status: (data.status as FinanceProjectStatus) ?? "ongoing",
             currency: (data.currency as string) ?? "PKR",
+            files: (data.files as import("./types").TaskFile[]) ?? [],
             createdAt: (data.createdAt as Timestamp | null) ?? null,
             updatedAt: (data.updatedAt as Timestamp | null) ?? null,
           };
@@ -191,19 +195,47 @@ export function subscribeToFinanceProjects(
   );
 }
 
-export async function addFinanceProject(input: {
-  name: string;
-  worth: number;
-  received: number;
-  milestoneCount: number;
-  status: FinanceProjectStatus;
-  currency: string;
-}): Promise<string> {
-  const ref = await addDoc(collection(db, PROJECTS), {
+export async function addFinanceProject(
+  input: {
+    name: string;
+    worth: number;
+    received: number;
+    milestoneCount: number;
+    status: FinanceProjectStatus;
+    currency: string;
+    files?: import("./types").TaskFile[];
+  },
+  uid: string,
+): Promise<string> {
+  const ref = doc(collection(db, PROJECTS));
+  
+  // 1. Create Finance Project
+  await setDoc(ref, {
     ...input,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+
+  // 2. Create corresponding App Project
+  await setDoc(doc(db, "projects", ref.id), {
+    title: input.name,
+    description: "",
+    status: "planned",
+    priority: "medium",
+    assigneeUid: null,
+    teamId: null,
+    dueDate: null,
+    order: Date.now(),
+    developerIds: [],
+    projectRoles: {},
+    columns: defaultColumns(),
+    rows: [],
+    financeFiles: input.files ?? [],
+    createdBy: uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
   return ref.id;
 }
 
@@ -215,6 +247,14 @@ export async function updateFinanceProject(
     ...patch,
     updatedAt: serverTimestamp(),
   });
+
+  // Sync files to App Project if they were updated
+  if (patch.files) {
+    await updateDoc(doc(db, "projects", id), {
+      financeFiles: patch.files,
+      updatedAt: serverTimestamp(),
+    });
+  }
 }
 
 export async function deleteFinanceProject(id: string): Promise<void> {

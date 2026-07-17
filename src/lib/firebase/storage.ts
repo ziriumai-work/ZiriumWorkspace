@@ -30,3 +30,14 @@ export async function uploadDocumentFile(
   return { name: file.name, url };
 }
 
+export async function uploadFinanceProjectFile(
+  projectId: string,
+  file: File,
+): Promise<TaskFile> {
+  const path = `financeProjects/${projectId}/${Date.now()}-${file.name}`;
+  const r = ref(storage, path);
+  await uploadBytes(r, file);
+  const url = await getDownloadURL(r);
+  return { name: file.name, url };
+}
+

@@ -79,6 +79,7 @@ export interface Project {
   // Legacy fixed task list (pre-database). Auto-migrated into columns/rows when
   // a project is opened. Kept optional so old documents still load.
   tasks?: TaskItem[];
+  financeFiles?: TaskFile[]; // attached service agreements/docs
   createdBy: string; // uid of creator
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;

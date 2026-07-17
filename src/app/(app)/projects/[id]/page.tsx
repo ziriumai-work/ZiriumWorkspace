@@ -19,6 +19,7 @@ import MuiLink from "@mui/material/Link";
 import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import KeyboardBackspaceIcon from "@mui/icons-material/KeyboardBackspace";
 import {
   subscribeToProject,
   updateProject,
@@ -110,14 +111,20 @@ export default function ProjectDetailPage({
         <Typography variant="body2" color="text.secondary">
           Project not found.
         </Typography>
-        <MuiLink
+        <Button
           component={Link}
           href="/projects"
-          variant="body2"
-          sx={{ mt: 1, display: "inline-block" }}
+          startIcon={<KeyboardBackspaceIcon />}
+          sx={{
+            mt: 1,
+            color: "text.secondary",
+            textTransform: "none",
+            fontWeight: 500,
+            "&:hover": { bgcolor: "surface", color: "primary.main" },
+          }}
         >
-          ← Back to Projects
-        </MuiLink>
+          Back to Projects
+        </Button>
       </Box>
     );
   }
@@ -129,14 +136,20 @@ export default function ProjectDetailPage({
         <Typography variant="body2" color="text.secondary">
           You don’t have access to this project.
         </Typography>
-        <MuiLink
+        <Button
           component={Link}
           href="/projects"
-          variant="body2"
-          sx={{ mt: 1, display: "inline-block" }}
+          startIcon={<KeyboardBackspaceIcon />}
+          sx={{
+            mt: 1,
+            color: "text.secondary",
+            textTransform: "none",
+            fontWeight: 500,
+            "&:hover": { bgcolor: "surface", color: "primary.main" },
+          }}
         >
-          ← Back to Projects
-        </MuiLink>
+          Back to Projects
+        </Button>
       </Box>
     );
   }
@@ -188,15 +201,20 @@ export default function ProjectDetailPage({
 
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 4 }}>
-      <MuiLink
+      <Button
         component={Link}
         href="/projects"
-        variant="caption"
-        color="text.secondary"
-        underline="hover"
+        startIcon={<KeyboardBackspaceIcon />}
+        sx={{
+          mb: 3,
+          color: "text.secondary",
+          textTransform: "none",
+          fontWeight: 500,
+          "&:hover": { bgcolor: "surface", color: "primary.main" },
+        }}
       >
-        ← Projects
-      </MuiLink>
+        Back to Projects
+      </Button>
 
       {/* Title */}
       <InputBase

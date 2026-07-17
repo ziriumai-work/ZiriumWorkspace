@@ -376,7 +376,8 @@ function AssignTaskForm({
                 hidden 
                 onChange={(e) => {
                   if (e.target.files) {
-                    setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                    const selected = Array.from(e.target.files);
+                    setFiles(prev => [...prev, ...selected]);
                   }
                   e.target.value = ''; // reset to allow picking same file again
                 }} 
@@ -441,6 +442,7 @@ function TaskCard({
   canDelete: boolean;
   currentUser: { uid: string; name: string; isAdmin: boolean };
 }) {
+  const { formatCurrency } = useCurrency();
   const [open, setOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const reportsCount = task.reports ? task.reports.length : (task.report.text || task.report.links.length || task.report.files.length ? 1 : 0);
@@ -493,7 +495,7 @@ function TaskCard({
             )}
             {task.isOvertime && (
               <Chip
-                label={`Overtime ($${task.overtimeCost?.toFixed(2) ?? "0.00"})`}
+                label={`Overtime (${formatCurrency(task.overtimeCost || 0)})`}
                 sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 500, fontSize: 11, height: 20 }}
               />
             )}

@@ -368,19 +368,19 @@ export default function InvoicesPage() {
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
           {items.map((it) => (
             <Grid container spacing={1} key={it.id} sx={{ alignItems: "center" }}>
-              <Grid size={{ xs: 6, sm: 2.5 }}>
+              <Grid size={{ xs: 12, sm: 2.5 }}>
                 <TextField
                   value={it.category}
                   onChange={(e) => patchItem(it.id, { category: e.target.value })}
-                  placeholder="Category"
+                  label="Category"
                   fullWidth
                 />
               </Grid>
-              <Grid size={{ xs: 6, sm: 4 }}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   value={it.description}
                   onChange={(e) => patchItem(it.id, { description: e.target.value })}
-                  placeholder="Description"
+                  label="Description"
                   fullWidth
                 />
               </Grid>
@@ -390,7 +390,7 @@ export default function InvoicesPage() {
                   onChange={(e) =>
                     patchItem(it.id, { qty: Math.max(0, Number(e.target.value) || 0) })
                   }
-                  placeholder="Quantity"
+                  label="Quantity"
                   type="number"
                   fullWidth
                 />
@@ -403,7 +403,7 @@ export default function InvoicesPage() {
                       unitPrice: Math.max(0, Number(e.target.value) || 0),
                     })
                   }
-                  placeholder="Price per Unit"
+                  label="Price"
                   type="number"
                   fullWidth
                 />

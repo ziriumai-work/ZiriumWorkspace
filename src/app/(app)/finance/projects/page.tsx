@@ -42,12 +42,26 @@ import {
   type FinanceProject,
   type FinanceProjectStatus,
 } from "@/lib/data/finance";
+import { updateProject, getProject } from "@/lib/data/projects";
+import { defaultColumns } from "@/lib/firebase/db";
+import { serverTimestamp, setDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
+import { useUpload } from "@/lib/contexts/UploadContext";
+import { useAuth } from "@/lib/firebase/auth-context";
+import AttachFileIcon from "@mui/icons-material/AttachFile";
+import CloseIcon from "@mui/icons-material/Close";
+import SyncIcon from "@mui/icons-material/Sync";
+import { red } from "@mui/material/colors";
+import { type AlertColor } from "@mui/material/Alert";
 
 export default function FinanceProjectsPage() {
+  const { user } = useAuth();
+  const { uploadFile } = useUpload();
   const [projects, setProjects] = useState<FinanceProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<AlertColor>("success");
   const [toDelete, setToDelete] = useState<FinanceProject | null>(null);
 
   // Add-project form.
@@ -57,6 +71,7 @@ export default function FinanceProjectsPage() {
   const [milestones, setMilestones] = useLocalStorage("zirium_draft_project_milestones", "");
   const [status, setStatus] = useLocalStorage<FinanceProjectStatus>("zirium_draft_project_status", "ongoing");
   const [currency, setCurrency] = useLocalStorage("zirium_draft_project_currency", "PKR");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -80,20 +95,30 @@ export default function FinanceProjectsPage() {
     setSaving(true);
     setError(null);
     try {
-      await addFinanceProject({
+      const id = await addFinanceProject({
         name: name.trim(),
         worth: Number(worth) || 0,
         received: Number(received) || 0,
         milestoneCount: Number(milestones) || 0,
         status,
         currency,
-      });
+        files: [],
+      }, user!.uid);
+
+      if (selectedFiles.length > 0) {
+        const uploaded = await Promise.all(
+          selectedFiles.map((f) => uploadFile(`financeProjects/${id}/${Date.now()}-${f.name}`, f))
+        );
+        await updateFinanceProject(id, { files: uploaded });
+      }
+
       setName("");
       setWorth("");
       setReceived("");
       setMilestones("");
       setStatus("ongoing");
       setCurrency("PKR");
+      setSelectedFiles([]);
       setToast("Project added");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add project");
@@ -180,6 +205,38 @@ export default function FinanceProjectsPage() {
               fullWidth
             />
           </Grid>
+          <Grid size={{ xs: 12 }}>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
+              <Button component="label" variant="outlined" startIcon={<AttachFileIcon />}>
+                Attach Documents
+                <input
+                  type="file"
+                  hidden
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      const newFiles = Array.from(e.target.files);
+                      const duplicates = newFiles.filter((nf) => selectedFiles.some((f) => f.name === nf.name));
+                      if (duplicates.length > 0) {
+                        setToastType("error");
+                        setToast(`File(s) already added: ${duplicates.map(f => f.name).join(", ")}`);
+                      }
+                      const validFiles = newFiles.filter((nf) => !selectedFiles.some((f) => f.name === nf.name));
+                      setSelectedFiles((prev) => [...prev, ...validFiles]);
+                    }
+                    e.target.value = '';
+                  }}
+                />
+              </Button>
+              {selectedFiles.map((f, i) => (
+                <Chip
+                  key={i}
+                  label={f.name}
+                  onDelete={() => setSelectedFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                />
+              ))}
+            </Box>
+          </Grid>
           <Grid size={{ xs: 12 }} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Box>
               {(Number(worth) || 0) > 0 && (
@@ -220,24 +277,69 @@ export default function FinanceProjectsPage() {
           {projects.map((p) => (
             <Grid key={p.id} size={{ xs: 12, sm: 6, md: 4 }}>
               <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
-                <IconButton
-                  size="small"
-                  onClick={() => setToDelete(p)}
-                  sx={{
-                    position: "absolute",
-                    top: 12,
-                    right: 12,
-                    color: "text.secondary",
-                    "&:hover": { color: "error.main", bgcolor: "error.50" },
-                  }}
-                >
-                  <DeleteIcon sx={{ fontSize: 18 }} />
-                </IconButton>
-                <Box sx={{ pr: 4, mb: 2 }}>
-                  <EditableText
-                    value={p.name}
-                    onCommit={(v) => v.trim() && updateFinanceProject(p.id, { name: v.trim() })}
-                  />
+                <Box sx={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 1 }}>
+                  <IconButton
+                    size="small"
+                    title="Restore App Workspace"
+                    onClick={async () => {
+                      try {
+                        const existing = await getProject(p.id);
+                        if (!existing) {
+                          await setDoc(doc(db, "projects", p.id), {
+                            title: p.name,
+                            description: "",
+                            status: "planned",
+                            priority: "medium",
+                            assigneeUid: null,
+                            teamId: null,
+                            dueDate: null,
+                            order: Date.now(),
+                            developerIds: [],
+                            projectRoles: {},
+                            columns: defaultColumns(),
+                            rows: [],
+                            financeFiles: p.files ?? [],
+                            createdBy: user?.uid ?? "",
+                            createdAt: serverTimestamp(),
+                            updatedAt: serverTimestamp(),
+                          });
+                          setToastType("success");
+                          setToast("App Workspace restored!");
+                        } else {
+                          setToastType("error");
+                          setToast("App Workspace already exists.");
+                        }
+                      } catch (err) {
+                        setToastType("error");
+                        setToast("Failed to restore workspace.");
+                      }
+                    }}
+                    sx={{ color: "text.secondary", "&:hover": { color: "primary.main", bgcolor: "primary.50" } }}
+                  >
+                    <SyncIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => setToDelete(p)}
+                    sx={{
+                      color: "text.secondary",
+                      "&:hover": { color: "error.main", bgcolor: "error.50" },
+                    }}
+                  >
+                    <DeleteIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Box>
+                <Box sx={{ pr: 10, mb: 2 }}>
+                    <EditableText
+                      value={p.name}
+                      onCommit={(v) => v.trim() && updateFinanceProject(p.id, { name: v.trim() })}
+                      sx={{ 
+                        fontSize: 16,
+                        fontWeight: 600, 
+                        color: "primary.main",
+                        textShadow: "0 0 8px rgba(0, 229, 255, 0.4)",
+                      }}
+                    />
                 </Box>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, flexGrow: 1 }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -300,6 +402,55 @@ export default function FinanceProjectsPage() {
                       <MenuItem value="completed">Completed</MenuItem>
                     </Select>
                   </Box>
+                  <Box sx={{ mt: 1, pt: 1, borderTop: 1, borderColor: "divider" }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>Attachments</Typography>
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                      {p.files?.map((f, i) => (
+                        <Chip
+                          key={i}
+                          label={f.name}
+                          size="small"
+                          component="a"
+                          href={f.url}
+                          target="_blank"
+                          clickable
+                          onDelete={async (e) => {
+                            e.preventDefault();
+                            const newFiles = [...p.files!];
+                            newFiles.splice(i, 1);
+                            await updateFinanceProject(p.id, { files: newFiles });
+                            await updateProject(p.id, { financeFiles: newFiles }).catch(() => {});
+                          }}
+                        />
+                      ))}
+                      <Button component="label" size="small" variant="text" startIcon={<AttachFileIcon sx={{ fontSize: 16 }} />} sx={{ fontSize: 12, py: 0, minHeight: 24 }}>
+                        Add File
+                        <input
+                          type="file"
+                          hidden
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (p.files?.some(f => f.name === file.name)) {
+                              setToastType("error");
+                              setToast(`File "${file.name}" is already uploaded.`);
+                              e.target.value = '';
+                              return;
+                            }
+                            try {
+                              const uploaded = await uploadFile(`financeProjects/${p.id}/${Date.now()}-${file.name}`, file);
+                              const newFiles = [...(p.files || []), uploaded];
+                              await updateFinanceProject(p.id, { files: newFiles });
+                              await updateProject(p.id, { financeFiles: newFiles }).catch(() => {});
+                            } catch (err) {
+                              console.error(err);
+                            }
+                            e.target.value = '';
+                          }}
+                        />
+                      </Button>
+                    </Box>
+                  </Box>
                 </Box>
               </Paper>
             </Grid>
@@ -318,6 +469,7 @@ export default function FinanceProjectsPage() {
       <Toast
         open={Boolean(toast)}
         message={toast ?? ""}
+        type={toastType}
         onClose={() => setToast(null)}
       />
     </Box>
@@ -328,9 +480,11 @@ export default function FinanceProjectsPage() {
 function EditableText({
   value,
   onCommit,
+  sx,
 }: {
   value: string;
   onCommit: (v: string) => void;
+  sx?: any;
 }) {
   const [draft, setDraft] = useState(value);
   const [last, setLast] = useState(value);
@@ -347,7 +501,7 @@ function EditableText({
         if (e.key === "Enter") (e.target as HTMLInputElement).blur();
       }}
       fullWidth
-      sx={{ fontSize: 14, fontWeight: 500 }}
+      sx={{ fontSize: 14, fontWeight: 500, ...sx }}
     />
   );
 }
