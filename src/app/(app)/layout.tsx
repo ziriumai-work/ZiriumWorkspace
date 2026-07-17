@@ -24,6 +24,7 @@ import { CurrencyProvider } from "@/lib/contexts/CurrencyContext";
 
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { SessionManager } from "@/components/attendance/SessionManager";
+import { GlobalBanner } from "@/components/announcements/GlobalBanner";
 
 // Which roles may visit which top-level routes. Prefix match; routes not
 // listed (none today) are open to every signed-in user.
@@ -37,6 +38,7 @@ const ROUTE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: "/attendance", roles: ["admin", "employee", "intern"] },
   { prefix: "/finance", roles: ["admin"] },
   { prefix: "/documents", roles: ["admin", "employee", "intern"] },
+  { prefix: "/announcements", roles: ["admin"] },
 ];
 
 function allowedPath(role: AppRole, pathname: string): boolean {
@@ -82,19 +84,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <CurrencyProvider>
       <AiProvider>
         <SessionManager />
-        <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
-          <WelcomeScreen />
-          <AppSidebar />
-          <Box
-            sx={{
-              display: "flex",
-              flex: 1,
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            <AppTopbar />
-            <Box sx={{ flex: 1, overflowY: "auto" }}>{children}</Box>
+        <Box sx={{ display: "flex", flex: 1, overflow: "hidden", flexDirection: "column" }}>
+          <GlobalBanner />
+          <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+            <WelcomeScreen />
+            <AppSidebar />
+            <Box
+              sx={{
+                display: "flex",
+                flex: 1,
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
+              <AppTopbar />
+              <Box sx={{ flex: 1, overflowY: "auto" }}>{children}</Box>
+            </Box>
           </Box>
         </Box>
       </AiProvider>

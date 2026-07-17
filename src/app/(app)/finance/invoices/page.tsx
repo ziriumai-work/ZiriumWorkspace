@@ -500,10 +500,10 @@ export default function InvoicesPage() {
               invoices.map((inv) => (
                 <TableRow key={inv.id} hover>
                   <TableCell sx={{ fontWeight: 500 }}>{inv.number}</TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{inv.clientName}</Typography>
+                  <TableCell sx={{ maxWidth: 200 }}>
+                    <Typography variant="body2" sx={{ wordBreak: "break-word" }}>{inv.clientName}</Typography>
                     {inv.clientCompany && (
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", wordBreak: "break-word" }}>
                         {inv.clientCompany}
                       </Typography>
                     )}

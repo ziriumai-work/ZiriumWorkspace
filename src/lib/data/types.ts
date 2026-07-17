@@ -401,3 +401,16 @@ export interface LeaveRequest {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Announcements
+// ---------------------------------------------------------------------------
+export interface Announcement {
+  id: string;
+  title: string;
+  description: string;
+  expiryDate: string | null;
+  createdAt: Timestamp | null;
+  createdBy: string;
+}
+

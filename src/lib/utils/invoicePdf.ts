@@ -123,14 +123,21 @@ export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
   
   doc.setFont("helvetica", "bold");
   doc.setTextColor(TEXT_MAIN);
-  doc.text(invoice.clientName || "—", margin, y);
-  y += 16;
+  if (invoice.clientName) {
+    const nameLines = doc.splitTextToSize(invoice.clientName, (pageWidth / 2) - margin - 20);
+    doc.text(nameLines, margin, y);
+    y += nameLines.length * 16;
+  } else {
+    doc.text("—", margin, y);
+    y += 16;
+  }
   
   doc.setFont("helvetica", "normal");
   doc.setTextColor(TEXT_MUTED);
   if (invoice.clientCompany) {
-    doc.text(invoice.clientCompany, margin, y);
-    y += 16;
+    const companyLines = doc.splitTextToSize(invoice.clientCompany, (pageWidth / 2) - margin - 20);
+    doc.text(companyLines, margin, y);
+    y += companyLines.length * 16;
   }
   if (invoice.clientAddress) {
     const lines = doc.splitTextToSize(invoice.clientAddress, (pageWidth / 2) - margin - 20);
