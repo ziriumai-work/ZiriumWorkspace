@@ -23,6 +23,7 @@ import { AiProvider } from "@/components/ai/AiProvider";
 import { CurrencyProvider } from "@/lib/contexts/CurrencyContext";
 
 import { WelcomeScreen } from "@/components/WelcomeScreen";
+import { SessionManager } from "@/components/attendance/SessionManager";
 
 // Which roles may visit which top-level routes. Prefix match; routes not
 // listed (none today) are open to every signed-in user.
@@ -80,6 +81,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <CurrencyProvider>
       <AiProvider>
+        <SessionManager />
         <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
           <WelcomeScreen />
           <AppSidebar />

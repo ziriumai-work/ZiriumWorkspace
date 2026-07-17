@@ -53,6 +53,7 @@ function toTask(id: string, data: Record<string, unknown>): DailyTask {
     reports,
     assignedHours: (data.assignedHours as number) ?? 0,
     isOvertime: (data.isOvertime as boolean) ?? false,
+    compensatesWeeklyHours: (data.compensatesWeeklyHours as boolean) ?? false,
     overtimeCost: (data.overtimeCost as number) ?? 0,
     attachments: (data.attachments as TaskFile[]) ?? [],
     createdBy: (data.createdBy as string) ?? "",
@@ -107,6 +108,7 @@ export type NewTask = {
   date: string;
   assignedHours?: number;
   isOvertime?: boolean;
+  compensatesWeeklyHours?: boolean;
   overtimeCost?: number;
   attachments?: TaskFile[];
 };
@@ -130,6 +132,7 @@ export async function createTask(
     reports: [],
     assignedHours: input.assignedHours ?? 0,
     isOvertime: input.isOvertime ?? false,
+    compensatesWeeklyHours: input.compensatesWeeklyHours ?? false,
     overtimeCost: input.overtimeCost ?? 0,
     attachments: input.attachments ?? [],
     createdBy: createdByUid,

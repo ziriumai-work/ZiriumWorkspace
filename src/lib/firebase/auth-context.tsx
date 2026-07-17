@@ -138,13 +138,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [accessBlocked, setAccessBlocked] = useState<string | null>(null);
 
-  // Check for turnover statuses
+  // Check for unauthorized access or turnover statuses
   useEffect(() => {
-    if (employee && (employee.status === "terminated" || employee.status === "offboarded")) {
-      setAccessBlocked("Your account access has been revoked. If you believe this is an error, please contact your administrator.");
-      firebaseSignOut(auth).catch(() => {});
+    if (user && employees) {
+      const isPrivileged = member?.role === "owner" || member?.role === "admin";
+      if (employee) {
+        if (employee.status === "terminated" || employee.status === "offboarded") {
+          setAccessBlocked("Your account access has been revoked. If you believe this is an error, please contact your administrator.");
+          firebaseSignOut(auth).catch(() => {});
+        }
+      } else if (employees.length > 0 && !isPrivileged) {
+        // Not in the system, but system has users (so this is not the very first setup owner)
+        // And they are not manually promoted to owner/admin in the members collection.
+        setAccessBlocked("Your email is not registered in the system. Please contact your administrator to be added before logging in or registering.");
+        firebaseSignOut(auth).catch(() => {});
+      }
     }
-  }, [employee]);
+  }, [user, employee, employees, member]);
 
   // Admin if EITHER:
   //  - a privileged member role, OR
@@ -156,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     member?.role === "owner" ||
     member?.role === "admin" ||
     employee?.accessLevel === "admin" ||
-    (user !== null && employees !== null && employee === null);
+    (user !== null && employees !== null && employees.length === 0 && employee === null);
 
   // Resolve the app role once the directory is available. Interns are marked
   // by their employee record's accessLevel; everyone else in the directory is

@@ -100,6 +100,11 @@ export default function EmployeesPage() {
       setError("Name and email are required.");
       return;
     }
+    const cleanEmail = form.email.trim().toLowerCase();
+    if (employees.some(e => e.email.toLowerCase() === cleanEmail)) {
+      setError("An employee with this email already exists in the system.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {

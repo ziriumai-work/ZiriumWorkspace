@@ -207,6 +207,7 @@ export interface DailyTask {
   reports?: TaskReport[]; // ordered history of reports/reviews
   assignedHours?: number; // specific number of hours assigned
   isOvertime?: boolean; // toggle to mark as overtime
+  compensatesWeeklyHours?: boolean; // if true, these hours count towards weekly total instead of extra pay
   overtimeCost?: number; // computed overtime cost
   attachments?: TaskFile[]; // admin attached docs
   createdBy: string; // uid of the admin who assigned it

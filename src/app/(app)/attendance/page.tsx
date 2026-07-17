@@ -22,6 +22,8 @@ import Divider from "@mui/material/Divider";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Select from "@mui/material/Select";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -44,6 +46,7 @@ import {
   subscribeToOfficeSettings,
   updateOfficeSettings,
 } from "@/lib/data/attendance";
+import { subscribeToTasksForEmployee } from "@/lib/data/tasks";
 import {
   ATTENDANCE_STATUSES,
   DEFAULT_OFFICE_SETTINGS,
@@ -51,6 +54,7 @@ import {
   type AttendanceStatus,
   type Employee,
   type OfficeSettings,
+  type DailyTask,
 } from "@/lib/data/types";
 
 // Colour map for attendance status chips.
@@ -74,11 +78,21 @@ function fmtTime(iso: string | null): string {
   }
 }
 
+function formatHoursMinutes(hrs: number): string {
+  if (isNaN(hrs) || !isFinite(hrs) || hrs <= 0) return "—";
+  const totalMinutes = Math.round(hrs * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
 function calcHours(checkIn: string | null, checkOut: string | null): string {
   if (!checkIn) return "—";
   const outTime = checkOut ? new Date(checkOut) : new Date();
   const hrs = (outTime.getTime() - new Date(checkIn).getTime()) / 3_600_000;
-  return hrs > 0 ? `${hrs.toFixed(1)}h` : "—";
+  return formatHoursMinutes(hrs);
 }
 
 function pad(n: number) {
@@ -88,6 +102,7 @@ function pad(n: number) {
 export default function AttendancePage() {
   const { user, isAdmin, employee, role } = useAuth();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [settings, setSettings] = useState<OfficeSettings>(
     DEFAULT_OFFICE_SETTINGS,
@@ -177,6 +192,35 @@ export default function AttendancePage() {
     return unsub;
   }, [user, isAdmin, role]);
 
+  // Subscribe to tasks for non-admins (for stats calculation).
+  useEffect(() => {
+    if (!employee || isAdmin) return;
+    return subscribeToTasksForEmployee(employee.id, (t) => {
+      setTasks(t);
+    });
+  }, [employee, isAdmin]);
+
+  // TEMP DATA FIX: Fix any corrupted records with > 100 hours
+  useEffect(() => {
+    if (!records.length) return;
+    const fixRecords = async () => {
+      for (const r of records) {
+        if (r.hoursWorked > 100) {
+          try {
+            await updateDoc(doc(db, "attendance", r.id), {
+              hoursWorked: 0,
+              checkOut: null
+            });
+            console.log("Fixed corrupted record:", r.id);
+          } catch (e) {
+            console.error("Failed to fix record:", e);
+          }
+        }
+      }
+    };
+    fixRecords();
+  }, [records]);
+
   // Today's record for the current user.
   const today = new Date().toISOString().slice(0, 10);
   const myTodayRecord = useMemo(
@@ -250,6 +294,80 @@ export default function AttendancePage() {
       ),
     [monthRecords, settings, role],
   );
+
+  // Non-Admin Statistics
+  const myStats = useMemo(() => {
+    if (isAdmin || !employee) return null;
+
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const weekStart = new Date(now);
+    const day = weekStart.getDay();
+    const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+    weekStart.setDate(diff);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekStartIso = weekStart.toISOString().slice(0, 10);
+
+    const monthPrefix = todayStr.slice(0, 7); // "YYYY-MM"
+
+    // 1. Weekly Hours
+    let weeklyHoursWorked = 0;
+    records.forEach(r => {
+      if (r.date >= weekStartIso && r.date <= todayStr && r.uid === user?.uid) {
+        weeklyHoursWorked += r.hoursWorked;
+      }
+    });
+
+    let weeklyCompensatedHours = 0;
+    tasks.forEach(t => {
+      if (t.date >= weekStartIso && t.date <= todayStr && t.status === "done" && t.compensatesWeeklyHours) {
+        weeklyCompensatedHours += (t.assignedHours || 0);
+      }
+    });
+
+    const totalWeeklyHours = weeklyHoursWorked + weeklyCompensatedHours;
+    const requiredHours = employee.officeHours || 0;
+    const remainingHours = Math.max(0, requiredHours - totalWeeklyHours);
+
+    // 2. Flexibility
+    let flexibilityUsed = 0; // minutes
+    records.forEach(r => {
+      if (r.date >= weekStartIso && r.date <= todayStr && r.uid === user?.uid) {
+        flexibilityUsed += (r.flexibilityUsed || 0);
+      }
+    });
+    
+    const allowedFlex = (employee.flexibilityHours || 0) * 60;
+    const flexRemaining = allowedFlex - flexibilityUsed; 
+
+    // 3. Lates & Leaves (Month)
+    let monthlyLates = 0;
+    let monthlyLeaves = 0;
+    records.forEach(r => {
+      if (r.date.startsWith(monthPrefix) && r.uid === user?.uid) {
+        if (r.isLate) monthlyLates++;
+        if (r.status === "on_leave") monthlyLeaves++;
+      }
+    });
+
+    const latesAllowed = settings.lateThresholdDays;
+    const leavesAllowed = employee.accessLevel === "intern" ? settings.internLeavesPerMonth : settings.employeeLeavesPerMonth;
+
+    const isPenaltyActive = monthlyLates > latesAllowed && remainingHours > 0 && flexRemaining < 0;
+
+    return {
+      totalWeeklyHours,
+      requiredHours,
+      remainingHours,
+      flexRemaining,
+      allowedFlex,
+      monthlyLates,
+      latesAllowed,
+      monthlyLeaves,
+      leavesAllowed,
+      isPenaltyActive,
+    };
+  }, [isAdmin, employee, records, tasks, settings, user]);
 
   // ---- actions ----
 
@@ -428,8 +546,73 @@ export default function AttendancePage() {
         />
       </Paper>
 
+      {/* Non-Admin Statistics Dashboard */}
+      {myStats && (
+        <Paper variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 4 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
+            My Statistics
+          </Typography>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "repeat(1, 1fr)",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(4, 1fr)",
+              },
+              gap: 2,
+            }}
+          >
+            <StatCard 
+              label="Weekly Hours Remaining" 
+              value={formatHoursMinutes(myStats.remainingHours)} 
+              color={myStats.remainingHours > 0 ? "#f59e0b" : "#22c55e"} 
+            />
+            <StatCard 
+              label="Flexibility Remaining" 
+              value={formatHoursMinutes(Math.max(0, myStats.flexRemaining) / 60)} 
+              color={myStats.flexRemaining >= 0 ? "#3b82f6" : "#ef4444"} 
+            />
+            <StatCard 
+              label={`Lates (Max: ${myStats.latesAllowed})`} 
+              value={myStats.monthlyLates} 
+              color={myStats.monthlyLates > myStats.latesAllowed ? "#ef4444" : "#22c55e"} 
+            />
+            <StatCard 
+              label={`Leaves (Max: ${myStats.leavesAllowed})`} 
+              value={myStats.monthlyLeaves} 
+              color={myStats.monthlyLeaves > myStats.leavesAllowed ? "#ef4444" : "#22c55e"} 
+            />
+          </Box>
+          <Divider sx={{ my: 2 }} />
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3, alignItems: "center" }}>
+            <Typography variant="body2" color="text.secondary">
+              Total Weekly Hours Required: <strong>{myStats.requiredHours}h</strong>
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Total Flexibility Allowed: <strong>{formatHoursMinutes(myStats.allowedFlex / 60)}</strong>
+            </Typography>
+            {myStats.isPenaltyActive && (
+              <Chip
+                size="small"
+                label="50% Salary Deduction Active (Exhausted Flexibility & Max Lates)"
+                sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 700, fontSize: 12 }}
+              />
+            )}
+            {!myStats.isPenaltyActive && myStats.monthlyLates > myStats.latesAllowed && myStats.remainingHours === 0 && (
+              <Chip
+                size="small"
+                label="Penalty Averted (Compensated Weekly Hours)"
+                sx={{ bgcolor: "#22c55e22", color: "#22c55e", fontWeight: 700, fontSize: 12 }}
+              />
+            )}
+          </Box>
+        </Paper>
+      )}
+
       {/* Clock in / out card */}
-      <Paper
+      {!isAdmin && (
+        <Paper
         variant="outlined"
         sx={{
           p: 3,
@@ -500,6 +683,7 @@ export default function AttendancePage() {
           )}
         </Box>
       </Paper>
+      )}
 
       {/* Admin controls + filter */}
       {isAdmin && (
@@ -562,7 +746,7 @@ export default function AttendancePage() {
               setMarkOpen(true);
               setMarkUid(employees.find((e) => e.uid)?.uid ?? "");
               setMarkDate(today);
-              setMarkStatus("present");
+              setMarkStatus("on_leave");
               setMarkCheckIn("");
               setMarkCheckOut("");
             }}
@@ -620,10 +804,10 @@ export default function AttendancePage() {
         <Divider sx={{ my: 2 }} />
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3, alignItems: "center" }}>
           <Typography variant="body2" color="text.secondary">
-            Total Hours: <strong>{summary.totalHoursWorked}h</strong>
+            Total Hours: <strong>{formatHoursMinutes(summary.totalHoursWorked)}</strong>
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Overtime: <strong>{Math.round(summary.totalOvertimeMinutes / 60 * 10) / 10}h</strong>
+            Overtime: <strong>{formatHoursMinutes(summary.totalOvertimeMinutes / 60)}</strong>
           </Typography>
           {summary.lateDaysOverThreshold > 0 && (
             <Chip
@@ -895,34 +1079,8 @@ export default function AttendancePage() {
               },
             }}
           >
-            {ATTENDANCE_STATUSES.map((s) => (
-              <MenuItem
-                key={s.value}
-                value={s.value}
-                disabled={markDate > new Date().toISOString().slice(0, 10) && s.value !== "on_leave"}
-              >
-                {s.label}
-              </MenuItem>
-            ))}
+            <MenuItem value="on_leave">On Leave</MenuItem>
           </Select>
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <TextField
-              label="Check-in time"
-              type="time"
-              value={markCheckIn}
-              onChange={(e) => setMarkCheckIn(e.target.value)}
-              fullWidth
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-            <TextField
-              label="Check-out time"
-              type="time"
-              value={markCheckOut}
-              onChange={(e) => setMarkCheckOut(e.target.value)}
-              fullWidth
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-          </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setMarkOpen(false)}>Cancel</Button>
@@ -1073,7 +1231,7 @@ function StatCard({
   color,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   color: string;
 }) {
   return (

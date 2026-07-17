@@ -286,6 +286,72 @@ export async function clockOut(
   });
 }
 
+/** 
+ * Session Manager Helper: finds any open shifts (checkOut: null) for the user.
+ * If the shift is from a previous day, or today but past office end time, it
+ * auto-closes the shift exactly at the official office end time.
+ */
+export async function autoClockOutUnclosedShifts(
+  uid: string,
+  settings: OfficeSettings
+): Promise<void> {
+  const q = query(
+    collection(db, COL),
+    where("uid", "==", uid),
+    where("checkOut", "==", null)
+  );
+  
+  const snap = await getDocs(q);
+  if (snap.empty) return;
+  
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  
+  const todayEnd = new Date(now);
+  todayEnd.setHours(settings.endHour, settings.endMinute, 0, 0);
+  
+  const batchUpdates = [];
+  
+  for (const d of snap.docs) {
+    const data = d.data() as AttendanceRecord;
+    let shouldClose = false;
+    
+    // If from a previous day, definitely close.
+    if (data.date < todayStr) {
+      shouldClose = true;
+    } 
+    // If today, only close if we are past closing time.
+    else if (data.date === todayStr && now > todayEnd) {
+      shouldClose = true;
+    }
+    
+    if (shouldClose) {
+      // Reconstruct the official closing time for that specific date
+      const closingDate = new Date(data.date); // e.g. "2024-05-10"
+      closingDate.setHours(settings.endHour, settings.endMinute, 0, 0);
+      
+      const checkOutIso = closingDate.toISOString();
+      const hoursWorked = data.checkIn 
+        ? Math.max(0, (closingDate.getTime() - new Date(data.checkIn).getTime()) / 3_600_000)
+        : 0;
+      
+      batchUpdates.push(
+        updateDoc(d.ref, {
+          checkOut: checkOutIso,
+          hoursWorked: Math.round(hoursWorked * 100) / 100,
+          isOvertime: false,
+          overtimeMinutes: 0,
+          updatedAt: serverTimestamp(),
+        })
+      );
+    }
+  }
+  
+  if (batchUpdates.length > 0) {
+    await Promise.all(batchUpdates);
+  }
+}
+
 /** Admin: manually mark attendance for any employee. */
 export async function markAttendance(
   uid: string,

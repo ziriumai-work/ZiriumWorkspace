@@ -214,6 +214,7 @@ function AssignTaskForm({
   const [date, setDate] = useState(today());
   const [assignedHours, setAssignedHours] = useState<number>(0);
   const [isOvertime, setIsOvertime] = useState(false);
+  const [compensatesWeeklyHours, setCompensatesWeeklyHours] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -254,6 +255,7 @@ function AssignTaskForm({
         date,
         assignedHours,
         isOvertime,
+        compensatesWeeklyHours,
         overtimeCost: calculatedCost,
         attachments: uploadedFiles,
       });
@@ -261,6 +263,7 @@ function AssignTaskForm({
       setDescription("");
       setAssignedHours(0);
       setIsOvertime(false);
+      setCompensatesWeeklyHours(false);
       setFiles([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to assign task");
@@ -361,6 +364,16 @@ function AssignTaskForm({
             label="Mark as Overtime"
           />
           {isOvertime && (
+            <FormControlLabel
+              control={<Switch checked={compensatesWeeklyHours} onChange={(e) => setCompensatesWeeklyHours(e.target.checked)} color="secondary" size="small" />}
+              label={
+                <Typography variant="caption" sx={{ lineHeight: 1 }}>
+                  Count towards weekly hours completion
+                </Typography>
+              }
+            />
+          )}
+          {isOvertime && !compensatesWeeklyHours && (
             <Typography variant="caption" color="text.secondary">
               Est. Cost: {formatCurrency(calculatedCost)}
             </Typography>
