@@ -40,4 +40,13 @@ export async function uploadFinanceProjectFile(
   const url = await getDownloadURL(r);
   return { name: file.name, url };
 }
-
+export async function uploadLeaveProof(
+  uid: string,
+  file: File,
+): Promise<TaskFile> {
+  const path = `leaveRequests/${uid}/${Date.now()}-${file.name}`;
+  const r = ref(storage, path);
+  await uploadBytes(r, file);
+  const url = await getDownloadURL(r);
+  return { name: file.name, url };
+}

@@ -24,6 +24,7 @@ import {
   type AttendanceStatus,
   type OfficeSettings,
   type Developer,
+  type DailyTask,
 } from "@/lib/data/types";
 
 const COL = "attendance";
@@ -160,6 +161,19 @@ export async function clockIn(
   const id = recordId(uid, date);
   const checkInIso = now.toISOString();
 
+  // Check if a record already exists for today (e.g., approved leave)
+  const docRef = doc(db, COL, id);
+  const snap = await getDoc(docRef);
+  if (snap.exists()) {
+    const data = snap.data() as AttendanceRecord;
+    if (data.status === "sick_leave" || data.status === "on_leave") {
+      return { status: "warning", message: "You can't clock in today you are on a leave." };
+    }
+    if (data.checkIn) {
+      return { status: "warning", message: "Already clocked in today." };
+    }
+  }
+
   if (!employee.startDate) {
     await updateDoc(doc(db, "developers", employee.id), {
       startDate: date,
@@ -257,18 +271,26 @@ export async function clockIn(
 /** Clock out — sets checkOut, calculates hoursWorked and overtime. */
 export async function clockOut(
   uid: string,
-  settings: OfficeSettings,
-): Promise<void> {
+  settings: OfficeSettings
+): Promise<{ status: "success" | "warning" | "error"; message: string }> {
   const now = new Date();
   const date = now.toISOString().slice(0, 10);
   const id = recordId(uid, date);
   const docRef = doc(db, COL, id);
   
   const snap = await getDoc(docRef);
-  if (!snap.exists()) return;
+  if (!snap.exists()) return { status: "error", message: "No check-in record found for today." };
   
-  const data = snap.data();
+  const data = snap.data() as AttendanceRecord;
+  if (data.status === "sick_leave" || data.status === "on_leave") {
+    return { status: "warning", message: "You can't clock out today you are on a leave." };
+  }
+  
   const checkInIso = data.checkIn;
+  if (!checkInIso) {
+    return { status: "error", message: "You haven't checked in today." };
+  }
+
   const checkOutIso = now.toISOString();
   
   const hoursWorked = Math.max(
@@ -284,6 +306,8 @@ export async function clockOut(
     overtimeMinutes: overtime,
     updatedAt: serverTimestamp(),
   });
+  
+  return { status: "success", message: "Clocked out successfully." };
 }
 
 /** 
@@ -347,6 +371,87 @@ export async function autoClockOutUnclosedShifts(
     }
   }
   
+  if (batchUpdates.length > 0) {
+    await Promise.all(batchUpdates);
+  }
+}
+
+/** 
+ * Auto-fills missing working days as on_leave or absent.
+ * Skips weekends (Saturday, Sunday) and skips today.
+ */
+export async function autoFillMissingAttendance(
+  employee: Developer,
+  settings: OfficeSettings
+): Promise<void> {
+  if (!employee.startDate || !employee.uid) return;
+
+  const uid = employee.uid;
+  const q = query(collection(db, COL), where("uid", "==", uid));
+  const snap = await getDocs(q);
+  
+  const existingRecords = new Map<string, AttendanceRecord>();
+  snap.forEach(d => {
+    const rec = d.data() as AttendanceRecord;
+    existingRecords.set(rec.date, rec);
+  });
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  
+  const start = new Date(employee.startDate);
+  start.setHours(0, 0, 0, 0);
+
+  const allowedLeaves = employee.accessLevel === "intern" 
+    ? settings.internLeavesPerMonth 
+    : settings.employeeLeavesPerMonth;
+
+  const batchUpdates = [];
+
+  // Iterate from start date up to yesterday
+  const curr = new Date(start);
+  while (true) {
+    const dateStr = curr.toISOString().slice(0, 10);
+    if (dateStr >= todayStr) break;
+
+    const dayOfWeek = curr.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    if (!isWeekend && !existingRecords.has(dateStr)) {
+      const monthPrefix = dateStr.slice(0, 7);
+      
+      let leavesThisMonth = 0;
+      for (const rec of existingRecords.values()) {
+        if (rec.date.startsWith(monthPrefix) && rec.status === "on_leave") {
+          leavesThisMonth++;
+        }
+      }
+
+      const status: AttendanceStatus = leavesThisMonth < allowedLeaves ? "on_leave" : "absent";
+      
+      const id = recordId(uid, dateStr);
+      const newRec: Partial<AttendanceRecord> = {
+        uid,
+        employeeName: employee.name,
+        date: dateStr,
+        checkIn: null,
+        checkOut: null,
+        status,
+        hoursWorked: 0,
+        isLate: false,
+        isOvertime: false,
+        overtimeMinutes: 0,
+        createdAt: serverTimestamp() as any,
+        updatedAt: serverTimestamp() as any,
+      };
+      
+      batchUpdates.push(setDoc(doc(db, COL, id), newRec));
+      existingRecords.set(dateStr, newRec as AttendanceRecord);
+    }
+    
+    curr.setDate(curr.getDate() + 1);
+  }
+
   if (batchUpdates.length > 0) {
     await Promise.all(batchUpdates);
   }
@@ -424,8 +529,8 @@ export interface MonthlySummary {
   totalPresent: number;
   totalLate: number;
   totalLeaves: number;
+  totalSickLeaves: number;
   totalAbsent: number;
-  totalHalfDays: number;
   totalHoursWorked: number;
   totalOvertimeMinutes: number;
   lateDaysOverThreshold: number; // late days beyond allowed threshold
@@ -435,14 +540,15 @@ export interface MonthlySummary {
 
 export function computeMonthlySummary(
   records: AttendanceRecord[],
+  tasks: DailyTask[],
   settings: OfficeSettings,
   isIntern: boolean,
 ): MonthlySummary {
   let totalPresent = 0;
   let totalLate = 0;
   let totalLeaves = 0;
+  let totalSickLeaves = 0;
   let totalAbsent = 0;
-  let totalHalfDays = 0;
   let totalHoursWorked = 0;
   let totalOvertimeMinutes = 0;
 
@@ -457,11 +563,11 @@ export function computeMonthlySummary(
       case "on_leave":
         totalLeaves++;
         break;
+      case "sick_leave":
+        totalSickLeaves++;
+        break;
       case "absent":
         totalAbsent++;
-        break;
-      case "half_day":
-        totalHalfDays++;
         break;
     }
     
@@ -477,6 +583,13 @@ export function computeMonthlySummary(
     
     totalHoursWorked += hw;
     totalOvertimeMinutes += ot;
+  }
+
+  for (const t of tasks) {
+    if (t.status === "done" && t.isOvertime && t.compensatesWeeklyHours) {
+      totalHoursWorked += (Number(t.assignedHours) || 0);
+      totalOvertimeMinutes += (Number(t.assignedHours) || 0) * 60;
+    }
   }
 
   const allowedLeaves = isIntern
@@ -506,8 +619,8 @@ export function computeMonthlySummary(
     totalPresent,
     totalLate,
     totalLeaves,
+    totalSickLeaves,
     totalAbsent,
-    totalHalfDays,
     totalHoursWorked: Math.round(totalHoursWorked * 100) / 100,
     totalOvertimeMinutes,
     lateDaysOverThreshold,

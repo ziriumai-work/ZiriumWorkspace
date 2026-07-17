@@ -146,6 +146,14 @@ service cloud.firestore {
     match /monthlyExpenses/{id} {
       allow read, write: if isAdmin();
     }
+    
+    // Sick Leave Requests
+    match /leaveRequests/{id} {
+      allow read: if isAdmin() || (isMember() && resource.data.uid == request.auth.uid);
+      allow create: if isMember() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
 
     // Everything else is locked until the phase that introduces it defines
     // explicit rules.

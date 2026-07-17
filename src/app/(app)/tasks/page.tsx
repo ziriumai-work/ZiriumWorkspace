@@ -41,7 +41,7 @@ import {
   type NewTask,
 } from "@/lib/data/tasks";
 import { uploadTaskFile } from "@/lib/firebase/storage";
-import { doc, collection } from "firebase/firestore";
+import { doc, collection, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { overtimeCost } from "@/lib/utils/salaryMath";
 import { subscribeToDevelopers } from "@/lib/data/developers";
@@ -660,7 +660,7 @@ function TaskCard({
           value={task.status}
           options={DAILY_TASK_STATUSES}
           color={TASK_STATUS_COLORS[task.status]}
-          disabled={!canEdit}
+          disabled={!currentUser.isAdmin}
           onChange={(status: DailyTaskStatus) => updateTask(task.id, { status })}
         />
 

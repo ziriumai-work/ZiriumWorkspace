@@ -22,6 +22,11 @@ import Divider from "@mui/material/Divider";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Select from "@mui/material/Select";
+import Collapse from "@mui/material/Collapse";
+import IconButton from "@mui/material/IconButton";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import { useRouter } from "next/navigation";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import Table from "@mui/material/Table";
@@ -46,7 +51,7 @@ import {
   subscribeToOfficeSettings,
   updateOfficeSettings,
 } from "@/lib/data/attendance";
-import { subscribeToTasksForEmployee } from "@/lib/data/tasks";
+import { subscribeToAllTasks, subscribeToTasksForEmployee } from "@/lib/data/tasks";
 import {
   ATTENDANCE_STATUSES,
   DEFAULT_OFFICE_SETTINGS,
@@ -61,9 +66,9 @@ import {
 const STATUS_COLORS: Record<AttendanceStatus, string> = {
   present: "#22c55e",
   late: "#f59e0b",
-  half_day: "#3b82f6",
   absent: "#ef4444",
   on_leave: "#a855f7",
+  sick_leave: "#ec4899", // pink for sick leave
 };
 
 function fmtTime(iso: string | null): string {
@@ -100,6 +105,7 @@ function pad(n: number) {
 }
 
 export default function AttendancePage() {
+  const router = useRouter();
   const { user, isAdmin, employee, role } = useAuth();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [tasks, setTasks] = useState<DailyTask[]>([]);
@@ -160,7 +166,7 @@ export default function AttendancePage() {
   useEffect(() => {
     if (!user) return;
     const unsub = subscribeToDevelopers(
-      (devs) => setEmployees(devs ?? []),
+      (devs) => setEmployees((devs ?? []).filter(d => d.accessLevel !== "admin")),
       (err) => console.error("Employees error:", err)
     );
     return unsub;
@@ -192,12 +198,14 @@ export default function AttendancePage() {
     return unsub;
   }, [user, isAdmin, role]);
 
-  // Subscribe to tasks for non-admins (for stats calculation).
+  // Subscribe to tasks. Admins need all tasks for overtime calculation.
   useEffect(() => {
-    if (!employee || isAdmin) return;
-    return subscribeToTasksForEmployee(employee.id, (t) => {
-      setTasks(t);
-    });
+    if (isAdmin) {
+      return subscribeToAllTasks((t) => setTasks(t));
+    } else {
+      if (!employee) return;
+      return subscribeToTasksForEmployee(employee.id, (t) => setTasks(t));
+    }
   }, [employee, isAdmin]);
 
   // TEMP DATA FIX: Fix any corrupted records with > 100 hours
@@ -285,14 +293,45 @@ export default function AttendancePage() {
     return result;
   }, [records, summaryMonth, filterUid, filterDepartment, filterRole, isAdmin, user, employees]);
 
+  const monthTasks = useMemo(() => {
+    const target = summaryMonth; // "yyyy-mm"
+    let result = tasks.filter(t => t.date.startsWith(target));
+    if (!isAdmin) {
+      if (employee) result = result.filter((t) => t.assigneeId === employee.id);
+    } else {
+      if (filterUid !== "all") {
+        const selectedEmp = employees.find(e => e.uid === filterUid);
+        if (selectedEmp) {
+          result = result.filter((t) => t.assigneeId === selectedEmp.id);
+        } else {
+          result = []; // fallback if not found
+        }
+      }
+      if (filterDepartment !== "all") {
+        result = result.filter((t) => {
+          const emp = employees.find(e => e.id === t.assigneeId);
+          return emp?.department === filterDepartment;
+        });
+      }
+      if (filterRole !== "all") {
+        result = result.filter((t) => {
+          const emp = employees.find(e => e.id === t.assigneeId);
+          return emp?.accessLevel === filterRole;
+        });
+      }
+    }
+    return result;
+  }, [tasks, summaryMonth, filterUid, filterDepartment, filterRole, isAdmin, employee, employees]);
+
   const summary = useMemo(
     () =>
       computeMonthlySummary(
         monthRecords,
+        monthTasks,
         settings,
         role === "intern",
       ),
-    [monthRecords, settings, role],
+    [monthRecords, monthTasks, settings, role],
   );
 
   // Non-Admin Statistics
@@ -312,9 +351,11 @@ export default function AttendancePage() {
 
     // 1. Weekly Hours
     let weeklyHoursWorked = 0;
+    let daysOnLeaveThisWeek = 0;
     records.forEach(r => {
       if (r.date >= weekStartIso && r.date <= todayStr && r.uid === user?.uid) {
         weeklyHoursWorked += r.hoursWorked;
+        if (r.status === "on_leave" || r.status === "sick_leave") daysOnLeaveThisWeek++;
       }
     });
 
@@ -326,7 +367,9 @@ export default function AttendancePage() {
     });
 
     const totalWeeklyHours = weeklyHoursWorked + weeklyCompensatedHours;
-    const requiredHours = employee.officeHours || 0;
+    const baseRequiredHours = employee.officeHours || 0;
+    const dailyHours = baseRequiredHours / 5; // Assumes a 5-day work week
+    const requiredHours = Math.max(0, baseRequiredHours - (daysOnLeaveThisWeek * dailyHours));
     const remainingHours = Math.max(0, requiredHours - totalWeeklyHours);
 
     // 2. Flexibility
@@ -343,10 +386,12 @@ export default function AttendancePage() {
     // 3. Lates & Leaves (Month)
     let monthlyLates = 0;
     let monthlyLeaves = 0;
+    let monthlySickLeaves = 0;
     records.forEach(r => {
       if (r.date.startsWith(monthPrefix) && r.uid === user?.uid) {
         if (r.isLate) monthlyLates++;
         if (r.status === "on_leave") monthlyLeaves++;
+        if (r.status === "sick_leave") monthlySickLeaves++;
       }
     });
 
@@ -361,10 +406,11 @@ export default function AttendancePage() {
       remainingHours,
       flexRemaining,
       allowedFlex,
-      monthlyLates,
       latesAllowed,
-      monthlyLeaves,
       leavesAllowed,
+      monthlyLates,
+      monthlyLeaves,
+      monthlySickLeaves,
       isPenaltyActive,
     };
   }, [isAdmin, employee, records, tasks, settings, user]);
@@ -393,12 +439,11 @@ export default function AttendancePage() {
     setBusy(true);
     setError(null);
     try {
-      await clockOut(user.uid, settings);
-      setSuccess("Clocked out successfully!");
-      setTimeout(() => setSuccess(null), 3000);
+      const res = await clockOut(user.uid, settings);
+      setToastMsg({ message: res.message, type: res.status });
     } catch (err) {
       console.error(err);
-      setError("Failed to clock out.");
+      setToastMsg({ message: err instanceof Error ? err.message : "Failed to clock out.", type: "error" });
     }
     setBusy(false);
   }
@@ -483,6 +528,15 @@ export default function AttendancePage() {
             ⚙ Office Settings
           </Button>
         )}
+        {!isAdmin && (
+          <Button
+            variant="contained"
+            onClick={() => router.push("/attendance/leaves")}
+            sx={{ borderRadius: 3, fontSize: 13 }}
+          >
+            Request Sick Leave
+          </Button>
+        )}
       </Box>
 
       {error && (
@@ -557,8 +611,8 @@ export default function AttendancePage() {
               display: "grid",
               gridTemplateColumns: {
                 xs: "repeat(1, 1fr)",
-                sm: "repeat(2, 1fr)",
-                md: "repeat(4, 1fr)",
+                sm: "repeat(3, 1fr)",
+                md: "repeat(5, 1fr)",
               },
               gap: 2,
             }}
@@ -583,11 +637,19 @@ export default function AttendancePage() {
               value={myStats.monthlyLeaves} 
               color={myStats.monthlyLeaves > myStats.leavesAllowed ? "#ef4444" : "#22c55e"} 
             />
+            <StatCard 
+              label={`Sick Leaves`} 
+              value={myStats.monthlySickLeaves} 
+              color="#ec4899" 
+            />
           </Box>
           <Divider sx={{ my: 2 }} />
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3, alignItems: "center" }}>
             <Typography variant="body2" color="text.secondary">
               Total Weekly Hours Required: <strong>{myStats.requiredHours}h</strong>
+              {myStats.requiredHours < (employee?.officeHours || 0) && (
+                <span style={{ fontStyle: "italic", opacity: 0.8 }}> (reduced due to leaves)</span>
+              )}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Total Flexibility Allowed: <strong>{formatHoursMinutes(myStats.allowedFlex / 60)}</strong>
@@ -694,7 +756,8 @@ export default function AttendancePage() {
             justifyContent: "space-between",
             flexWrap: "wrap",
             gap: 2,
-            mb: 2,
+            mb: 4,
+            mt: 6,
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
@@ -735,7 +798,6 @@ export default function AttendancePage() {
               sx={{ minWidth: 120, borderRadius: 2, fontSize: 14 }}
             >
               <MenuItem value="all">All Roles</MenuItem>
-              <MenuItem value="admin">Admin</MenuItem>
               <MenuItem value="employee">Employee</MenuItem>
               <MenuItem value="intern">Intern</MenuItem>
             </Select>
@@ -798,8 +860,8 @@ export default function AttendancePage() {
           <StatCard label="Present" value={summary.totalPresent} color="#22c55e" />
           <StatCard label="Late" value={summary.totalLate} color="#f59e0b" />
           <StatCard label="Leaves" value={summary.totalLeaves} color="#a855f7" />
+          <StatCard label="Sick Leaves" value={summary.totalSickLeaves} color="#ec4899" />
           <StatCard label="Absent" value={summary.totalAbsent} color="#ef4444" />
-          <StatCard label="Half Day" value={summary.totalHalfDays} color="#3b82f6" />
         </Box>
         <Divider sx={{ my: 2 }} />
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3, alignItems: "center" }}>
@@ -840,163 +902,205 @@ export default function AttendancePage() {
         </Box>
       </Paper>
 
-      {/* Records table */}
-      <TableContainer
-        component={Paper}
-        variant="outlined"
-        sx={{ borderRadius: 4, overflow: "hidden" }}
-      >
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ bgcolor: "surface" }}>
-              {isAdmin && (
-                <>
-                  <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Member</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Role</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Department</TableCell>
-                </>
-              )}
-              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Date</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Clock In</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Clock Out</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Hours</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Flags</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {displayed.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={isAdmin ? 9 : 6}
-                  sx={{
-                    textAlign: "center",
-                    py: 4,
-                    color: "text.secondary",
-                  }}
-                >
-                  No attendance records found.
-                </TableCell>
+      {/* Records view */}
+      {isAdmin && filterUid === "all" ? (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          {employees
+            .filter(emp => filterDepartment === "all" || emp.department === filterDepartment)
+            .filter(emp => filterRole === "all" || emp.accessLevel === filterRole)
+            .map(emp => {
+              // Find today's record
+              const todayRecord = displayed.find(r => r.uid === emp.uid && r.date === today) || null;
+            // Find month records (excluding today so it's not redundant in the expanded list, or we can keep it. Let's keep it sorted)
+            const empMonthRecords = displayed.filter(r => r.uid === emp.uid).sort((a, b) => b.date.localeCompare(a.date));
+            
+            return (
+              <AdminEmployeeCard
+                key={emp.id}
+                employee={emp}
+                todayRecord={todayRecord}
+                monthRecords={empMonthRecords}
+                monthTasks={monthTasks}
+                onMarkAttendance={(uid) => {
+                  setMarkOpen(true);
+                  setMarkUid(uid);
+                  setMarkDate(today);
+                  setMarkStatus("on_leave");
+                  setMarkCheckIn("");
+                  setMarkCheckOut("");
+                }}
+              />
+            );
+          })}
+        </Box>
+      ) : (
+        <TableContainer
+          component={Paper}
+          variant="outlined"
+          sx={{ borderRadius: 4, overflow: "hidden" }}
+        >
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: "surface" }}>
+                {isAdmin && (
+                  <>
+                    <TableCell sx={{ fontWeight: 600, fontSize: 13, pl: 3 }}>Member</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Role</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Department</TableCell>
+                  </>
+                )}
+                <TableCell sx={{ fontWeight: 600, fontSize: 13, pl: isAdmin ? undefined : 3 }}>Date</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Clock In</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Clock Out</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Hours</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: 13, pr: 3 }}>Flags</TableCell>
               </TableRow>
-            ) : (
-              displayed.map((r) => (
-                <TableRow key={r.id} hover>
-                  {isAdmin && (
-                    <>
-                      <TableCell>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                          }}
-                        >
-                          <Avatar
-                            sx={{
-                              width: 24,
-                              height: 24,
-                              fontSize: 11,
-                              bgcolor: "accentSoft",
-                              color: "primary.main",
-                            }}
-                          >
-                            {r.employeeName?.charAt(0).toUpperCase() ?? "?"}
-                          </Avatar>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {r.employeeName}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ textTransform: "capitalize", color: "text.secondary" }}>
-                          {employees.find(e => e.uid === r.uid)?.accessLevel ?? "-"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ textTransform: "uppercase", color: "text.secondary" }}>
-                          {(() => {
-                            const emp = employees.find(e => e.uid === r.uid);
-                            if (!emp) return "-";
-                            return emp.department === "custom" && emp.customDepartment ? emp.customDepartment : emp.department;
-                          })()}
-                        </Typography>
-                      </TableCell>
-                    </>
-                  )}
-                  <TableCell>
-                    <Typography variant="body2">
-                      {new Date(r.date + "T00:00:00").toLocaleDateString(
-                        undefined,
-                        { weekday: "short", month: "short", day: "numeric" },
-                      )}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={
-                        ATTENDANCE_STATUSES.find((s) => s.value === r.status)
-                          ?.label ?? r.status
-                      }
-                      size="small"
-                      sx={{
-                        bgcolor: `${STATUS_COLORS[r.status]}22`,
-                        color: STATUS_COLORS[r.status],
-                        fontWeight: 600,
-                        fontSize: 11,
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {fmtTime(r.checkIn)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {fmtTime(r.checkOut)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {calcHours(r.checkIn, r.checkOut)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-                      {r.isLate && (
-                        <Chip
-                          size="small"
-                          label="Late"
-                          sx={{
-                            height: 20,
-                            fontSize: 10,
-                            bgcolor: "#f59e0b22",
-                            color: "#f59e0b",
-                            fontWeight: 600,
-                          }}
-                        />
-                      )}
-                      {r.isOvertime && (
-                        <Chip
-                          size="small"
-                          label={`+${r.overtimeMinutes < 60 ? `${r.overtimeMinutes}m` : `${Math.floor(r.overtimeMinutes / 60)}h ${r.overtimeMinutes % 60}m`} OT`}
-                          sx={{
-                            height: 20,
-                            fontSize: 10,
-                            bgcolor: "#3b82f622",
-                            color: "#3b82f6",
-                            fontWeight: 600,
-                          }}
-                        />
-                      )}
-                    </Box>
+            </TableHead>
+            <TableBody>
+              {displayed.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={isAdmin ? 9 : 6}
+                    sx={{
+                      textAlign: "center",
+                      py: 4,
+                      color: "text.secondary",
+                    }}
+                  >
+                    No attendance records found.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                displayed.map((r) => (
+                  <TableRow key={r.id} hover>
+                    {isAdmin && (
+                      <>
+                        <TableCell sx={{ pl: 3 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <Avatar
+                              sx={{
+                                width: 24,
+                                height: 24,
+                                fontSize: 11,
+                                bgcolor: "accentSoft",
+                                color: "primary.main",
+                              }}
+                            >
+                              {r.employeeName?.charAt(0).toUpperCase() ?? "?"}
+                            </Avatar>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {r.employeeName}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ textTransform: "capitalize", color: "text.secondary" }}>
+                            {employees.find(e => e.uid === r.uid)?.accessLevel ?? "-"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ textTransform: "uppercase", color: "text.secondary" }}>
+                            {(() => {
+                              const emp = employees.find(e => e.uid === r.uid);
+                              if (!emp) return "-";
+                              return emp.department === "custom" && emp.customDepartment ? emp.customDepartment : emp.department;
+                            })()}
+                          </Typography>
+                        </TableCell>
+                      </>
+                    )}
+                    <TableCell sx={{ pl: isAdmin ? undefined : 3 }}>
+                      <Typography variant="body2">
+                        {new Date(r.date + "T00:00:00").toLocaleDateString(
+                          undefined,
+                          { weekday: "short", month: "short", day: "numeric" },
+                        )}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={
+                          ATTENDANCE_STATUSES.find((s) => s.value === r.status)
+                            ?.label ?? r.status
+                        }
+                        size="small"
+                        sx={{
+                          bgcolor: `${STATUS_COLORS[r.status]}22`,
+                          color: STATUS_COLORS[r.status],
+                          fontWeight: 600,
+                          fontSize: 11,
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {fmtTime(r.checkIn)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {fmtTime(r.checkOut)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {calcHours(r.checkIn, r.checkOut)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ pr: 3 }}>
+                      <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                        {r.isLate && (
+                          <Chip
+                            size="small"
+                            label="Late"
+                            sx={{
+                              height: 20,
+                              fontSize: 10,
+                              bgcolor: "#f59e0b22",
+                              color: "#f59e0b",
+                              fontWeight: 600,
+                            }}
+                          />
+                        )}
+                        {(() => {
+                          const empDocId = employees.find(e => e.uid === r.uid)?.id;
+                          const dailyTasksForRecord = monthTasks.filter(t => t.date === r.date && t.assigneeId === empDocId && t.status === "done" && t.isOvertime && t.compensatesWeeklyHours);
+                          const taskOvertimeMinutes = dailyTasksForRecord.reduce((acc, t) => acc + (Number(t.assignedHours) || 0) * 60, 0);
+                          const totalOtMinutes = (r.isOvertime ? r.overtimeMinutes : 0) + taskOvertimeMinutes;
+                          
+                          if (totalOtMinutes > 0) {
+                            return (
+                              <Chip
+                                size="small"
+                                label={`+${totalOtMinutes < 60 ? `${totalOtMinutes}m` : `${Math.floor(totalOtMinutes / 60)}h ${totalOtMinutes % 60}m`} OT`}
+                                sx={{
+                                  height: 20,
+                                  fontSize: 10,
+                                  bgcolor: "#3b82f622",
+                                  color: "#3b82f6",
+                                  fontWeight: 600,
+                                }}
+                              />
+                            );
+                          }
+                          return null;
+                        })()}
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Admin: Mark attendance dialog */}
       <Dialog
@@ -1253,16 +1357,7 @@ function StatCard({
           transform: "translateY(-4px)",
           boxShadow: `0 12px 24px -8px ${color}60`,
         },
-        "&::after": {
-          content: '""',
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "2px",
-          bgcolor: color,
-          opacity: 0.5,
-        }
+
       }}
     >
       <Typography
@@ -1274,10 +1369,123 @@ function StatCard({
       <Typography
         variant="caption"
         color="text.secondary"
-        sx={{ mt: 0.5, display: "block", fontWeight: 500 }}
+        sx={{ fontWeight: 600, display: "block", mt: 1, textTransform: "uppercase" }}
       >
         {label}
       </Typography>
+    </Paper>
+  );
+}
+
+// Card used in Admin UI for "All" view
+function AdminEmployeeCard({
+  employee,
+  todayRecord,
+  monthRecords,
+  monthTasks,
+  onMarkAttendance,
+}: {
+  employee: Employee;
+  todayRecord: AttendanceRecord | null;
+  monthRecords: AttendanceRecord[];
+  monthTasks: DailyTask[];
+  onMarkAttendance: (uid: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  
+  return (
+    <Paper variant="outlined" sx={{ p: 3, borderRadius: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Avatar sx={{ bgcolor: "accentSoft", color: "primary.main", width: 48, height: 48, fontWeight: 700 }}>
+            {employee.name.charAt(0).toUpperCase()}
+          </Avatar>
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{employee.name}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ textTransform: "capitalize" }}>
+              {employee.accessLevel} • {employee.department === "custom" && employee.customDepartment ? employee.customDepartment : employee.department}
+            </Typography>
+          </Box>
+        </Box>
+        
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          {todayRecord ? (
+            <Box sx={{ textAlign: "right" }}>
+              <Chip
+                label={ATTENDANCE_STATUSES.find(s => s.value === todayRecord.status)?.label ?? todayRecord.status}
+                size="small"
+                sx={{ bgcolor: `${STATUS_COLORS[todayRecord.status]}22`, color: STATUS_COLORS[todayRecord.status], fontWeight: 600, mb: 0.5 }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                In: {fmtTime(todayRecord.checkIn)} {todayRecord.checkOut ? `• Out: ${fmtTime(todayRecord.checkOut)}` : "• Active"}
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography variant="body2" color="text.secondary">No Record Today</Typography>
+              <Button size="small" variant="outlined" onClick={() => onMarkAttendance(employee.uid!)}>Mark</Button>
+            </Box>
+          )}
+          
+          <IconButton onClick={() => setExpanded(!expanded)} sx={{ bgcolor: "action.hover" }}>
+            {expanded ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+          </IconButton>
+        </Box>
+      </Box>
+      
+      <Collapse in={expanded}>
+        <Divider sx={{ my: 2 }} />
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Date</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>In</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Out</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Hours</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Flags</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {monthRecords.length === 0 ? (
+              <TableRow><TableCell colSpan={6} align="center" sx={{ color: "text.secondary", py: 3 }}>No other records this month</TableCell></TableRow>
+            ) : (
+              monthRecords.map(r => (
+                <TableRow key={r.id}>
+                  <TableCell>{new Date(r.date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={ATTENDANCE_STATUSES.find((s) => s.value === r.status)?.label ?? r.status}
+                      size="small"
+                      sx={{ bgcolor: `${STATUS_COLORS[r.status]}22`, color: STATUS_COLORS[r.status], fontWeight: 600, fontSize: 11 }}
+                    />
+                  </TableCell>
+                  <TableCell>{fmtTime(r.checkIn)}</TableCell>
+                  <TableCell>{fmtTime(r.checkOut)}</TableCell>
+                  <TableCell>{calcHours(r.checkIn, r.checkOut)}</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                      {r.isLate && <Chip size="small" label="Late" sx={{ height: 20, fontSize: 10, bgcolor: "#f59e0b22", color: "#f59e0b", fontWeight: 600 }} />}
+                      {(() => {
+                        const dailyTasksForRecord = monthTasks.filter(t => t.date === r.date && t.assigneeId === employee.id && t.status === "done" && t.isOvertime && t.compensatesWeeklyHours);
+                        const taskOvertimeMinutes = dailyTasksForRecord.reduce((acc, t) => acc + (Number(t.assignedHours) || 0) * 60, 0);
+                        const totalOtMinutes = (r.isOvertime ? r.overtimeMinutes : 0) + taskOvertimeMinutes;
+                        
+                        if (totalOtMinutes > 0) {
+                          return (
+                            <Chip size="small" label={`+${totalOtMinutes < 60 ? `${totalOtMinutes}m` : `${Math.floor(totalOtMinutes / 60)}h ${totalOtMinutes % 60}m`} OT`} sx={{ height: 20, fontSize: 10, bgcolor: "#3b82f622", color: "#3b82f6", fontWeight: 600 }} />
+                          );
+                        }
+                        return null;
+                      })()}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </Collapse>
     </Paper>
   );
 }

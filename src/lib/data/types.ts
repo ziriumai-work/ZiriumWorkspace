@@ -350,16 +350,16 @@ export type AttendanceStatus =
   | "present"
   | "absent"
   | "late"
-  | "half_day"
-  | "on_leave";
+  | "on_leave"
+  | "sick_leave";
 
 export const ATTENDANCE_STATUSES: { value: AttendanceStatus; label: string }[] =
   [
     { value: "present", label: "Present" },
     { value: "absent", label: "Absent" },
     { value: "late", label: "Late" },
-    { value: "half_day", label: "Half Day" },
     { value: "on_leave", label: "On Leave" },
+    { value: "sick_leave", label: "Sick Leave" },
   ];
 
 export interface AttendanceRecord {
@@ -375,6 +375,23 @@ export interface AttendanceRecord {
   flexibilityUsed?: number; // minutes of flexibility used today
   isOvertime: boolean; // true if checked out after office end time
   overtimeMinutes: number; // extra minutes past office end time
+  createdAt: Timestamp | null;
+  updatedAt: Timestamp | null;
+}
+
+// ---------------------------------------------------------------------------
+// Leave Requests (leaveRequests/{id})
+// ---------------------------------------------------------------------------
+export type LeaveRequestStatus = "pending" | "approved" | "rejected";
+
+export interface LeaveRequest {
+  id: string;
+  uid: string; // auth uid of the requester
+  employeeName: string; // denormalised name
+  dates: string[]; // array of ISO yyyy-mm-dd dates requested
+  reason: string;
+  proofUrls: string[]; // urls of uploaded documents
+  status: LeaveRequestStatus;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 }

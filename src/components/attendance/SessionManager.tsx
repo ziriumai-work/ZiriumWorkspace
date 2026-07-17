@@ -2,11 +2,11 @@
 
 import { useEffect } from "react";
 import { useAuth } from "@/lib/firebase/auth-context";
-import { autoClockOutUnclosedShifts, subscribeToOfficeSettings } from "@/lib/data/attendance";
+import { autoClockOutUnclosedShifts, subscribeToOfficeSettings, autoFillMissingAttendance } from "@/lib/data/attendance";
 import { OfficeSettings } from "@/lib/data/types";
 
 export function SessionManager() {
-  const { user } = useAuth();
+  const { user, employee } = useAuth();
 
   useEffect(() => {
     if (!user) return;
@@ -18,6 +18,9 @@ export function SessionManager() {
       currentSettings = settings;
       // Trigger an immediate check when settings load.
       autoClockOutUnclosedShifts(user.uid, settings).catch(console.error);
+      if (employee) {
+        autoFillMissingAttendance(employee, settings).catch(console.error);
+      }
     });
 
     // Also run a check every 5 minutes in case they leave the app open.

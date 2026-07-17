@@ -3,12 +3,18 @@
 // Slim top bar: a path-derived breadcrumb on the left and the global "Ask AI"
 // trigger on the right (also reachable via ⌘K).
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import Badge from "@mui/material/Badge";
+import TaskAltIcon from "@mui/icons-material/TaskAlt";
+import Tooltip from "@mui/material/Tooltip";
 import { useAi } from "@/components/ai/AiProvider";
 import { useAuth } from "@/lib/firebase/auth-context";
+import { subscribeToPendingLeaveRequests } from "@/lib/data/leaves";
+import { useEffect, useState } from "react";
 
 function crumbFromPath(pathname: string): string {
   const seg = pathname.split("/").filter(Boolean)[0] ?? "dashboard";
@@ -23,8 +29,18 @@ function crumbFromPath(pathname: string): string {
 
 export function AppTopbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { openAi } = useAi();
   const { isAdmin } = useAuth();
+  const [pendingLeaves, setPendingLeaves] = useState(0);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const unsub = subscribeToPendingLeaveRequests((reqs) => {
+      setPendingLeaves(reqs.length);
+    });
+    return unsub;
+  }, [isAdmin]);
 
   return (
     <Box
@@ -44,8 +60,43 @@ export function AppTopbar() {
         {crumbFromPath(pathname)}
       </Typography>
 
-      {/* AI is admin-only (see the role matrix) — hide the trigger otherwise. */}
-      {isAdmin && (
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        {isAdmin && (
+          <Tooltip title="Approvals required">
+            <IconButton 
+              onClick={() => router.push("/attendance/leaves")} 
+              sx={{
+                color: pendingLeaves > 0 ? "primary.main" : "inherit",
+                "&:hover": {
+                  bgcolor: "rgba(255, 255, 255, 0.08)",
+                },
+                "& .MuiTouchRipple-root .MuiTouchRipple-child": {
+                  backgroundColor: "rgba(255, 255, 255, 0.5)",
+                }
+              }}
+            >
+              <Badge 
+                badgeContent={pendingLeaves} 
+                sx={{ 
+                  "& .MuiBadge-badge": { 
+                    bgcolor: pendingLeaves > 0 ? "#22c55e" : "transparent", 
+                    color: "white",
+                    fontWeight: "bold",
+                    fontSize: "0.65rem",
+                    minWidth: "16px",
+                    height: "16px",
+                    padding: "0 4px",
+                  } 
+                }}
+              >
+                <TaskAltIcon sx={{ fontSize: 28 }} />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+        )}
+        
+        {/* AI is admin-only (see the role matrix) — hide the trigger otherwise. */}
+        {isAdmin && (
         <Button
           onClick={() => openAi()}
           variant="outlined"
@@ -79,6 +130,7 @@ export function AppTopbar() {
           </Box>
         </Button>
       )}
+      </Box>
     </Box>
   );
 }
