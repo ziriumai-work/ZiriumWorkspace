@@ -30,6 +30,7 @@ import {
 import MuiLink from "@mui/material/Link";
 import CloseIcon from "@mui/icons-material/Close";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import { useAuth } from "@/lib/firebase/auth-context";
 import {
   createTask,
@@ -95,6 +96,34 @@ export default function TasksPage() {
     // Neither resolved yet — stay in the loading state until a role is known.
   }, [isAdmin, employee]);
 
+  // TEMP DATA FIX: Fix any corrupted tasks with overtimeCost > 0 but compensatesWeeklyHours === true
+  useEffect(() => {
+    if (!tasks.length || !isAdmin) return;
+    const fixTasks = async () => {
+      for (const t of tasks) {
+        if (t.isOvertime && t.compensatesWeeklyHours && t.overtimeCost && t.overtimeCost > 0) {
+          try {
+            await updateDoc(doc(db, "tasks", t.id), {
+              overtimeCost: 0
+            });
+            console.log("Fixed corrupted task:", t.id);
+          } catch (e) {
+            console.error("Failed to fix task:", e);
+          }
+        }
+      }
+    };
+    fixTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, isAdmin]);
+
+  // Filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterDate, setFilterDate] = useState("");
+  const [filterStatus, setFilterStatus] = useState<DailyTaskStatus | "all">("all");
+  const [filterAssignee, setFilterAssignee] = useState<string>("all");
+
   // Admin needs employees (assignee picker) and projects (optional link).
   useEffect(() => {
     if (!isAdmin) return;
@@ -106,16 +135,35 @@ export default function TasksPage() {
     };
   }, [isAdmin]);
 
-  // Group tasks by date (already sorted newest-first).
+  // Filter and Group tasks by date (already sorted newest-first).
   const groups = useMemo(() => {
+    let filtered = tasks;
+    
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(t => t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q));
+    }
+    
+    if (filterDate) {
+      filtered = filtered.filter(t => t.date === filterDate);
+    }
+    
+    if (filterStatus !== "all") {
+      filtered = filtered.filter(t => t.status === filterStatus);
+    }
+    
+    if (isAdmin && filterAssignee !== "all") {
+      filtered = filtered.filter(t => t.assigneeId === filterAssignee);
+    }
+
     const out: { date: string; items: DailyTask[] }[] = [];
-    for (const t of tasks) {
+    for (const t of filtered) {
       const last = out[out.length - 1];
       if (last && last.date === t.date) last.items.push(t);
       else out.push({ date: t.date, items: [t] });
     }
     return out;
-  }, [tasks]);
+  }, [tasks, searchQuery, filterDate, filterStatus, filterAssignee, isAdmin]);
 
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 860, px: 4, py: 5 }}>
@@ -135,6 +183,83 @@ export default function TasksPage() {
           onAssign={(input) => createTask(input, user?.uid ?? "")}
         />
       )}
+
+      {/* Filter Toggle */}
+      <Box sx={{ display: "flex", justifyContent: "flex-start", mt: 3, mb: showFilters ? 2 : 3 }}>
+        <IconButton 
+          onClick={() => setShowFilters(!showFilters)}
+          sx={{ 
+            bgcolor: showFilters ? "primary.main" : "transparent",
+            color: showFilters ? "primary.contrastText" : "text.secondary",
+            border: "1px solid",
+            borderColor: showFilters ? "primary.main" : "divider",
+            borderRadius: 2,
+            "&:hover": {
+              bgcolor: showFilters ? "primary.dark" : "action.hover",
+            }
+          }}
+        >
+          <FilterListIcon />
+        </IconButton>
+      </Box>
+
+      {/* Filters Form */}
+      <Collapse in={showFilters}>
+        <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 3, display: "flex", flexDirection: "column", gap: 2 }}>
+          <TextField
+            size="small"
+            placeholder="Search tasks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            fullWidth
+          />
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center" }}>
+            <TextField
+              size="small"
+              type="date"
+              label="Filter by Date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+              sx={{ width: 160 }}
+            />
+            <Select
+              size="small"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as DailyTaskStatus | "all")}
+              displayEmpty
+              sx={{ width: 140 }}
+            >
+              <MenuItem value="all">All Statuses</MenuItem>
+              {DAILY_TASK_STATUSES.map(s => (
+                <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
+              ))}
+            </Select>
+            {isAdmin && (
+              <Select
+                size="small"
+                value={filterAssignee}
+                onChange={(e) => setFilterAssignee(e.target.value)}
+                displayEmpty
+                sx={{ width: 160 }}
+              >
+                <MenuItem value="all">All Members</MenuItem>
+                {employees.map(e => (
+                  <MenuItem key={e.id} value={e.id}>{e.name}</MenuItem>
+                ))}
+              </Select>
+            )}
+            {(searchQuery || filterDate || filterStatus !== "all" || filterAssignee !== "all") && (
+              <Button size="small" onClick={() => {
+                setSearchQuery("");
+                setFilterDate("");
+                setFilterStatus("all");
+                setFilterAssignee("all");
+              }}>Clear Filters</Button>
+            )}
+          </Box>
+        </Paper>
+      </Collapse>
 
       <Box sx={{ mt: 3 }}>
         {loading ? (
@@ -222,7 +347,7 @@ function AssignTaskForm({
   const { formatCurrency } = useCurrency();
 
   const selectedEmp = employees.find((e) => e.id === assigneeId);
-  const calculatedCost = isOvertime && assignedHours > 0 
+  const calculatedCost = isOvertime && !compensatesWeeklyHours && assignedHours > 0 
     ? overtimeCost(selectedEmp?.monthlySalary, assignedHours, date) 
     : 0;
 
@@ -508,7 +633,7 @@ function TaskCard({
             )}
             {task.isOvertime && (
               <Chip
-                label={`Overtime (${formatCurrency(task.overtimeCost || 0)})`}
+                label={task.compensatesWeeklyHours ? "Compensatory Task" : `Overtime (${formatCurrency(task.overtimeCost || 0)})`}
                 sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 500, fontSize: 11, height: 20 }}
               />
             )}
