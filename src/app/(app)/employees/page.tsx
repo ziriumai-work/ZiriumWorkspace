@@ -96,8 +96,8 @@ export default function EmployeesPage() {
   }
 
   async function add() {
-    if (!form.name.trim() || !form.email.trim()) {
-      setError("Name and email are required.");
+    if (!form.name.trim() || !form.email.trim() || !form.startDate) {
+      setError("Name, email, and start date are required.");
       return;
     }
     const cleanEmail = form.email.trim().toLowerCase();
@@ -234,6 +234,17 @@ export default function EmployeesPage() {
             </Field>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+            <Field label="Start Date *">
+              <TextField
+                type="date"
+                value={form.startDate || ""}
+                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                slotProps={{ inputLabel: { shrink: true } }}
+                fullWidth
+              />
+            </Field>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <Field label="Employment type">
               <TextField
                 select
@@ -255,16 +266,7 @@ export default function EmployeesPage() {
               </TextField>
             </Field>
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
-            <Field label="Start date">
-              <TextField
-                type="date"
-                value={form.startDate ?? ""}
-                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                fullWidth
-              />
-            </Field>
-          </Grid>
+
           <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <Field label="Status">
               <TextField
@@ -433,6 +435,20 @@ export default function EmployeesPage() {
                       </Typography>
                     </CardRow>
 
+                    <CardRow label="Start Date">
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
+                        {e.startDate || "—"}
+                      </Typography>
+                    </CardRow>
+
+                    {e.endDate && (
+                      <CardRow label="End Date">
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
+                          {e.endDate}
+                        </Typography>
+                      </CardRow>
+                    )}
+
                     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
                       <PillSelect
                         value={e.status}
@@ -569,6 +585,42 @@ export default function EmployeesPage() {
                   >
                     {EMPLOYMENT_TYPES.map((t) => (
                       <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>
+                    ))}
+                  </TextField>
+                </Field>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Field label="Start Date">
+                  <TextField
+                    type="date"
+                    value={editForm.startDate || ""}
+                    onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                    fullWidth
+                  />
+                </Field>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Field label="End Date">
+                  <TextField
+                    type="date"
+                    value={editForm.endDate || ""}
+                    onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                    fullWidth
+                  />
+                </Field>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Field label="Status">
+                  <TextField
+                    select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value as EmployeeStatus })}
+                    fullWidth
+                  >
+                    {EMPLOYEE_STATUSES.map((s) => (
+                      <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
                     ))}
                   </TextField>
                 </Field>

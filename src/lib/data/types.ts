@@ -133,6 +133,7 @@ export interface Developer {
   customDepartment?: string; // Name if department === "custom"
   employmentType: EmploymentType;
   startDate: string | null; // ISO yyyy-mm-dd
+  endDate: string | null; // ISO yyyy-mm-dd
   status: EmployeeStatus;
   accessLevel: AccessLevel; // "admin" can manage; "employee" gets a restricted view
   uid: string | null; // bound on first matching sign-in
@@ -412,5 +413,33 @@ export interface Announcement {
   expiryDate: string | null;
   createdAt: Timestamp | null;
   createdBy: string;
+}
+
+// ---------------------------------------------------------------------------
+// Salaries
+// ---------------------------------------------------------------------------
+export type SalaryStatus = "due" | "paid" | "fulfilled";
+
+export interface SalaryLineItem {
+  description: string;
+  amount: number; // positive for additions (overtime), negative for deductions
+  dateStr?: string; // e.g., "2026-07-20"
+}
+
+export interface SalaryRecord {
+  id: string;
+  month: string; // "yyyy-MM"
+  employeeId: string; // developers/{id}
+  employeeName: string;
+  baseSalary: number;
+  overtimeTotal: number;
+  deductionsTotal: number;
+  netSalary: number;
+  lineItems: SalaryLineItem[];
+  status: SalaryStatus;
+  receiptUrl?: string | null;
+  createdAt: Timestamp | null;
+  paidAt: Timestamp | null;
+  fulfilledAt: Timestamp | null;
 }
 

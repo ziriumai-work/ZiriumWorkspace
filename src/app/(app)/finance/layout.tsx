@@ -5,7 +5,7 @@
 // courtesy message in case an employee lands here mid-role-resolution.
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, redirect } from "next/navigation";
 import Box from "@mui/material/Box";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
@@ -28,7 +28,12 @@ export default function FinanceLayout({
   const pathname = usePathname();
   const { isAdmin } = useAuth();
 
-  if (!isAdmin) {
+  const isSalariesPage = pathname.startsWith("/finance/salaries");
+
+  if (!isAdmin && !isSalariesPage) {
+    if (pathname === "/finance") {
+      redirect("/finance/salaries");
+    }
     return (
       <Box sx={{ mx: "auto", width: "100%", maxWidth: 720, px: 4, py: 5 }}>
         <Typography variant="h1">Finance</Typography>
@@ -39,9 +44,14 @@ export default function FinanceLayout({
     );
   }
 
+  // Filter tabs: non-admins only see the "Monthly Salaries" tab
+  const visibleTabs = isAdmin 
+    ? [...TABS, { href: "/finance/salaries", label: "Monthly Salaries" }]
+    : [{ href: "/finance/salaries", label: "Monthly Salaries" }];
+
   // Longest-prefix match so /finance/projects highlights Projects, not Dashboard.
   const active =
-    TABS.filter(
+    visibleTabs.filter(
       (t) => pathname === t.href || pathname.startsWith(t.href + "/"),
     ).sort((a, b) => b.href.length - a.href.length)[0]?.href ?? "/finance";
 
@@ -57,7 +67,7 @@ export default function FinanceLayout({
           allowScrollButtonsMobile
           sx={{ minHeight: 38, "& .MuiTab-root": { minHeight: 38, py: 0.5 } }}
         >
-          {TABS.map((t) => (
+          {visibleTabs.map((t) => (
             <Tab
               key={t.href}
               value={t.href}

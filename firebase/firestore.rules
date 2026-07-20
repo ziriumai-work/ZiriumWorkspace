@@ -144,7 +144,13 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     match /monthlyExpenses/{id} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if isMember(); // Allow employees to create expense when fulfilling salary
+    }
+    
+    // Salaries
+    match /salaries/{id} {
+      allow read, write: if true;
     }
     
     // Sick Leave Requests

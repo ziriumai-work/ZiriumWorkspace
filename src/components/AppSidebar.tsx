@@ -86,7 +86,7 @@ const NAV: {
   {
     href: "/finance",
     label: "Finance",
-    roles: ["admin"],
+    roles: ["admin", "employee", "intern"],
     icon: (
       <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm.9 15.5v1.3h-1.7v-1.3c-1.6-.3-2.9-1.2-3-2.9h1.9c.1.8.7 1.4 2 1.4 1.4 0 1.8-.7 1.8-1.2 0-.6-.4-1.2-2-1.6-1.9-.4-3.4-1.2-3.4-3 0-1.5 1.2-2.5 2.7-2.8V6.2h1.7v1.3c1.6.3 2.6 1.4 2.7 2.8h-1.9c0-.8-.5-1.4-1.7-1.4-1.1 0-1.7.5-1.7 1.2 0 .6.5 1 2 1.4 2 .5 3.4 1.2 3.4 3.1 0 1.6-1.2 2.6-2.8 2.9Z" />
     ),
@@ -111,9 +111,24 @@ const NAV: {
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { user, member, role, signOut } = useAuth();
+  const { user, member, employee, role, signOut, isAdmin } = useAuth();
+
+  const isPaid = !!employee?.monthlySalary && employee.monthlySalary > 0;
+
   // While the role is still resolving, show the common items only.
-  const nav = NAV.filter((item) => item.roles.includes(role ?? "employee"));
+  const nav = NAV.filter((item) => {
+    if (item.href === "/finance") {
+      if (isAdmin) return true;
+      if (isPaid && (role === "employee" || role === "intern")) return true;
+      return false;
+    }
+    return item.roles.includes(role ?? "employee");
+  }).map((item) => {
+    if (item.href === "/finance" && !isAdmin) {
+      return { ...item, label: "Salary" };
+    }
+    return item;
+  });
 
   return (
     <Box
