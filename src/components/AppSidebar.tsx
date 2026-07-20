@@ -4,6 +4,7 @@
 // signed-in user with a sign-out action. Phase 2 will add a nested page tree
 // below the primary nav.
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Avatar from "@mui/material/Avatar";
@@ -15,6 +16,13 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
+import Tooltip from "@mui/material/Tooltip";
+import IconButton from "@mui/material/IconButton";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import { useColorScheme } from "@mui/material/styles";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 import type { AppRole } from "@/lib/data/types";
@@ -24,31 +32,28 @@ import type { AppRole } from "@/lib/data/types";
 const NAV: {
   href: string;
   label: string;
-  roles: AppRole[];
   icon: React.ReactNode;
+  roles: AppRole[];
 }[] = [
   {
     href: "/dashboard",
     label: "Dashboard",
-    roles: ["admin", "employee"],
+    roles: ["admin", "member", "employee", "intern"],
     icon: (
-      <path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z" />
-    ),
-  },
-  {
-    href: "/intern",
-    label: "My Space",
-    roles: ["intern"],
-    icon: (
-      <path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z" />
+      <>
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </>
     ),
   },
   {
     href: "/projects",
     label: "Projects",
-    roles: ["admin", "employee", "intern"],
+    roles: ["admin", "member", "employee", "intern"],
     icon: (
-      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+      <>
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+      </>
     ),
   },
   {
@@ -56,7 +61,10 @@ const NAV: {
     label: "Tasks",
     roles: ["admin", "employee", "intern"],
     icon: (
-      <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.6-4.6 1.4 1.4-6 6Z" />
+      <>
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
+      </>
     ),
   },
   {
@@ -64,15 +72,22 @@ const NAV: {
     label: "Employees",
     roles: ["admin"],
     icon: (
-      <path d="M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm0 2c-2.7 0-8 1.3-8 4v3h9v-3c0-1 .4-1.9 1-2.6A13 13 0 0 0 8 13Zm8 0c-.3 0-.7 0-1.1.1A5 5 0 0 1 17 17v3h7v-3c0-2.7-5.3-4-8-4Z" />
+      <>
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </>
     ),
   },
   {
-    href: "/zirium",
+    href: "/ai",
     label: "Zirium AI",
-    roles: ["admin"],
+    roles: ["admin", "employee", "intern", "member"],
     icon: (
-      <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+      <>
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </>
     ),
   },
   {
@@ -80,31 +95,47 @@ const NAV: {
     label: "Attendance",
     roles: ["admin", "employee", "intern"],
     icon: (
-      <path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 16H5V10h14v10Zm0-12H5V6h14v2Z" />
+      <>
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </>
     ),
   },
   {
-    href: "/finance",
+    href: "/finance/salaries",
     label: "Finance",
     roles: ["admin", "employee", "intern"],
     icon: (
-      <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm.9 15.5v1.3h-1.7v-1.3c-1.6-.3-2.9-1.2-3-2.9h1.9c.1.8.7 1.4 2 1.4 1.4 0 1.8-.7 1.8-1.2 0-.6-.4-1.2-2-1.6-1.9-.4-3.4-1.2-3.4-3 0-1.5 1.2-2.5 2.7-2.8V6.2h1.7v1.3c1.6.3 2.6 1.4 2.7 2.8h-1.9c0-.8-.5-1.4-1.7-1.4-1.1 0-1.7.5-1.7 1.2 0 .6.5 1 2 1.4 2 .5 3.4 1.2 3.4 3.1 0 1.6-1.2 2.6-2.8 2.9Z" />
+      <>
+        <line x1="12" y1="1" x2="12" y2="23" />
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </>
     ),
   },
   {
     href: "/documents",
     label: "Documents",
-    roles: ["admin", "employee", "intern"],
+    roles: ["admin", "member", "employee", "intern"],
     icon: (
-      <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+      <>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <polyline points="10 9 9 9 8 9" />
+      </>
     ),
   },
   {
     href: "/announcements",
     label: "Announcements",
-    roles: ["admin"],
+    roles: ["admin", "member", "employee", "intern"],
     icon: (
-      <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9h-2V5h2v6zm0 4h-2v-2h2v2z" />
+      <>
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </>
     ),
   },
 ];
@@ -112,102 +143,122 @@ const NAV: {
 export function AppSidebar() {
   const pathname = usePathname();
   const { user, member, employee, role, signOut, isAdmin } = useAuth();
+  const { mode, setMode } = useColorScheme();
+  const [collapsed, setCollapsed] = useState(false);
 
   const isPaid = !!employee?.monthlySalary && employee.monthlySalary > 0;
 
   // While the role is still resolving, show the common items only.
   const nav = NAV.filter((item) => {
-    if (item.href === "/finance") {
+    if (item.label === "Finance") {
       if (isAdmin) return true;
-      if (isPaid && (role === "employee" || role === "intern")) return true;
+      if (isPaid) {
+        item.label = "Salary";
+        return true;
+      }
       return false;
     }
-    return item.roles.includes(role ?? "employee");
-  }).map((item) => {
-    if (item.href === "/finance" && !isAdmin) {
-      return { ...item, label: "Salary" };
-    }
-    return item;
+    return item.roles.includes(role ?? "member");
   });
 
   return (
     <Box
-      component="aside"
+      component="nav"
       sx={{
-        width: 240,
+        width: collapsed ? 80 : 260,
+        transition: "width 0.2s ease-in-out",
         flexShrink: 0,
+        bgcolor: "surface",
+        borderRight: "1px solid",
+        borderColor: "divider",
         display: "flex",
         flexDirection: "column",
-        borderRight: 1,
-        borderColor: "divider",
-        bgcolor: "surface",
-        borderRadius: 3,
+        pt: 2,
+        pb: 1,
+        overflowX: "hidden",
       }}
     >
-      {/* Brand */}
-      <div className="flex items-center gap-2 px-4 py-4">
-        <img src="/logo.png" alt="Logo" className="h-7 w-7 object-cover rounded-md shadow-sm" />
-        <span className="text-sm font-semibold tracking-tight">Zirium Workspace</span>
-      </div>
+      <Box sx={{ px: collapsed ? 1 : 3, mb: 2, display: "flex", flexDirection: collapsed ? "column" : "row", alignItems: "center", gap: 1.5, justifyContent: collapsed ? "center" : "flex-start" }}>
+        <img src="/logo.png" alt="Logo" style={{ height: 28, width: 28, objectFit: "cover", borderRadius: 6, boxShadow: "0 1px 3px rgba(0,0,0,0.12)", marginBottom: collapsed ? 4 : 0 }} />
+        {!collapsed && (
+          <Typography variant="subtitle2" noWrap sx={{ fontSize: 16, letterSpacing: "-0.01em", flex: 1 }}>
+            Workspace
+          </Typography>
+        )}
+        <IconButton onClick={() => setCollapsed(!collapsed)} size="small" sx={{ color: "text.secondary" }}>
+          {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+        </IconButton>
+      </Box>
 
-      <List dense sx={{ flex: 1, px: 1, py: 0 }}>
+      <List sx={{ px: 1.5, flex: 1, overflowY: "auto", overflowX: "hidden", "&::-webkit-scrollbar": { display: "none" }, scrollbarWidth: "none" }}>
         {nav.map((item) => {
           const active =
-            pathname === item.href || pathname.startsWith(item.href + "/");
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname.startsWith(item.href);
+
           return (
-            <ListItemButton
-              key={item.href}
-              component={Link}
-              href={item.href}
-              selected={active}
-              sx={{
-                borderRadius: 4,
-                mb: 0.5,
-                py: 1,
-                px: 2,
-                color: "text.secondary",
-                position: "relative",
-                "&.Mui-selected, &.Mui-selected:hover": {
-                  bgcolor: "accentSoft",
-                  color: "primary.main",
-                  fontWeight: 500,
-                },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 30, color: "inherit" }}>
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill={active ? "currentColor" : "none"}
-                  stroke={active ? "none" : "currentColor"}
-                  strokeWidth={active ? "0" : "1.6"}
-                >
-                  {item.icon}
-                </svg>
-              </ListItemIcon>
-              <ListItemText
-                primary={item.label}
-                slotProps={{
-                  primary: {
-                    sx: { fontSize: 14, fontWeight: active ? 500 : 400 },
+            <Tooltip title={collapsed ? item.label : ""} placement="right" key={item.href}>
+              <ListItemButton
+                component={Link}
+                href={item.href}
+                selected={active}
+                sx={{
+                  borderRadius: 2,
+                  mb: 0.5,
+                  px: 2,
+                  justifyContent: "flex-start",
+                  color: "text.secondary",
+                  "&:hover": {
+                    bgcolor: "action.hover",
+                    color: "text.primary",
+                  },
+                  "&.Mui-selected, &.Mui-selected:hover": {
+                    bgcolor: "accentSoft",
+                    color: "primary.main",
+                    fontWeight: 500,
                   },
                 }}
-              />
-            </ListItemButton>
+              >
+                <ListItemIcon sx={{ minWidth: 36, color: "inherit", mr: collapsed ? 0 : 1, pl: collapsed ? 1 : 0 }}>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    {item.icon}
+                  </svg>
+                </ListItemIcon>
+                {!collapsed && (
+                  <ListItemText
+                    primary={item.label}
+                    slotProps={{
+                      primary: { sx: { fontSize: 14, fontWeight: active ? 600 : 500 } },
+                    }}
+                  />
+                )}
+              </ListItemButton>
+            </Tooltip>
           );
         })}
       </List>
 
-      {role === "admin" && (
-        <Box sx={{ mt: "auto", display: "flex", flexDirection: "column", px: 1 }}>
+      {role === "admin" && !collapsed && (
+        <Box sx={{ mt: "auto", display: "flex", flexDirection: "column", px: 2, mb: 1 }}>
           <CurrencySwitcher />
         </Box>
       )}
 
+      {role === "admin" && collapsed && <Box sx={{ mt: "auto" }} />}
+
       <Divider />
-      <Box sx={{ p: 1.5 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+      <Box sx={{ p: collapsed ? 1 : 1.5, display: "flex", flexDirection: "column", alignItems: collapsed ? "center" : "stretch" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: collapsed ? 2 : 0, justifyContent: collapsed ? "center" : "flex-start" }}>
           <Avatar
             src={user?.photoURL ?? undefined}
             slotProps={{ img: { referrerPolicy: "no-referrer" } }}
@@ -222,38 +273,73 @@ export function AppSidebar() {
           >
             {(user?.displayName ?? user?.email ?? "?").charAt(0).toUpperCase()}
           </Avatar>
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography
-              variant="caption"
-              noWrap
-              sx={{ fontWeight: 600, display: "block" }}
+          {!collapsed && (
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography
+                variant="caption"
+                noWrap
+                sx={{ fontWeight: 600, display: "block" }}
+              >
+                {user?.displayName ?? user?.email}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                noWrap
+                sx={{ display: "block", fontSize: 11, textTransform: "capitalize" }}
+              >
+                {role ?? member?.role ?? "member"}
+              </Typography>
+            </Box>
+          )}
+          {!collapsed && (
+            <IconButton 
+              onClick={() => setMode(mode === 'light' ? 'dark' : 'light')} 
+              size="small" 
+              color="inherit"
+              sx={{ color: "text.secondary", "&:hover": { color: "primary.main" } }}
             >
-              {user?.displayName ?? user?.email}
-            </Typography>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              noWrap
-              sx={{ display: "block", fontSize: 11, textTransform: "capitalize" }}
-            >
-              {role ?? member?.role ?? "member"}
-            </Typography>
-          </Box>
+              {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+            </IconButton>
+          )}
         </Box>
-        <Button
-          onClick={() => signOut()}
-          fullWidth
-          color="inherit"
-          sx={{
-            mt: 1,
-            justifyContent: "flex-start",
-            color: "text.secondary",
-            fontWeight: 400,
-            fontSize: 12,
-          }}
-        >
-          Sign out
-        </Button>
+        
+        {collapsed && (
+          <IconButton 
+            onClick={() => setMode(mode === 'light' ? 'dark' : 'light')} 
+            size="small" 
+            color="inherit"
+            sx={{ mb: 1, color: "text.secondary", "&:hover": { color: "primary.main" } }}
+          >
+            {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+          </IconButton>
+        )}
+
+        {collapsed ? (
+          <IconButton onClick={() => signOut()} size="small" color="error" sx={{ mt: 1 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </IconButton>
+        ) : (
+          <Button
+            onClick={() => signOut()}
+            fullWidth
+            color="inherit"
+            sx={{
+              mt: 1,
+              justifyContent: "flex-start",
+              color: "text.secondary",
+              fontWeight: 400,
+              fontSize: 12,
+              "&:hover": { color: "error.main", bgcolor: "error.soft" },
+            }}
+          >
+            Sign out
+          </Button>
+        )}
       </Box>
     </Box>
   );

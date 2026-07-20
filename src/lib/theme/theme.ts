@@ -19,7 +19,7 @@ declare module "@mui/material/styles" {
 }
 
 export const theme = createTheme({
-  cssVariables: { colorSchemeSelector: "media" },
+  cssVariables: { colorSchemeSelector: "class" },
   colorSchemes: {
     light: {
       palette: {
@@ -83,7 +83,23 @@ export const theme = createTheme({
     MuiChip: { defaultProps: { size: "small" } },
     MuiTable: { defaultProps: { size: "small" } },
     MuiTooltip: { defaultProps: { arrow: true } },
-    MuiPaper: { styleOverrides: { root: { backgroundImage: "none" } } },
+    MuiPaper: { 
+      styleOverrides: { 
+        root: ({ theme }) => ({ 
+          backgroundImage: "none",
+          boxShadow: "var(--mui-shadows-1)",
+          borderColor: theme.vars?.palette?.divider,
+        }) 
+      } 
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundImage: "none",
+          boxShadow: "var(--mui-shadows-1)",
+        })
+      }
+    },
     MuiDialog: {
       styleOverrides: {
         paper: { borderRadius: 16 },

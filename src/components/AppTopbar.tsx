@@ -68,10 +68,7 @@ export function AppTopbar() {
               sx={{
                 color: pendingLeaves > 0 ? "primary.main" : "inherit",
                 "&:hover": {
-                  bgcolor: "rgba(255, 255, 255, 0.08)",
-                },
-                "& .MuiTouchRipple-root .MuiTouchRipple-child": {
-                  backgroundColor: "rgba(255, 255, 255, 0.5)",
+                  bgcolor: "action.hover",
                 }
               }}
             >

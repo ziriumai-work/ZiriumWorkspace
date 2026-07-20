@@ -22,6 +22,8 @@ import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
+import Collapse from "@mui/material/Collapse";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   subscribeToDevelopers,
@@ -70,6 +72,12 @@ export default function EmployeesPage() {
   const [editForm, setEditForm] = useState<Developer | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
+  // Filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterRole, setFilterRole] = useState<"all" | "employee" | "intern">("all");
+  const [filterPay, setFilterPay] = useState<"all" | "paid" | "unpaid">("all");
+  const [filterDept, setFilterDept] = useState<string>("all");
+
   useEffect(() => {
     const unsub = subscribeToDevelopers(
       (d) => {
@@ -116,6 +124,14 @@ export default function EmployeesPage() {
       setSaving(false);
     }
   }
+
+  const filteredEmployees = employees.filter((e) => {
+    if (filterRole !== "all" && e.accessLevel !== filterRole) return false;
+    if (filterPay === "paid" && (!e.monthlySalary || e.monthlySalary <= 0)) return false;
+    if (filterPay === "unpaid" && e.monthlySalary && e.monthlySalary > 0) return false;
+    if (filterDept !== "all" && e.department !== filterDept) return false;
+    return true;
+  });
 
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 5 }}>
@@ -337,14 +353,71 @@ export default function EmployeesPage() {
 
       {/* Directory */}
       <Box sx={{ mt: 5 }}>
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Team Directory</Typography>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: showFilters ? 2 : 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>Team Directory</Typography>
+          <IconButton 
+            onClick={() => setShowFilters(!showFilters)}
+            size="small"
+            sx={{ 
+              bgcolor: showFilters ? "primary.main" : "transparent",
+              color: showFilters ? "primary.contrastText" : "text.secondary",
+              border: "1px solid",
+              borderColor: showFilters ? "primary.main" : "divider",
+              borderRadius: 2,
+              "&:hover": {
+                bgcolor: showFilters ? "primary.dark" : "action.hover",
+              }
+            }}
+          >
+            <FilterListIcon fontSize="small" />
+          </IconButton>
+        </Box>
+
+        <Collapse in={showFilters}>
+          <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 3, display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center" }}>
+            <Select
+              size="small"
+              value={filterRole}
+              onChange={(e) => setFilterRole(e.target.value as any)}
+              displayEmpty
+              sx={{ width: 140 }}
+            >
+              <MenuItem value="all">All Roles</MenuItem>
+              <MenuItem value="employee">Employees</MenuItem>
+              <MenuItem value="intern">Interns</MenuItem>
+            </Select>
+            <Select
+              size="small"
+              value={filterPay}
+              onChange={(e) => setFilterPay(e.target.value as any)}
+              displayEmpty
+              sx={{ width: 160 }}
+            >
+              <MenuItem value="all">All Pay Statuses</MenuItem>
+              <MenuItem value="paid">Paid</MenuItem>
+              <MenuItem value="unpaid">Unpaid</MenuItem>
+            </Select>
+            <Select
+              size="small"
+              value={filterDept}
+              onChange={(e) => setFilterDept(e.target.value)}
+              displayEmpty
+              sx={{ width: 160 }}
+            >
+              <MenuItem value="all">All Departments</MenuItem>
+              {DEPARTMENTS.map(d => (
+                <MenuItem key={d.value} value={d.value}>{d.label}</MenuItem>
+              ))}
+            </Select>
+          </Paper>
+        </Collapse>
         {loading ? (
           <Typography variant="body2" color="text.secondary">Loading…</Typography>
-        ) : employees.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">No employees yet. Add your first one above.</Typography>
+        ) : filteredEmployees.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">No employees match this filter.</Typography>
         ) : (
           <Grid container spacing={3}>
-            {employees.map((e) => (
+            {filteredEmployees.map((e) => (
               <Grid size={{ xs: 12, sm: 6, md: 4 }} key={e.id}>
                 <Paper 
                   elevation={1} 

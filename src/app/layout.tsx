@@ -9,6 +9,8 @@ import { AiProvider } from "@/components/ai/AiProvider";
 import { UploadProvider } from "@/lib/contexts/UploadContext";
 import theme from "@/lib/theme/theme";
 
+import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -36,8 +38,10 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="h-full flex flex-col">
+        <InitColorSchemeScript attribute="class" />
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <CssBaseline />

@@ -7,7 +7,8 @@ import { useAuth } from "@/lib/firebase/auth-context";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
-import { blue, dark, neutral, brand } from "@/lib/theme/colors";
+import { useColorScheme } from "@mui/material/styles";
+import { blue, dark, neutral, brand, light } from "@/lib/theme/colors";
 
 import { keyframes } from "@emotion/react";
 
@@ -35,6 +36,8 @@ export function GlobalBanner() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissedUntil, setDismissedUntil] = useState<number>(0);
   const [tick, setTick] = useState(0);
+  const { mode } = useColorScheme();
+  const isLight = mode === "light";
 
   // Force re-evaluation of active announcements every minute
   useEffect(() => {
@@ -97,14 +100,17 @@ export function GlobalBanner() {
   return (
     <Box
       sx={{
-        background: `linear-gradient(90deg, ${dark.surface} 0%, ${blue[900]}44 50%, ${dark.surface} 100%)`,
-        color: brand.white,
+        width: "100%",
+        background: isLight 
+          ? `linear-gradient(90deg, ${light.surface} 0%, ${blue[50]} 50%, ${light.surface} 100%)`
+          : `linear-gradient(90deg, ${dark.surface} 0%, ${blue[900]}44 50%, ${dark.surface} 100%)`,
+        color: isLight ? neutral[900] : brand.white,
         p: { xs: 1.5, md: 2 },
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        borderBottom: `1px solid ${blue[400]}22`,
-        boxShadow: `0 4px 30px rgba(0,0,0,0.5)`,
+        borderBottom: `1px solid ${isLight ? blue[100] : blue[400] + "22"}`,
+        boxShadow: isLight ? `0 4px 15px rgba(0,0,0,0.05)` : `0 4px 30px rgba(0,0,0,0.5)`,
         position: "relative",
         overflow: "hidden",
       }}
@@ -141,7 +147,7 @@ export function GlobalBanner() {
               width="18"
               height="18"
               viewBox="0 0 24 24"
-              fill={blue[100]}
+              fill={isLight ? blue[600] : blue[100]}
               sx={{
                 animation: `${ringAnimation} 4s ease-in-out infinite`,
                 transformOrigin: "top center"
@@ -174,15 +180,15 @@ export function GlobalBanner() {
             sx={{
               fontWeight: 700,
               fontSize: "1.05rem",
-              color: brand.white,
-              textShadow: `0 0 12px ${blue[400]}44`,
+              color: isLight ? neutral[900] : brand.white,
+              textShadow: isLight ? "none" : `0 0 12px ${blue[400]}44`,
               letterSpacing: 0.3
             }}
           >
             {current.title}
           </Typography>
           {current.description && (
-            <Typography variant="body2" sx={{ color: blue[100], opacity: 0.7, mt: 0.2, fontWeight: 400, wordBreak: "break-word" }}>
+            <Typography variant="body2" sx={{ color: isLight ? neutral[600] : blue[100], opacity: 0.8, mt: 0.2, fontWeight: 400, wordBreak: "break-word" }}>
               {current.description}
             </Typography>
           )}
@@ -191,23 +197,23 @@ export function GlobalBanner() {
         {/* Right Side: Controls */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {activeAnnouncements.length > 1 && (
-            <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", mr: 1, bgcolor: "rgba(0,0,0,0.3)", borderRadius: "8px", px: 1, border: `1px solid ${neutral[800]}` }}>
+            <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", mr: 1, bgcolor: isLight ? "rgba(0,0,0,0.05)" : "rgba(0,0,0,0.3)", borderRadius: "8px", px: 1, border: `1px solid ${isLight ? neutral[200] : neutral[800]}` }}>
               <IconButton
                 size="small"
                 onClick={() => setCurrentIndex((prev) => (prev - 1 + activeAnnouncements.length) % activeAnnouncements.length)}
-                sx={{ color: neutral[400], p: 0.5, flexShrink: 0, "&:hover": { color: blue[300] } }}
+                sx={{ color: isLight ? neutral[600] : neutral[400], p: 0.5, flexShrink: 0, "&:hover": { color: isLight ? blue[600] : blue[300] } }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                  <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z" />
                 </svg>
               </IconButton>
-              <Typography variant="caption" sx={{ color: neutral[400], fontWeight: 600, flexShrink: 0, minWidth: "24px", textAlign: "center" }}>
-                {currentIndex + 1} / {activeAnnouncements.length}
+              <Typography variant="caption" sx={{ color: isLight ? neutral[600] : neutral[400], fontWeight: 600, minWidth: 32, textAlign: "center" }}>
+                {currentIndex + 1}/{activeAnnouncements.length}
               </Typography>
               <IconButton
                 size="small"
                 onClick={() => setCurrentIndex((prev) => (prev + 1) % activeAnnouncements.length)}
-                sx={{ color: neutral[400], p: 0.5, flexShrink: 0, "&:hover": { color: blue[300] } }}
+                sx={{ color: isLight ? neutral[600] : neutral[400], p: 0.5, flexShrink: 0, "&:hover": { color: isLight ? blue[600] : blue[300] } }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
@@ -217,11 +223,13 @@ export function GlobalBanner() {
           )}
 
           <IconButton
+            size="small"
             onClick={() => setDismissedUntil(Date.now())}
             sx={{
-              color: neutral[400],
-              bgcolor: "rgba(255,255,255,0.03)",
-              "&:hover": { color: brand.white, bgcolor: "rgba(255,255,255,0.1)" },
+              color: isLight ? neutral[600] : neutral[400],
+              bgcolor: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)",
+              "&:hover": { bgcolor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)", color: isLight ? neutral[900] : brand.white },
+              ml: 1,
               transition: "all 0.2s ease",
             }}
           >
