@@ -105,29 +105,16 @@ export function AppTopbar() {
             borderColor: "divider",
             fontSize: 12,
             gap: 1,
+            color: "text.primary",
+            "&:hover": {
+              bgcolor: "action.hover",
+            }
           }}
           startIcon={
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
-            </svg>
+            <img src="/logo.png" alt="Zirium AI" style={{ width: 16, height: 16, borderRadius: 4 }} />
           }
         >
           Ask AI
-          <Box
-            component="kbd"
-            sx={{
-              border: 1,
-              borderColor: "divider",
-              borderRadius: 0.5,
-              px: 0.5,
-              fontSize: 10,
-              fontWeight: 500,
-              opacity: 0.7,
-              fontFamily: "inherit",
-            }}
-          >
-            ⌘K
-          </Box>
         </Button>
       )}
       </Box>

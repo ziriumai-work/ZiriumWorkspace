@@ -40,6 +40,7 @@ import Typography from "@mui/material/Typography";
 import { Toast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { subscribeToDevelopers } from "@/lib/data/developers";
+import { red, amber, green, purple, pink } from "@/lib/theme/colors";
 import {
   clockIn,
   clockOut,
@@ -919,11 +920,11 @@ export default function AttendancePage() {
             gap: 2,
           }}
         >
-          <StatCard label="Present" value={summary.totalPresent} color="#22c55e" />
-          <StatCard label="Late" value={summary.totalLate} color="#f59e0b" />
-          <StatCard label="Leaves" value={summary.totalLeaves} color="#a855f7" />
-          <StatCard label="Sick Leaves" value={summary.totalSickLeaves} color="#ec4899" />
-          <StatCard label="Absent" value={summary.totalAbsent} color="#ef4444" />
+          <StatCard label="Present" value={summary.totalPresent} color={green.main} />
+          <StatCard label="Late" value={summary.totalLate} color={amber.main} />
+          <StatCard label="Leaves" value={summary.totalLeaves} color={purple.main} />
+          <StatCard label="Sick Leaves" value={summary.totalSickLeaves} color={pink.main} />
+          <StatCard label="Absent" value={summary.totalAbsent} color={red.main} />
         </Box>
         <Divider sx={{ my: 2 }} />
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3, alignItems: "center" }}>
@@ -940,35 +941,35 @@ export default function AttendancePage() {
                 <Chip
                   size="small"
                   label={`${summary.lateDaysOverThreshold} late day${summary.lateDaysOverThreshold > 1 ? "s" : ""} → 50% deduction each`}
-                  sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 600, fontSize: 11 }}
+                  sx={{ bgcolor: `${red.main}22`, color: red.main, fontWeight: 600, fontSize: 11 }}
                 />
               )}
               {summary.excessLeaves > 0 && (
                 <Chip
                   size="small"
                   label={`${summary.excessLeaves} excess leave${summary.excessLeaves > 1 ? "s" : ""} → 1 day deduction each`}
-                  sx={{ bgcolor: "#f59e0b22", color: "#f59e0b", fontWeight: 600, fontSize: 11 }}
+                  sx={{ bgcolor: `${amber.main}22`, color: amber.main, fontWeight: 600, fontSize: 11 }}
                 />
               )}
               {summary.deductionDays > 0 && (
                 <Chip
                   size="small"
                   label={`Total deduction: ${summary.deductionDays} day${summary.deductionDays > 1 ? "s" : ""} salary`}
-                  sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 700, fontSize: 12 }}
+                  sx={{ bgcolor: `${red.main}22`, color: red.main, fontWeight: 700, fontSize: 12 }}
                 />
               )}
               {summary.overtimeDueMinutes !== undefined && summary.overtimeDueMinutes > 0 && (
                 <Chip
                   size="small"
                   label={`Intern Overtime Due: ${formatHoursMinutes(summary.overtimeDueMinutes / 60)}`}
-                  sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 700, fontSize: 12 }}
+                  sx={{ bgcolor: `${red.main}22`, color: red.main, fontWeight: 700, fontSize: 12 }}
                 />
               )}
               {summary.deductionDays === 0 && (!summary.overtimeDueMinutes || summary.overtimeDueMinutes === 0) && summary.totalPresent > 0 && (
                 <Chip
                   size="small"
                   label="No deductions ✓"
-                  sx={{ bgcolor: "#22c55e22", color: "#22c55e", fontWeight: 600, fontSize: 11 }}
+                  sx={{ bgcolor: `${green.main}22`, color: green.main, fontWeight: 600, fontSize: 11 }}
                 />
               )}
             </>
@@ -978,13 +979,13 @@ export default function AttendancePage() {
                 <Chip
                   size="small"
                   label={`Overtime Due: ${formatHoursMinutes(summary.overtimeDueMinutes / 60)}`}
-                  sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 700, fontSize: 12 }}
+                  sx={{ bgcolor: `${red.main}22`, color: red.main, fontWeight: 700, fontSize: 12 }}
                 />
               ) : (
                 <Chip
                   size="small"
                   label="No Pending Overtime ✓"
-                  sx={{ bgcolor: "#22c55e22", color: "#22c55e", fontWeight: 600, fontSize: 11 }}
+                  sx={{ bgcolor: `${green.main}22`, color: green.main, fontWeight: 600, fontSize: 11 }}
                 />
               )}
             </>
@@ -994,28 +995,28 @@ export default function AttendancePage() {
                 <Chip
                   size="small"
                   label={`${summary.lateDaysOverThreshold} late day${summary.lateDaysOverThreshold > 1 ? "s" : ""} → 50% deduction each`}
-                  sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 600, fontSize: 11 }}
+                  sx={{ bgcolor: `${red.main}22`, color: red.main, fontWeight: 600, fontSize: 11 }}
                 />
               )}
               {summary.excessLeaves > 0 && (
                 <Chip
                   size="small"
                   label={`${summary.excessLeaves} excess leave${summary.excessLeaves > 1 ? "s" : ""} → 1 day deduction each`}
-                  sx={{ bgcolor: "#f59e0b22", color: "#f59e0b", fontWeight: 600, fontSize: 11 }}
+                  sx={{ bgcolor: `${amber.main}22`, color: amber.main, fontWeight: 600, fontSize: 11 }}
                 />
               )}
               {summary.deductionDays > 0 && (
                 <Chip
                   size="small"
                   label={`Total deduction: ${summary.deductionDays} day${summary.deductionDays > 1 ? "s" : ""} salary`}
-                  sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 700, fontSize: 12 }}
+                  sx={{ bgcolor: `${red.main}22`, color: red.main, fontWeight: 700, fontSize: 12 }}
                 />
               )}
               {summary.deductionDays === 0 && summary.totalPresent > 0 && (
                 <Chip
                   size="small"
                   label="No deductions ✓"
-                  sx={{ bgcolor: "#22c55e22", color: "#22c55e", fontWeight: 600, fontSize: 11 }}
+                  sx={{ bgcolor: `${green.main}22`, color: green.main, fontWeight: 600, fontSize: 11 }}
                 />
               )}
             </>

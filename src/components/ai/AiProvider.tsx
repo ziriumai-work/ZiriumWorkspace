@@ -252,8 +252,8 @@ function AiPanel({
           py: 1.5,
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <SparkIcon />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+          <img src="/logo.png" alt="Zirium AI" style={{ width: 20, height: 20, borderRadius: 4 }} />
           <Typography variant="subtitle2">
             {opts.title ?? "AI Assistant"}
           </Typography>
@@ -402,22 +402,25 @@ function AiPanel({
         )}
 
         {output ? (
-          <Box sx={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.65 }}>
-            {output}
-            {streaming && (
-              <Box
-                component="span"
-                sx={{
-                  animation: "pulse 1s ease-in-out infinite",
-                  "@keyframes pulse": {
-                    "0%, 100%": { opacity: 1 },
-                    "50%": { opacity: 0.3 },
-                  },
-                }}
-              >
-                ▍
-              </Box>
-            )}
+          <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
+            <img src="/logo.png" alt="Zirium AI" style={{ width: 24, height: 24, borderRadius: 6, marginTop: 2, flexShrink: 0 }} />
+            <Box sx={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.65, flex: 1 }}>
+              {output}
+              {streaming && (
+                <Box
+                  component="span"
+                  sx={{
+                    animation: "pulse 1s ease-in-out infinite",
+                    "@keyframes pulse": {
+                      "0%, 100%": { opacity: 1 },
+                      "50%": { opacity: 0.3 },
+                    },
+                  }}
+                >
+                  ▍
+                </Box>
+              )}
+            </Box>
           </Box>
         ) : (
           !streaming &&

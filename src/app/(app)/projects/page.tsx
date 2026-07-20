@@ -96,6 +96,7 @@ export default function ProjectsPage() {
     <Box sx={{ display: "flex", flex: 1, flexDirection: "column" }}>
       <AiProjectAgent
         open={showAgent}
+        projects={projects}
         onClose={() => setShowAgent(false)}
         onCreated={(newId) => {
           setShowAgent(false);

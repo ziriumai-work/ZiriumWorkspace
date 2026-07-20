@@ -148,8 +148,8 @@ export default function ZiriumPage() {
           py: 1.5,
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <SparkIcon />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+          <img src="/logo.png" alt="Zirium AI" style={{ width: 20, height: 20, borderRadius: 4 }} />
           <Typography variant="subtitle2">Zirium AI</Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -235,10 +235,9 @@ export default function ZiriumPage() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: 3,
-                bgcolor: "accentSoft",
               }}
             >
-              <SparkIcon large />
+              <img src="/logo.png" alt="Zirium AI" style={{ width: 48, height: 48, borderRadius: 12 }} />
             </Box>
             <Typography variant="h2" sx={{ mt: 2, fontSize: "1.25rem" }}>
               How can I help?
@@ -391,12 +390,9 @@ function Message({ msg, streaming }: { msg: ChatMsg; streaming: boolean }) {
           flexShrink: 0,
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 2,
-          bgcolor: "primary.main",
-          color: "primary.contrastText",
         }}
       >
-        <SparkIcon inherit />
+        <img src="/logo.png" alt="Zirium AI" style={{ width: 28, height: 28, borderRadius: 6 }} />
       </Box>
       <Box sx={{ minWidth: 0, flex: 1 }}>
         {msg.reasoning && (
