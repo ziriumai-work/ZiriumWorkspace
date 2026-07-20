@@ -114,7 +114,7 @@ service cloud.firestore {
     match /attendance/{recordId} {
       // Read: admin can read everything; others only their own.
       allow read: if isAdmin()
-        || (isMember() && resource.data.uid == request.auth.uid);
+        || (isMember() && (resource == null || resource.data.uid == request.auth.uid));
 
       // Create: admin can create for anyone; others only for themselves.
       allow create: if isAdmin()

@@ -323,16 +323,78 @@ export default function AttendancePage() {
     return result;
   }, [tasks, summaryMonth, filterUid, filterDepartment, filterRole, isAdmin, employee, employees]);
 
-  const summary = useMemo(
-    () =>
-      computeMonthlySummary(
+  const targetEmployee = useMemo(() => {
+    if (isAdmin && filterUid !== "all") {
+      return employees.find(e => e.id === filterUid) || employee;
+    }
+    return employee;
+  }, [isAdmin, filterUid, employees, employee]);
+
+  const isTargetIntern = targetEmployee?.accessLevel === "intern";
+
+  const summary = useMemo(() => {
+    if (isAdmin && filterUid === "all") {
+      const uids = new Set(monthRecords.map(r => r.uid));
+      const matchedEmployees = employees.filter(emp => {
+        if (filterDepartment !== "all" && emp.department !== filterDepartment) return false;
+        if (filterRole !== "all" && emp.accessLevel !== filterRole) return false;
+        return true;
+      });
+      matchedEmployees.forEach(e => {
+        if (e.uid) uids.add(e.uid);
+      });
+
+      const aggregated = {
+        totalPresent: 0,
+        totalLate: 0,
+        totalLeaves: 0,
+        totalSickLeaves: 0,
+        totalAbsent: 0,
+        totalHoursWorked: 0,
+        totalOvertimeMinutes: 0,
+        lateDaysOverThreshold: 0,
+        excessLeaves: 0,
+        deductionDays: 0,
+        overtimeDueMinutes: 0,
+      };
+
+      for (const uid of uids) {
+        if (!uid) continue;
+        const emp = employees.find(e => e.uid === uid);
+        if (!emp) continue;
+        
+        const empRecords = monthRecords.filter(r => r.uid === uid);
+        const empTasks = monthTasks.filter(t => t.assigneeId === emp.id);
+        
+        const s = computeMonthlySummary(empRecords, empTasks, settings, emp.accessLevel === "intern", emp);
+        
+        aggregated.totalPresent += s.totalPresent;
+        aggregated.totalLate += s.totalLate;
+        aggregated.totalLeaves += s.totalLeaves;
+        aggregated.totalSickLeaves += s.totalSickLeaves;
+        aggregated.totalAbsent += s.totalAbsent;
+        aggregated.totalHoursWorked += s.totalHoursWorked;
+        aggregated.totalOvertimeMinutes += s.totalOvertimeMinutes;
+        aggregated.lateDaysOverThreshold += s.lateDaysOverThreshold;
+        aggregated.excessLeaves += s.excessLeaves;
+        aggregated.deductionDays += s.deductionDays;
+        aggregated.overtimeDueMinutes += (s.overtimeDueMinutes || 0);
+      }
+      
+      // Fix floating point errors from addition
+      aggregated.totalHoursWorked = Math.round(aggregated.totalHoursWorked * 100) / 100;
+      
+      return aggregated;
+    } else {
+      return computeMonthlySummary(
         monthRecords,
         monthTasks,
         settings,
-        role === "intern",
-      ),
-    [monthRecords, monthTasks, settings, role],
-  );
+        isTargetIntern,
+        targetEmployee || undefined
+      );
+    }
+  }, [monthRecords, monthTasks, settings, isTargetIntern, targetEmployee, isAdmin, filterUid, employees, filterDepartment, filterRole]);
 
   // Non-Admin Statistics
   const myStats = useMemo(() => {
@@ -871,33 +933,92 @@ export default function AttendancePage() {
           <Typography variant="body2" color="text.secondary">
             Overtime: <strong>{formatHoursMinutes(summary.totalOvertimeMinutes / 60)}</strong>
           </Typography>
-          {summary.lateDaysOverThreshold > 0 && (
-            <Chip
-              size="small"
-              label={`${summary.lateDaysOverThreshold} late day${summary.lateDaysOverThreshold > 1 ? "s" : ""} → 50% deduction each`}
-              sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 600, fontSize: 11 }}
-            />
-          )}
-          {summary.excessLeaves > 0 && (
-            <Chip
-              size="small"
-              label={`${summary.excessLeaves} excess leave${summary.excessLeaves > 1 ? "s" : ""} → 1 day deduction each`}
-              sx={{ bgcolor: "#f59e0b22", color: "#f59e0b", fontWeight: 600, fontSize: 11 }}
-            />
-          )}
-          {summary.deductionDays > 0 && (
-            <Chip
-              size="small"
-              label={`Total deduction: ${summary.deductionDays} day${summary.deductionDays > 1 ? "s" : ""} salary`}
-              sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 700, fontSize: 12 }}
-            />
-          )}
-          {summary.deductionDays === 0 && summary.totalPresent > 0 && (
-            <Chip
-              size="small"
-              label="No deductions ✓"
-              sx={{ bgcolor: "#22c55e22", color: "#22c55e", fontWeight: 600, fontSize: 11 }}
-            />
+          
+          {isAdmin && filterUid === "all" ? (
+            <>
+              {summary.lateDaysOverThreshold > 0 && (
+                <Chip
+                  size="small"
+                  label={`${summary.lateDaysOverThreshold} late day${summary.lateDaysOverThreshold > 1 ? "s" : ""} → 50% deduction each`}
+                  sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 600, fontSize: 11 }}
+                />
+              )}
+              {summary.excessLeaves > 0 && (
+                <Chip
+                  size="small"
+                  label={`${summary.excessLeaves} excess leave${summary.excessLeaves > 1 ? "s" : ""} → 1 day deduction each`}
+                  sx={{ bgcolor: "#f59e0b22", color: "#f59e0b", fontWeight: 600, fontSize: 11 }}
+                />
+              )}
+              {summary.deductionDays > 0 && (
+                <Chip
+                  size="small"
+                  label={`Total deduction: ${summary.deductionDays} day${summary.deductionDays > 1 ? "s" : ""} salary`}
+                  sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 700, fontSize: 12 }}
+                />
+              )}
+              {summary.overtimeDueMinutes !== undefined && summary.overtimeDueMinutes > 0 && (
+                <Chip
+                  size="small"
+                  label={`Intern Overtime Due: ${formatHoursMinutes(summary.overtimeDueMinutes / 60)}`}
+                  sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 700, fontSize: 12 }}
+                />
+              )}
+              {summary.deductionDays === 0 && (!summary.overtimeDueMinutes || summary.overtimeDueMinutes === 0) && summary.totalPresent > 0 && (
+                <Chip
+                  size="small"
+                  label="No deductions ✓"
+                  sx={{ bgcolor: "#22c55e22", color: "#22c55e", fontWeight: 600, fontSize: 11 }}
+                />
+              )}
+            </>
+          ) : isTargetIntern ? (
+            <>
+              {summary.overtimeDueMinutes !== undefined && summary.overtimeDueMinutes > 0 ? (
+                <Chip
+                  size="small"
+                  label={`Overtime Due: ${formatHoursMinutes(summary.overtimeDueMinutes / 60)}`}
+                  sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 700, fontSize: 12 }}
+                />
+              ) : (
+                <Chip
+                  size="small"
+                  label="No Pending Overtime ✓"
+                  sx={{ bgcolor: "#22c55e22", color: "#22c55e", fontWeight: 600, fontSize: 11 }}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              {summary.lateDaysOverThreshold > 0 && (
+                <Chip
+                  size="small"
+                  label={`${summary.lateDaysOverThreshold} late day${summary.lateDaysOverThreshold > 1 ? "s" : ""} → 50% deduction each`}
+                  sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 600, fontSize: 11 }}
+                />
+              )}
+              {summary.excessLeaves > 0 && (
+                <Chip
+                  size="small"
+                  label={`${summary.excessLeaves} excess leave${summary.excessLeaves > 1 ? "s" : ""} → 1 day deduction each`}
+                  sx={{ bgcolor: "#f59e0b22", color: "#f59e0b", fontWeight: 600, fontSize: 11 }}
+                />
+              )}
+              {summary.deductionDays > 0 && (
+                <Chip
+                  size="small"
+                  label={`Total deduction: ${summary.deductionDays} day${summary.deductionDays > 1 ? "s" : ""} salary`}
+                  sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 700, fontSize: 12 }}
+                />
+              )}
+              {summary.deductionDays === 0 && summary.totalPresent > 0 && (
+                <Chip
+                  size="small"
+                  label="No deductions ✓"
+                  sx={{ bgcolor: "#22c55e22", color: "#22c55e", fontWeight: 600, fontSize: 11 }}
+                />
+              )}
+            </>
           )}
         </Box>
       </Paper>

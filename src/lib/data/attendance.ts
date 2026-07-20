@@ -180,12 +180,29 @@ export async function clockIn(
     });
   }
 
-  const officeStart = new Date(now);
-  officeStart.setHours(settings.startHour, settings.startMinute, 0, 0);
-  const diffMs = now.getTime() - officeStart.getTime();
-  const lateMinutes = Math.max(0, Math.floor(diffMs / 60000));
+  let isLate = false;
+  let lateMinutes = 0;
 
-  let isLate = isCheckInLate(checkInIso, settings);
+  if (employee.accessLevel === "intern") {
+    const dailyHours = (employee.officeHours || 30) / 5;
+    const requiredMinutes = dailyHours * 60;
+    
+    const officeEnd = new Date(now);
+    officeEnd.setHours(settings.endHour, settings.endMinute, 0, 0);
+    
+    const remainingMinutes = Math.floor((officeEnd.getTime() - now.getTime()) / 60000);
+    
+    if (remainingMinutes < requiredMinutes) {
+      isLate = true;
+      lateMinutes = requiredMinutes - remainingMinutes;
+    }
+  } else {
+    const officeStart = new Date(now);
+    officeStart.setHours(settings.startHour, settings.startMinute, 0, 0);
+    const diffMs = now.getTime() - officeStart.getTime();
+    lateMinutes = Math.max(0, Math.floor(diffMs / 60000));
+    isLate = isCheckInLate(checkInIso, settings);
+  }
   let status: AttendanceStatus = isLate ? "late" : "present";
   let flexibilityUsed = 0;
   let returnResult: { status: "success" | "warning"; message: string } = { status: "success", message: "Clocked in successfully." };
@@ -315,6 +332,14 @@ export async function clockOut(
  * If the shift is from a previous day, or today but past office end time, it
  * auto-closes the shift exactly at the official office end time.
  */
+/** Helper to safely get YYYY-MM-DD in the local timezone */
+function getLocalISODate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export async function autoClockOutUnclosedShifts(
   uid: string,
   settings: OfficeSettings
@@ -329,7 +354,7 @@ export async function autoClockOutUnclosedShifts(
   if (snap.empty) return;
   
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
+  const todayStr = getLocalISODate(now);
   
   const todayEnd = new Date(now);
   todayEnd.setHours(settings.endHour, settings.endMinute, 0, 0);
@@ -338,26 +363,79 @@ export async function autoClockOutUnclosedShifts(
   
   for (const d of snap.docs) {
     const data = d.data() as AttendanceRecord;
-    let shouldClose = false;
     
-    // If from a previous day, definitely close.
+    // Only auto clock out if they actually clocked in!
+    if (!data.checkIn) continue;
+    
+    let shouldClose = false;
     if (data.date < todayStr) {
       shouldClose = true;
-    } 
-    // If today, only close if we are past closing time.
-    else if (data.date === todayStr && now > todayEnd) {
+    } else if (data.date === todayStr && now > todayEnd) {
       shouldClose = true;
     }
     
     if (shouldClose) {
-      // Reconstruct the official closing time for that specific date
-      const closingDate = new Date(data.date); // e.g. "2024-05-10"
+      const closingDate = new Date(data.date + "T00:00:00");
       closingDate.setHours(settings.endHour, settings.endMinute, 0, 0);
       
       const checkOutIso = closingDate.toISOString();
-      const hoursWorked = data.checkIn 
-        ? Math.max(0, (closingDate.getTime() - new Date(data.checkIn).getTime()) / 3_600_000)
-        : 0;
+      const hoursWorked = Math.max(0, (closingDate.getTime() - new Date(data.checkIn).getTime()) / 3_600_000);
+      
+      batchUpdates.push(
+        updateDoc(d.ref, {
+          checkOut: checkOutIso,
+          hoursWorked: Math.round(hoursWorked * 100) / 100,
+          isOvertime: false,
+          overtimeMinutes: 0,
+          updatedAt: serverTimestamp(),
+        })
+      );
+    }
+  }
+  
+  if (batchUpdates.length > 0) {
+    await Promise.all(batchUpdates);
+  }
+}
+
+export async function autoClockOutAllUnclosedShifts(
+  settings: OfficeSettings
+): Promise<void> {
+  const q = query(
+    collection(db, COL),
+    where("checkOut", "==", null)
+  );
+  
+  const snap = await getDocs(q);
+  if (snap.empty) return;
+  
+  const now = new Date();
+  const todayStr = getLocalISODate(now);
+  
+  const todayEnd = new Date(now);
+  todayEnd.setHours(settings.endHour, settings.endMinute, 0, 0);
+  
+  const batchUpdates = [];
+  
+  for (const d of snap.docs) {
+    const data = d.data() as AttendanceRecord;
+    
+    // Only auto clock out if they actually clocked in!
+    if (!data.checkIn) continue;
+    
+    let shouldClose = false;
+    if (data.date < todayStr) {
+      shouldClose = true;
+    } else if (data.date === todayStr && now > todayEnd) {
+      shouldClose = true;
+    }
+    
+    if (shouldClose) {
+      const closingDate = new Date(data.date + "T00:00:00");
+      closingDate.setHours(settings.endHour, settings.endMinute, 0, 0);
+      
+      const checkOutIso = closingDate.toISOString();
+      const hoursWorked = Math.max(0, (closingDate.getTime() - new Date(data.checkIn).getTime()) / 3_600_000);
       
       batchUpdates.push(
         updateDoc(d.ref, {
@@ -397,10 +475,9 @@ export async function autoFillMissingAttendance(
   });
 
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
+  const todayStr = getLocalISODate(now);
   
-  const start = new Date(employee.startDate);
-  start.setHours(0, 0, 0, 0);
+  const start = new Date(employee.startDate + "T00:00:00");
 
   const allowedLeaves = employee.accessLevel === "intern" 
     ? settings.internLeavesPerMonth 
@@ -411,7 +488,7 @@ export async function autoFillMissingAttendance(
   // Iterate from start date up to yesterday
   const curr = new Date(start);
   while (true) {
-    const dateStr = curr.toISOString().slice(0, 10);
+    const dateStr = getLocalISODate(curr);
     if (dateStr >= todayStr) break;
 
     const dayOfWeek = curr.getDay();
@@ -536,6 +613,7 @@ export interface MonthlySummary {
   lateDaysOverThreshold: number; // late days beyond allowed threshold
   excessLeaves: number; // leaves beyond allowed quota
   deductionDays: number; // total deduction days (half-day for late + full-day for excess leave)
+  overtimeDueMinutes?: number; // only applicable for interns
 }
 
 export function computeMonthlySummary(
@@ -543,6 +621,7 @@ export function computeMonthlySummary(
   tasks: DailyTask[],
   settings: OfficeSettings,
   isIntern: boolean,
+  employee?: Pick<Developer, "officeHours">
 ): MonthlySummary {
   let totalPresent = 0;
   let totalLate = 0;
@@ -606,25 +685,56 @@ export function computeMonthlySummary(
     0,
     totalLate - settings.lateThresholdDays,
   );
-  const overtimeOffsetDays = Math.floor(totalOvertimeMinutes / 480);
-  const lateDaysOverThreshold = Math.max(
-    0,
-    grossLatePenalties - overtimeOffsetDays,
-  );
+  
+  if (isIntern) {
+    // Intern penalty logic: penalties become negative overtime (overtimeDue).
+    const dailyHours = (employee?.officeHours || 30) / 5;
+    const dailyMinutes = dailyHours * 60;
+    
+    // Total missing minutes from absentees and excess leaves
+    const missingMinutesFromAbsences = (totalAbsent + excessLeaves) * dailyMinutes;
+    // Missing minutes from late days over threshold
+    const missingMinutesFromLates = grossLatePenalties * (dailyMinutes / 2);
+    
+    const totalPenaltyMinutes = missingMinutesFromAbsences + missingMinutesFromLates;
+    
+    const netOvertime = totalOvertimeMinutes - totalPenaltyMinutes;
+    
+    return {
+      totalPresent,
+      totalLate,
+      totalLeaves,
+      totalSickLeaves,
+      totalAbsent,
+      totalHoursWorked: Math.round(totalHoursWorked * 100) / 100,
+      totalOvertimeMinutes: Math.max(0, netOvertime),
+      lateDaysOverThreshold: grossLatePenalties,
+      excessLeaves,
+      deductionDays: 0,
+      overtimeDueMinutes: netOvertime < 0 ? Math.abs(netOvertime) : 0,
+    };
+  } else {
+    // Employee penalty logic: deduction days and offset with overtime
+    const overtimeOffsetDays = Math.floor(totalOvertimeMinutes / 480);
+    const lateDaysOverThreshold = Math.max(
+      0,
+      grossLatePenalties - overtimeOffsetDays,
+    );
 
-  // Each excess late day = 0.5 day deduction; each excess leave = 1 day deduction.
-  const deductionDays = lateDaysOverThreshold * 0.5 + excessLeaves;
+    // Each excess late day = 0.5 day deduction; each excess leave = 1 day deduction.
+    const deductionDays = lateDaysOverThreshold * 0.5 + excessLeaves;
 
-  return {
-    totalPresent,
-    totalLate,
-    totalLeaves,
-    totalSickLeaves,
-    totalAbsent,
-    totalHoursWorked: Math.round(totalHoursWorked * 100) / 100,
-    totalOvertimeMinutes,
-    lateDaysOverThreshold,
-    excessLeaves,
-    deductionDays,
-  };
+    return {
+      totalPresent,
+      totalLate,
+      totalLeaves,
+      totalSickLeaves,
+      totalAbsent,
+      totalHoursWorked: Math.round(totalHoursWorked * 100) / 100,
+      totalOvertimeMinutes,
+      lateDaysOverThreshold,
+      excessLeaves,
+      deductionDays,
+    };
+  }
 }
