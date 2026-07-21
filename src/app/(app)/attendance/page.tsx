@@ -1059,7 +1059,7 @@ export default function AttendancePage() {
         <TableContainer
           component={Paper}
           variant="outlined"
-          sx={{ borderRadius: 4, overflow: "hidden" }}
+          sx={{ borderRadius: 4, overflowX: "auto" }}
         >
           <Table size="small">
             <TableHead>
@@ -1516,49 +1516,50 @@ function AdminEmployeeCard({
   const [expanded, setExpanded] = useState(false);
   
   return (
-    <Paper variant="outlined" sx={{ p: 3, borderRadius: 4, display: "flex", flexDirection: "column", gap: 2 }}>
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Avatar sx={{ bgcolor: "accentSoft", color: "primary.main", width: 48, height: 48, fontWeight: 700 }}>
+    <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, borderRadius: 4, display: "flex", flexDirection: "column", gap: { xs: 1.5, sm: 2 } }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, alignItems: { xs: "stretch", sm: "center" }, justifyContent: "space-between", gap: { xs: 1.5, sm: 2 } }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: { xs: 1.5, sm: 2 } }}>
+          <Avatar src={employee.photoURL || undefined} sx={{ bgcolor: "accentSoft", color: "primary.main", width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 }, fontWeight: 700 }}>
             {employee.name.charAt(0).toUpperCase()}
           </Avatar>
           <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{employee.name}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ textTransform: "capitalize" }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: { xs: 15, sm: 16 } }}>{employee.name}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ textTransform: "capitalize", fontSize: { xs: 13, sm: 14 } }}>
               {employee.accessLevel} • {employee.department === "custom" && employee.customDepartment ? employee.customDepartment : employee.department}
             </Typography>
           </Box>
         </Box>
         
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, pl: { xs: 6.5, sm: 0 } }}>
           {todayRecord ? (
-            <Box sx={{ textAlign: "right" }}>
+            <Box sx={{ textAlign: { xs: "left", sm: "right" }, display: "flex", flexDirection: { xs: "row", sm: "column" }, alignItems: { xs: "center", sm: "flex-end" }, gap: { xs: 1.5, sm: 0 } }}>
               <Chip
                 label={ATTENDANCE_STATUSES.find(s => s.value === todayRecord.status)?.label ?? todayRecord.status}
                 size="small"
-                sx={{ bgcolor: `${STATUS_COLORS[todayRecord.status]}22`, color: STATUS_COLORS[todayRecord.status], fontWeight: 600, mb: 0.5 }}
+                sx={{ bgcolor: `${STATUS_COLORS[todayRecord.status]}22`, color: STATUS_COLORS[todayRecord.status], fontWeight: 600, mb: { xs: 0, sm: 0.5 } }}
               />
               <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                 In: {fmtTime(todayRecord.checkIn)} {todayRecord.checkOut ? `• Out: ${fmtTime(todayRecord.checkOut)}` : "• Active"}
               </Typography>
             </Box>
           ) : (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography variant="body2" color="text.secondary">No Record Today</Typography>
-              <Button size="small" variant="outlined" onClick={() => onMarkAttendance(employee.uid!)}>Mark</Button>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: 13, sm: 14 } }}>No Record</Typography>
+              <Button size="small" variant="outlined" onClick={() => onMarkAttendance(employee.uid!)} sx={{ px: { xs: 1.5, sm: 2 } }}>Mark</Button>
             </Box>
           )}
           
-          <IconButton onClick={() => setExpanded(!expanded)} sx={{ bgcolor: "action.hover" }}>
-            {expanded ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+          <IconButton size="small" onClick={() => setExpanded(!expanded)} sx={{ bgcolor: "action.hover", width: 32, height: 32 }}>
+            {expanded ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
           </IconButton>
         </Box>
       </Box>
       
       <Collapse in={expanded}>
         <Divider sx={{ my: 2 }} />
-        <Table size="small">
-          <TableHead>
+        <TableContainer sx={{ overflowX: "auto" }}>
+          <Table size="small">
+            <TableHead>
             <TableRow>
               <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Date</TableCell>
               <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Status</TableCell>
@@ -1607,6 +1608,7 @@ function AdminEmployeeCard({
             )}
           </TableBody>
         </Table>
+        </TableContainer>
       </Collapse>
     </Paper>
   );

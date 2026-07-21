@@ -42,6 +42,7 @@ function toDeveloper(id: string, data: Record<string, unknown>): Developer {
     monthlySalary: data.monthlySalary as number | undefined,
     officeHours: data.officeHours as number | undefined,
     flexibilityHours: data.flexibilityHours as number | undefined,
+    photoURL: (data.photoURL as string) ?? undefined,
     createdAt: (data.createdAt as Timestamp | null) ?? null,
   };
 }

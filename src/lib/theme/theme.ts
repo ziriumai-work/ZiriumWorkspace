@@ -72,6 +72,27 @@ export const theme = createTheme({
     subtitle2: { fontWeight: 600 },
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: `
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+          background-color: var(--mui-palette-primary-main);
+          border-radius: 8px;
+          border: 2px solid transparent;
+          background-clip: content-box;
+          opacity: 0.8;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background-color: var(--mui-palette-primary-dark);
+        }
+      `,
+    },
     MuiButton: {
       defaultProps: { size: "small", disableElevation: true },
       styleOverrides: {

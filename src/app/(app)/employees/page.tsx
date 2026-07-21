@@ -450,6 +450,7 @@ export default function EmployeesPage() {
 
                   <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
                     <Avatar
+                      src={e.photoURL || undefined}
                       sx={{
                         width: 48,
                         height: 48,

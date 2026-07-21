@@ -12,6 +12,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import MuiLink from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { subscribeToProjects } from "@/lib/data/projects";
 import { subscribeToTasksForEmployee, updateTask } from "@/lib/data/tasks";
@@ -128,7 +129,7 @@ export function PersonalDashboard() {
   const roleLabel = role === "employee" ? "Employee" : role === "intern" ? "Intern" : "Admin";
 
   return (
-    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 5 }}>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: { xs: 2, sm: 3, md: 4 }, py: { xs: 3, md: 5 } }}>
       {/* Header */}
       <Box component="header" sx={{ mb: 4 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
@@ -184,15 +185,7 @@ export function PersonalDashboard() {
                 }}
               >
                 <Typography variant="subtitle2">My pending tasks</Typography>
-                <MuiLink
-                  component={Link}
-                  href="/tasks"
-                  variant="caption"
-                  color="text.secondary"
-                  underline="hover"
-                >
-                  Open My Tasks →
-                </MuiLink>
+                <AnimatedActionLink href="/tasks">Open My Tasks</AnimatedActionLink>
               </Box>
 
               {loading ? (
@@ -320,15 +313,7 @@ export function PersonalDashboard() {
                 }}
               >
                 <Typography variant="subtitle2">My projects</Typography>
-                <MuiLink
-                  component={Link}
-                  href="/projects"
-                  variant="caption"
-                  color="text.secondary"
-                  underline="hover"
-                >
-                  View all →
-                </MuiLink>
+                <AnimatedActionLink href="/projects">View all</AnimatedActionLink>
               </Box>
 
               {myProjects.length === 0 ? (
@@ -398,7 +383,7 @@ export function PersonalDashboard() {
         <Grid size={{ xs: 12, lg: 4 }}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {/* Profile */}
-            <Paper component="section" variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+            <Paper component="section" variant="outlined" sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3 }}>
               <Typography variant="subtitle2" sx={{ mb: 2 }}>
                 My profile
               </Typography>
@@ -426,7 +411,7 @@ export function PersonalDashboard() {
                   </Typography>
                 </Box>
               </Box>
-              <Box component="dl" sx={{ mt: 3, m: 0, mb: 0, display: "flex", flexDirection: "column", gap: 1.5 }}>
+              <Box component="dl" sx={{ m: 0, mt: 3, display: "flex", flexDirection: "column", gap: 2 }}>
                 <ProfileRow label="Title" value={employee.role || "—"} />
                 <ProfileRow label="Department" value={deptLabel} />
                 <ProfileRow
@@ -442,7 +427,7 @@ export function PersonalDashboard() {
             </Paper>
 
             {/* Team */}
-            <Paper component="section" variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+            <Paper component="section" variant="outlined" sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3 }}>
               <Typography variant="subtitle2" sx={{ mb: 2 }}>
                 {deptLabel} team
               </Typography>
@@ -455,6 +440,7 @@ export function PersonalDashboard() {
                   {team.map((m) => (
                     <Box key={m.id} sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                       <Avatar
+                        src={m.photoURL || undefined}
                         sx={{
                           width: 32,
                           height: 32,
@@ -559,5 +545,52 @@ function ProfileRow({ label, value }: { label: string; value: string }) {
         {value}
       </Typography>
     </Box>
+  );
+}
+
+function AnimatedActionLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <MuiLink
+      component={Link}
+      href={href}
+      variant="caption"
+      underline="none"
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        fontWeight: 600,
+        color: "text.secondary",
+        px: 1.5,
+        py: 0.5,
+        borderRadius: "100px",
+        transition: "all 0.2s ease",
+        "&:hover": {
+          bgcolor: "primary.main",
+          color: "primary.contrastText",
+          "& .arrow-icon": {
+            width: 14,
+            opacity: 1,
+            transform: "translateX(2px)",
+            ml: 0.5,
+          },
+        },
+      }}
+    >
+      {children}
+      <Box
+        component="span"
+        className="arrow-icon"
+        sx={{
+          display: "inline-flex",
+          width: 0,
+          opacity: 0,
+          transform: "translateX(-4px)",
+          transition: "all 0.2s ease",
+          overflow: "hidden",
+        }}
+      >
+        <ArrowForwardIcon sx={{ fontSize: 14 }} />
+      </Box>
+    </MuiLink>
   );
 }

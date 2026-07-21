@@ -227,11 +227,13 @@ export default function ProjectDetailPage({
         }}
         placeholder="Untitled"
         fullWidth
+        multiline
         sx={{
           mt: 1.5,
-          fontSize: "1.875rem",
+          fontSize: { xs: "1.5rem", sm: "1.875rem" },
           fontWeight: 700,
           letterSpacing: "-0.02em",
+          lineHeight: 1.2,
         }}
       />
 

@@ -137,6 +137,7 @@ export interface Developer {
   status: EmployeeStatus;
   accessLevel: AccessLevel; // "admin" can manage; "employee" gets a restricted view
   uid: string | null; // bound on first matching sign-in
+  photoURL?: string; // custom uploaded profile photo overriding auth default
   monthlySalary?: number; // base monthly salary
   officeHours?: number; // expected weekly office hours
   flexibilityHours?: number; // weekly flexibility time allowed

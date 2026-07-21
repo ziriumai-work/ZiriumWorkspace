@@ -190,7 +190,7 @@ export function ProjectBoard({
                         >
                           {devs.slice(0, 3).map((d) => (
                             <Tooltip key={d.id} title={d.name}>
-                              <Avatar>{d.name.charAt(0).toUpperCase()}</Avatar>
+                              <Avatar src={d.photoURL || undefined}>{d.name.charAt(0).toUpperCase()}</Avatar>
                             </Tooltip>
                           ))}
                         </AvatarGroup>

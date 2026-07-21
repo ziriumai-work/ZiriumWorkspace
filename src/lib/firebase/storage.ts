@@ -50,3 +50,13 @@ export async function uploadLeaveProof(
   const url = await getDownloadURL(r);
   return { name: file.name, url };
 }
+
+export async function uploadProfilePhoto(
+  uid: string,
+  file: Blob | File,
+): Promise<string> {
+  const path = `profiles/${uid}/avatar-${Date.now()}.png`;
+  const r = ref(storage, path);
+  await uploadBytes(r, file);
+  return await getDownloadURL(r);
+}

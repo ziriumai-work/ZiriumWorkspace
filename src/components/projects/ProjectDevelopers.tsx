@@ -86,6 +86,7 @@ export function ProjectDevelopers({
           onClick={editable ? (e) => handleOpenRole(e, d.id) : undefined}
           avatar={
             <Avatar
+              src={d.photoURL || undefined}
               sx={{
                 bgcolor: "accentSoft",
                 color: "primary.main",
