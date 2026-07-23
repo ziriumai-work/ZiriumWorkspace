@@ -111,20 +111,11 @@ export default function ProjectDetailPage({
         <Typography variant="body2" color="text.secondary">
           Project not found.
         </Typography>
-        <Button
-          component={Link}
-          href="/projects"
-          startIcon={<KeyboardBackspaceIcon />}
-          sx={{
-            mt: 1,
-            color: "text.secondary",
-            textTransform: "none",
-            fontWeight: 500,
-            "&:hover": { bgcolor: "surface", color: "primary.main" },
-          }}
-        >
-          Back to Projects
-        </Button>
+        <Box sx={{ mt: 1 }}>
+          <MuiLink component={Link} href="/projects" variant="actionPillBackward">
+            Back to Projects
+          </MuiLink>
+        </Box>
       </Box>
     );
   }
@@ -136,20 +127,11 @@ export default function ProjectDetailPage({
         <Typography variant="body2" color="text.secondary">
           You don’t have access to this project.
         </Typography>
-        <Button
-          component={Link}
-          href="/projects"
-          startIcon={<KeyboardBackspaceIcon />}
-          sx={{
-            mt: 1,
-            color: "text.secondary",
-            textTransform: "none",
-            fontWeight: 500,
-            "&:hover": { bgcolor: "surface", color: "primary.main" },
-          }}
-        >
-          Back to Projects
-        </Button>
+        <Box sx={{ mt: 1 }}>
+          <MuiLink component={Link} href="/projects" variant="actionPillBackward">
+            Back to Projects
+          </MuiLink>
+        </Box>
       </Box>
     );
   }
@@ -201,20 +183,11 @@ export default function ProjectDetailPage({
 
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: { xs: 2, sm: 4, md: 6 }, py: 4 }}>
-      <Button
-        component={Link}
-        href="/projects"
-        startIcon={<KeyboardBackspaceIcon />}
-        sx={{
-          mb: 3,
-          color: "text.secondary",
-          textTransform: "none",
-          fontWeight: 500,
-          "&:hover": { bgcolor: "surface", color: "primary.main" },
-        }}
-      >
-        Back to Projects
-      </Button>
+      <Box sx={{ mb: 3 }}>
+        <MuiLink component={Link} href="/projects" variant="actionPillBackward">
+          Back to Projects
+        </MuiLink>
+      </Box>
 
       {/* Title */}
       <InputBase

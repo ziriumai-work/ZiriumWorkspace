@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Grid from "@mui/material/Grid";
@@ -15,9 +16,13 @@ import ListItemButton from "@mui/material/ListItemButton";
 import MuiLink from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
+import Divider from "@mui/material/Divider";
+import { alpha } from "@mui/material/styles";
 import { subscribeToProjects } from "@/lib/data/projects";
-import { PROJECT_STATUSES, type Project } from "@/lib/data/types";
-import { STATUS_META, chipSx } from "@/components/projectMeta";
+import { subscribeToAllTasks } from "@/lib/data/tasks";
+import { subscribeToAllAttendance } from "@/lib/data/attendance";
+import { PROJECT_STATUSES, type Project, type DailyTask, type AttendanceRecord } from "@/lib/data/types";
+import { STATUS_META, chipSx, TASK_STATUS_COLORS } from "@/components/projectMeta";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { PersonalDashboard } from "@/components/dashboard/PersonalDashboard";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
@@ -25,18 +30,27 @@ import { ScrollReveal } from "@/components/ui/ScrollReveal";
 export default function DashboardPage() {
   const { user, employee, isAdmin } = useAuth();
   const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [allTasks, setAllTasks] = useState<DailyTask[]>([]);
+  const [allAttendance, setAllAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = subscribeToProjects(
+    const unsubProjects = subscribeToProjects(
       (p) => {
         setAllProjects(p);
         setLoading(false);
       },
       () => setLoading(false),
     );
-    return unsub;
-  }, []);
+    const unsubTasks = isAdmin ? subscribeToAllTasks(setAllTasks) : () => {};
+    const unsubAtt = isAdmin ? subscribeToAllAttendance(setAllAttendance) : () => {};
+
+    return () => {
+      unsubProjects();
+      unsubTasks();
+      unsubAtt();
+    };
+  }, [isAdmin]);
 
   // Admins see all projects; employees only their assigned ones.
   const projects = useMemo(() => {
@@ -55,6 +69,30 @@ export default function DashboardPage() {
     (p) => p.status !== "done" && p.status !== "archived",
   ).length;
 
+  const taskStats = useMemo(() => {
+    let todo = 0, inProgress = 0, done = 0, overtime = 0;
+    for (const t of allTasks) {
+      if (t.status === "todo") todo++;
+      else if (t.status === "in_progress") inProgress++;
+      else if (t.status === "done") done++;
+      if (t.isOvertime) overtime++;
+    }
+    return { total: allTasks.length, todo, inProgress, done, overtime };
+  }, [allTasks]);
+
+  const attendanceStats = useMemo(() => {
+    let present = 0, absent = 0, late = 0, onLeave = 0;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayRecords = allAttendance.filter(r => r.date === todayStr);
+    for (const r of todayRecords) {
+      if (r.status === "present") present++;
+      else if (r.status === "absent") absent++;
+      else if (r.status === "late") late++;
+      else if (r.status === "on_leave") onLeave++;
+    }
+    return { total: todayRecords.length, present, absent, late, onLeave };
+  }, [allAttendance]);
+
   const recent = projects.slice(0, 6);
   const firstName = (user?.displayName ?? "there").split(" ")[0];
 
@@ -72,12 +110,127 @@ export default function DashboardPage() {
         </Typography>
       </Box>
 
+      {/* Global Summaries (Admin Only) */}
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 4 }}>
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 300,
+            p: 1.25,
+            px: 2.25,
+            borderRadius: 3,
+            bgcolor: "surface",
+            border: "1px solid",
+            borderColor: "divider",
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: { xs: 1.5, sm: 2.5 },
+            fontSize: 12,
+            fontFamily: "var(--font-geist-mono), monospace",
+            transition: "all 0.25s ease-in-out",
+            cursor: "default",
+            "&:hover": {
+              borderColor: "primary.main",
+              boxShadow: "0 6px 20px -6px rgba(13, 147, 199, 0.18)",
+              transform: "translateY(-2px)",
+            },
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "primary.main" }} />
+            <Typography variant="caption" sx={{ fontFamily: "inherit", fontWeight: 600, color: "text.primary" }}>
+              {taskStats.total} {taskStats.total === 1 ? "Task" : "Tasks"}
+            </Typography>
+          </Box>
+          <Divider orientation="vertical" flexItem sx={{ height: 12, my: "auto" }} />
+          <Typography variant="caption" sx={{ fontFamily: "inherit", color: "text.secondary" }}>
+            <Box component="span" sx={{ color: TASK_STATUS_COLORS.todo, fontWeight: 600 }}>{taskStats.todo}</Box> to do
+          </Typography>
+          <Typography variant="caption" sx={{ fontFamily: "inherit", color: "text.secondary" }}>
+            <Box component="span" sx={{ color: TASK_STATUS_COLORS.in_progress, fontWeight: 600 }}>{taskStats.inProgress}</Box> in progress
+          </Typography>
+          <Typography variant="caption" sx={{ fontFamily: "inherit", color: "text.secondary" }}>
+            <Box component="span" sx={{ color: TASK_STATUS_COLORS.done, fontWeight: 600 }}>{taskStats.done}</Box> complete
+          </Typography>
+          {taskStats.overtime > 0 && (
+            <>
+              <Divider orientation="vertical" flexItem sx={{ height: 12, my: "auto" }} />
+              <Typography variant="caption" sx={{ fontFamily: "inherit", color: "#ef4444", fontWeight: 600 }}>
+                ⚡ {taskStats.overtime} overtime
+              </Typography>
+            </>
+          )}
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 300,
+            p: 1.25,
+            px: 2.25,
+            borderRadius: 3,
+            bgcolor: "surface",
+            border: "1px solid",
+            borderColor: "divider",
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: { xs: 1.5, sm: 2.5 },
+            fontSize: 12,
+            fontFamily: "var(--font-geist-mono), monospace",
+            transition: "all 0.25s ease-in-out",
+            cursor: "default",
+            "&:hover": {
+              borderColor: "primary.main",
+              boxShadow: "0 6px 20px -6px rgba(13, 147, 199, 0.18)",
+              transform: "translateY(-2px)",
+            },
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "primary.main" }} />
+            <Typography variant="caption" sx={{ fontFamily: "inherit", fontWeight: 600, color: "text.primary" }}>
+              Today's Attendance
+            </Typography>
+          </Box>
+          <Divider orientation="vertical" flexItem sx={{ height: 12, my: "auto" }} />
+          <Typography variant="caption" sx={{ fontFamily: "inherit", color: "text.secondary" }}>
+            <Box component="span" sx={{ color: "#22c55e", fontWeight: 600 }}>{attendanceStats.present}</Box> present
+          </Typography>
+          <Typography variant="caption" sx={{ fontFamily: "inherit", color: "text.secondary" }}>
+            <Box component="span" sx={{ color: "#f59e0b", fontWeight: 600 }}>{attendanceStats.late}</Box> late
+          </Typography>
+          <Typography variant="caption" sx={{ fontFamily: "inherit", color: "text.secondary" }}>
+            <Box component="span" sx={{ color: "#ef4444", fontWeight: 600 }}>{attendanceStats.absent}</Box> absent
+          </Typography>
+          <Typography variant="caption" sx={{ fontFamily: "inherit", color: "text.secondary" }}>
+            <Box component="span" sx={{ color: "#3b82f6", fontWeight: 600 }}>{attendanceStats.onLeave}</Box> on leave
+          </Typography>
+        </Box>
+      </Box>
+
       {/* Status summary cards */}
       <Grid container spacing={1.5}>
         {PROJECT_STATUSES.map((s) => (
           <Grid key={s.value} size={{ xs: 6, sm: 4, lg: 2 }}>
             <ScrollReveal>
-              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 3 }}>
+              <Paper 
+                variant="outlined" 
+                sx={[
+                  chipSx(STATUS_META[s.value].color),
+                  { 
+                    p: 1.5, 
+                    borderRadius: 3,
+                    transition: "all 0.2s ease-in-out",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      borderColor: STATUS_META[s.value].color,
+                      boxShadow: `0 8px 24px ${alpha(STATUS_META[s.value].color, 0.25)}`,
+                    }
+                  }
+                ]}
+              >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
                   <Box
                     sx={{
@@ -87,7 +240,7 @@ export default function DashboardPage() {
                       bgcolor: STATUS_META[s.value].color,
                     }}
                   />
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="inherit" sx={{ opacity: 0.8 }}>
                     {s.label}
                   </Typography>
                 </Box>
@@ -118,14 +271,8 @@ export default function DashboardPage() {
           }}
         >
           <Typography variant="subtitle2">Recently updated</Typography>
-          <MuiLink
-            component={Link}
-            href="/projects"
-            variant="caption"
-            color="text.secondary"
-            underline="hover"
-          >
-            View all →
+          <MuiLink component={Link} href="/projects" variant="actionPill">
+            View all
           </MuiLink>
         </Box>
 
@@ -176,13 +323,13 @@ export default function DashboardPage() {
                           {p.title}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" noWrap>
-                          Updated {new Date(p.updatedAt).toLocaleDateString()}
+                          Updated {p.updatedAt ? (p.updatedAt as any).toDate?.().toLocaleDateString() ?? "recently" : "recently"}
                         </Typography>
                       </Box>
                       <Chip
                         label={STATUS_META[p.status].label}
                         size="small"
-                        sx={{ ...chipSx(STATUS_META[p.status].color), ml: "auto" }}
+                        sx={[chipSx(STATUS_META[p.status].color), { ml: "auto" }]}
                       />
                     </Box>
                   </ListItemButton>

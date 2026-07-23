@@ -94,8 +94,7 @@ export function ProjectTable({
                     component={Link}
                     href={`/projects/${p.id}`}
                     color="inherit"
-                    underline="hover"
-                    sx={{ fontWeight: 500 }}
+                    variant="animatedUnderline"
                   >
                     {p.title}
                   </MuiLink>

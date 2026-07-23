@@ -185,7 +185,7 @@ export function PersonalDashboard() {
                 }}
               >
                 <Typography variant="subtitle2">My pending tasks</Typography>
-                <AnimatedActionLink href="/tasks">Open My Tasks</AnimatedActionLink>
+                <MuiLink component={Link} href="/tasks" variant="actionPill">Open My Tasks</MuiLink>
               </Box>
 
               {loading ? (
@@ -338,7 +338,7 @@ export function PersonalDashboard() {
                 }}
               >
                 <Typography variant="subtitle2">My projects</Typography>
-                <AnimatedActionLink href="/projects">View all</AnimatedActionLink>
+                <MuiLink component={Link} href="/projects" variant="actionPill">View all</MuiLink>
               </Box>
 
               {myProjects.length === 0 ? (
@@ -573,49 +573,3 @@ function ProfileRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function AnimatedActionLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <MuiLink
-      component={Link}
-      href={href}
-      variant="caption"
-      underline="none"
-      sx={{
-        display: "inline-flex",
-        alignItems: "center",
-        fontWeight: 600,
-        color: "text.secondary",
-        px: 1.5,
-        py: 0.5,
-        borderRadius: "100px",
-        transition: "all 0.2s ease",
-        "&:hover": {
-          bgcolor: "primary.main",
-          color: "primary.contrastText",
-          "& .arrow-icon": {
-            width: 14,
-            opacity: 1,
-            transform: "translateX(2px)",
-            ml: 0.5,
-          },
-        },
-      }}
-    >
-      {children}
-      <Box
-        component="span"
-        className="arrow-icon"
-        sx={{
-          display: "inline-flex",
-          width: 0,
-          opacity: 0,
-          transform: "translateX(-4px)",
-          transition: "all 0.2s ease",
-          overflow: "hidden",
-        }}
-      >
-        <ArrowForwardIcon sx={{ fontSize: 14 }} />
-      </Box>
-    </MuiLink>
-  );
-}

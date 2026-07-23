@@ -643,7 +643,7 @@ function TaskCard({
   const reportsCount = task.reports ? task.reports.length : (task.report?.text || task.report?.links?.length || task.report?.files?.length ? 1 : 0);
   const hasReport = reportsCount > 0;
 
-  const isLive = task.status === "in_progress" || task.status === "review";
+  const isLive = task.status === "in_progress";
   const emp = employees.find((e) => e.id === task.assigneeId);
 
   return (

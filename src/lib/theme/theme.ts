@@ -17,6 +17,13 @@ declare module "@mui/material/styles" {
     accentSoft?: string;
   }
 }
+declare module "@mui/material/Typography" {
+  interface TypographyPropsVariantOverrides {
+    actionPill: true;
+    actionPillBackward: true;
+    animatedUnderline: true;
+  }
+}
 
 export const theme = createTheme({
   cssVariables: { colorSchemeSelector: "class" },
@@ -133,6 +140,104 @@ export const theme = createTheme({
     },
     MuiOutlinedInput: {
       styleOverrides: { root: { borderRadius: 8 } },
+    },
+    MuiLink: {
+      variants: [
+        {
+          props: { variant: "actionPill" },
+          style: {
+            display: "inline-flex",
+            alignItems: "center",
+            fontWeight: 600,
+            color: "var(--mui-palette-text-secondary)",
+            padding: "4px 12px",
+            borderRadius: "100px",
+            transition: "all 0.2s ease",
+            textDecoration: "none",
+            "&:hover": {
+              backgroundColor: "var(--mui-palette-primary-main)",
+              color: "var(--mui-palette-primary-contrastText)",
+              "&::after": {
+                width: 14,
+                opacity: 1,
+                transform: "translateX(2px)",
+                marginLeft: 4,
+              }
+            },
+            "&::after": {
+              content: '"→"',
+              fontFamily: "var(--font-geist-sans), sans-serif",
+              display: "inline-block",
+              width: 0,
+              opacity: 0,
+              transform: "translateX(-4px)",
+              transition: "all 0.2s ease",
+              overflow: "hidden",
+            }
+          }
+        },
+        {
+          props: { variant: "actionPillBackward" },
+          style: {
+            display: "inline-flex",
+            alignItems: "center",
+            fontWeight: 600,
+            color: "var(--mui-palette-text-secondary)",
+            padding: "4px 12px",
+            borderRadius: "100px",
+            transition: "all 0.2s ease",
+            textDecoration: "none",
+            "&:hover": {
+              backgroundColor: "var(--mui-palette-primary-main)",
+              color: "var(--mui-palette-primary-contrastText)",
+              "&::before": {
+                width: 14,
+                opacity: 1,
+                transform: "translateX(-2px)",
+                marginRight: 4,
+              }
+            },
+            "&::before": {
+              content: '"←"',
+              fontFamily: "var(--font-geist-sans), sans-serif",
+              display: "inline-block",
+              width: 0,
+              opacity: 0,
+              transform: "translateX(4px)",
+              transition: "all 0.2s ease",
+              overflow: "hidden",
+            }
+          }
+        },
+        {
+          props: { variant: "animatedUnderline" },
+          style: {
+            position: "relative",
+            display: "inline-block",
+            textDecoration: "none",
+            fontWeight: 500,
+            transition: "color 0.2s ease",
+            "&:hover": {
+              color: "var(--mui-palette-primary-main)",
+              textDecoration: "none",
+            },
+            "&::after": {
+              content: '""',
+              position: "absolute",
+              bottom: -2,
+              left: 0,
+              width: "100%",
+              height: "2px",
+              borderRadius: "2px",
+              backgroundColor: "var(--mui-palette-primary-main)",
+              transform: "scaleX(0)",
+              transformOrigin: "left",
+              transition: "transform 0.3s ease",
+            },
+            "&:hover::after": { transform: "scaleX(1)" },
+          },
+        }
+      ]
     },
   },
 });
