@@ -19,6 +19,7 @@ import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import { Money } from "@/components/finance/Money";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { chipSx } from "@/components/projectMeta";
 import { green, amber, blue } from "@/lib/theme/colors";
 import {
@@ -255,10 +256,25 @@ export default function FinanceDashboardPage() {
       )}
 
       {/* Company-wide available balance (always across ALL projects/expenses) */}
-      <Paper
-        variant="outlined"
-        sx={{ mt: 3, p: 2, borderRadius: 3, display: "flex", flexWrap: "wrap", gap: 3, alignItems: "center" }}
-      >
+      <ScrollReveal>
+        <Paper
+          variant="outlined"
+          sx={{ 
+            mt: 3, 
+            p: 2, 
+            borderRadius: 3, 
+            display: "flex", 
+            flexWrap: "wrap", 
+            gap: 3, 
+            alignItems: "center",
+            transition: "all 0.2s ease-in-out",
+            "&:hover": {
+              transform: "translateY(-4px)",
+              borderColor: "primary.main",
+              boxShadow: "0 8px 24px rgba(25, 118, 210, 0.15)",
+            }
+          }}
+        >
         <Box>
           <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
             Available balance (PKR only based on PKR Projects + Allotments)
@@ -277,6 +293,7 @@ export default function FinanceDashboardPage() {
           </BreakdownItem>
         </Box>
       </Paper>
+      </ScrollReveal>
 
       {/* Per-project quick view */}
       <Typography variant="subtitle2" sx={{ mt: 4, mb: 1.5 }}>
@@ -295,9 +312,25 @@ export default function FinanceDashboardPage() {
         <Grid container spacing={1.5}>
           {filtered.map((p) => (
             <Grid key={p.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-              <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, height: "100%" }}>
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
-                  <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+              <ScrollReveal>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 2, 
+                    borderRadius: 3, 
+                    height: "100%",
+                    transition: "all 0.2s ease-in-out",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      borderColor: p.status === "completed" ? "success.main" : "primary.main",
+                      boxShadow: p.status === "completed" 
+                        ? "0 8px 24px rgba(46, 162, 110, 0.15)"
+                        : "0 8px 24px rgba(25, 118, 210, 0.15)",
+                    }
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                    <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
                     {p.name}
                   </Typography>
                   <Chip
@@ -334,6 +367,7 @@ export default function FinanceDashboardPage() {
                   </Row>
                 </Box>
               </Paper>
+              </ScrollReveal>
             </Grid>
           ))}
         </Grid>
@@ -353,15 +387,30 @@ function StatCard({
 }) {
   return (
     <Grid size={{ xs: 6, sm: 3 }}>
-      <Paper variant="outlined" sx={{ p: 1.75, borderRadius: 3, height: "100%" }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-          <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: color }} />
-          <Typography variant="caption" color="text.secondary">
-            {label}
-          </Typography>
-        </Box>
-        <Box sx={{ mt: 0.75 }}>{children}</Box>
-      </Paper>
+      <ScrollReveal>
+        <Paper 
+          variant="outlined" 
+          sx={{ 
+            p: 1.75, 
+            borderRadius: 3, 
+            height: "100%",
+            transition: "all 0.2s ease-in-out",
+            "&:hover": {
+              transform: "translateY(-4px)",
+              borderColor: color,
+              boxShadow: `0 8px 24px ${color}40`,
+            }
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+            <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: color }} />
+            <Typography variant="caption" color="text.secondary">
+              {label}
+            </Typography>
+          </Box>
+          <Box sx={{ mt: 0.75 }}>{children}</Box>
+        </Paper>
+      </ScrollReveal>
     </Grid>
   );
 }

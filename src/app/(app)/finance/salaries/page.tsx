@@ -31,6 +31,7 @@ import {
 } from "@/lib/data/salaries";
 import type { SalaryRecord, SalaryLineItem } from "@/lib/data/types";
 import { getAuth } from "firebase/auth";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 export default function SalariesPage() {
   const { user, isAdmin, employee } = useAuth();
@@ -218,96 +219,98 @@ export default function SalariesPage() {
 
     return (
       <Grid item xs={12} md={6} key={s.id}>
-        <Card 
-          variant="outlined" 
-          sx={{ 
-            height: "100%", 
-            display: "flex", 
-            flexDirection: "column", 
-            borderRadius: 3, 
-            borderColor: "divider",
-            transition: "all 0.2s ease-in-out",
-            "&:hover": {
-              transform: "translateY(-4px)",
-              borderColor: isDue ? orange.main : isPaid ? blue[400] : isFulfilled ? green.main : "primary.main",
-              boxShadow: isDue 
-                ? `0 8px 24px ${orange.main}40` 
-                : isPaid
-                  ? `0 8px 24px ${blue[400]}40`
-                  : isFulfilled
-                    ? `0 8px 24px ${green.main}40`
-                    : "0 8px 24px rgba(25, 118, 210, 0.15)",
-            }
-          }}
-        >
-          <CardContent sx={{ flex: 1, p: 3 }}>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 2, mb: 3 }}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h6" sx={{ color: blue[400], fontWeight: 700, mb: 0.5, wordBreak: "break-word" }}>
-                  {isAdmin ? s.employeeName : `Month: ${s.month}`}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {isAdmin ? `Salary Month: ${s.month}` : "Your Salary Details"}
-                </Typography>
+        <ScrollReveal>
+          <Card 
+            variant="outlined" 
+            sx={{ 
+              height: "100%", 
+              display: "flex", 
+              flexDirection: "column", 
+              borderRadius: 3, 
+              borderColor: "divider",
+              transition: "all 0.2s ease-in-out",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                borderColor: isDue ? orange.main : isPaid ? blue[400] : isFulfilled ? green.main : "primary.main",
+                boxShadow: isDue 
+                  ? `0 8px 24px ${orange.main}40` 
+                  : isPaid
+                    ? `0 8px 24px ${blue[400]}40`
+                    : isFulfilled
+                      ? `0 8px 24px ${green.main}40`
+                      : "0 8px 24px rgba(25, 118, 210, 0.15)",
+              }
+            }}
+          >
+            <CardContent sx={{ flex: 1, p: 3 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 2, mb: 3 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="h6" sx={{ color: blue[400], fontWeight: 700, mb: 0.5, wordBreak: "break-word" }}>
+                    {isAdmin ? s.employeeName : `Month: ${s.month}`}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {isAdmin ? `Salary Month: ${s.month}` : "Your Salary Details"}
+                  </Typography>
+                </Box>
+                <Chip
+                  label={isDue ? "Payment Due" : isPaid ? "Pending Receive" : "Fulfilled"}
+                  color={isDue ? "warning" : isPaid ? "info" : "success"}
+                  size="small"
+                  sx={{ fontWeight: 600, letterSpacing: 0.5, flexShrink: 0 }}
+                />
               </Box>
-              <Chip
-                label={isDue ? "Payment Due" : isPaid ? "Pending Receive" : "Fulfilled"}
-                color={isDue ? "warning" : isPaid ? "info" : "success"}
-                size="small"
-                sx={{ fontWeight: 600, letterSpacing: 0.5, flexShrink: 0 }}
-              />
-            </Box>
 
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, p: 2, bgcolor: "action.hover", borderRadius: 2 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>Base Salary</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 600 }}>{formatPKR(s.baseSalary)}</Typography>
-            </Box>
-
-            {s.lineItems.length > 0 && renderLineItems(s.lineItems)}
-
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 3, pt: 2, borderTop: "2px dashed", borderColor: "divider" }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "text.secondary" }}>Net Total</Typography>
-              <Typography variant="h6" color="success.main" sx={{ fontWeight: 800 }}>{formatPKR(s.netSalary)}</Typography>
-            </Box>
-
-            {s.receiptUrl && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                  Payment Receipt:
-                </Typography>
-                <a href={s.receiptUrl} target="_blank" rel="noreferrer">
-                  <img src={s.receiptUrl} alt="Receipt" style={{ maxWidth: "100%", maxHeight: 150, borderRadius: 4, border: "1px solid #ccc" }} />
-                </a>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, p: 2, bgcolor: "action.hover", borderRadius: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>Base Salary</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 600 }}>{formatPKR(s.baseSalary)}</Typography>
               </Box>
-            )}
 
-            {isPaid && !isAdmin && (
-              <Button
-                variant="contained"
-                onClick={() => setConfirmReceiveId(s.id)}
-                fullWidth
-                sx={{
-                  mt: 3,
-                  py: 1.2,
-                  borderRadius: 2,
-                  bgcolor: "info.main",
-                  fontWeight: 600,
-                  "&:hover": { bgcolor: "info.dark" },
-                }}
-              >
-                Confirm Receipt
-              </Button>
-            )}
-          </CardContent>
+              {s.lineItems.length > 0 && renderLineItems(s.lineItems)}
 
-          <CardActions sx={{ p: 2, pt: 0, justifyContent: "flex-end" }}>
-            {isAdmin && isDue && (
-              <Button variant="contained" size="small" onClick={() => setPayDialogFor(s)}>
-                Pay
-              </Button>
-            )}
-          </CardActions>
-        </Card>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 3, pt: 2, borderTop: "2px dashed", borderColor: "divider" }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "text.secondary" }}>Net Total</Typography>
+                <Typography variant="h6" color="success.main" sx={{ fontWeight: 800 }}>{formatPKR(s.netSalary)}</Typography>
+              </Box>
+
+              {s.receiptUrl && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                    Payment Receipt:
+                  </Typography>
+                  <a href={s.receiptUrl} target="_blank" rel="noreferrer">
+                    <img src={s.receiptUrl} alt="Receipt" style={{ maxWidth: "100%", maxHeight: 150, borderRadius: 4, border: "1px solid #ccc" }} />
+                  </a>
+                </Box>
+              )}
+
+              {isPaid && !isAdmin && (
+                <Button
+                  variant="contained"
+                  onClick={() => setConfirmReceiveId(s.id)}
+                  fullWidth
+                  sx={{
+                    mt: 3,
+                    py: 1.2,
+                    borderRadius: 2,
+                    bgcolor: "info.main",
+                    fontWeight: 600,
+                    "&:hover": { bgcolor: "info.dark" },
+                  }}
+                >
+                  Confirm Receipt
+                </Button>
+              )}
+            </CardContent>
+
+            <CardActions sx={{ p: 2, pt: 0, justifyContent: "flex-end" }}>
+              {isAdmin && isDue && (
+                <Button variant="contained" size="small" onClick={() => setPayDialogFor(s)}>
+                  Pay
+                </Button>
+              )}
+            </CardActions>
+          </Card>
+        </ScrollReveal>
       </Grid>
     );
   };

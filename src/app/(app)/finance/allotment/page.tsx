@@ -35,6 +35,7 @@ import EditNoteIcon from "@mui/icons-material/EditNote";
 import { Money } from "@/components/finance/Money";
 import { Toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { useLocalStorage } from "@/lib/hooks/useLocalStorage";
 import {
   addAllotment,
@@ -176,123 +177,125 @@ export default function AllotmentPage() {
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 4 }}>
       {/* Month selector + add form */}
-      <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
-        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
-          Allot money for a month
-        </Typography>
-        <Grid container spacing={1.5}>
-          {/* First Row */}
-          <Grid size={{ xs: 6, sm: 3, lg: 2 }}>
-            <TextField
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              label="Month"
-              fullWidth
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 4, lg: 4 }}>
-            <Autocomplete
-              freeSolo
-              options={uniqueSections}
-              value={label}
-              onInputChange={(_, v) => setLabel(v)}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Section — where it goes *"
-                  placeholder="e.g. Marketing, Salaries pool"
-                />
-              )}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 3, lg: 3 }}>
-            <TextField
-              value={linkedInvoices.length > 0 ? computedAmount : amount}
-              onChange={(e) => setAmount(e.target.value)}
-              label="Amount (PKR) *"
-              type="number"
-              fullWidth
-              disabled={linkedInvoices.length > 0}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 2, lg: 3 }}>
-            <Button
-              variant="outlined"
-              fullWidth
-              sx={{ height: 56, textTransform: "none" }}
-              startIcon={<EditNoteIcon />}
-              onClick={() => setNoteDialogOpen(true)}
-            >
-              {note ? "Edit Note" : "Add Note"}
-            </Button>
-          </Grid>
+      <ScrollReveal>
+        <Paper variant="outlined" sx={{ p: 5, borderRadius: 4 }}>
+          <Typography variant="body2" sx={{ mb: 3, fontWeight: 500 }}>
+            Allot money for a month
+          </Typography>
+          <Grid container spacing={3}>
+            {/* First Row */}
+            <Grid size={{ xs: 6, sm: 3, lg: 2 }}>
+              <TextField
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                label="Month"
+                fullWidth
+              />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 4, lg: 4 }}>
+              <Autocomplete
+                freeSolo
+                options={uniqueSections}
+                value={label}
+                onInputChange={(_, v) => setLabel(v)}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Section — where it goes *"
+                    placeholder="e.g. Marketing, Salaries pool"
+                  />
+                )}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 3, lg: 3 }}>
+              <TextField
+                value={linkedInvoices.length > 0 ? computedAmount : amount}
+                onChange={(e) => setAmount(e.target.value)}
+                label="Amount (PKR) *"
+                type="number"
+                fullWidth
+                disabled={linkedInvoices.length > 0}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 2, lg: 3 }}>
+              <Button
+                variant="outlined"
+                fullWidth
+                sx={{ height: 56, textTransform: "none" }}
+                startIcon={<EditNoteIcon />}
+                onClick={() => setNoteDialogOpen(true)}
+              >
+                {note ? "Edit Note" : "Add Note"}
+              </Button>
+            </Grid>
 
-          {/* Second Row: Invoices Linkage */}
-          <Grid size={12}>
-            <Autocomplete
-              multiple
-              options={availableInvoices}
-              getOptionLabel={(o) => `${o.number} — ${o.currency} ${formatAmount(getOutstanding(o))} outstanding`}
-              value={linkedInvoices.map((i) => i.inv)}
-              isOptionEqualToValue={(opt, val) => opt.id === val.id}
-              onChange={(_, vals) => {
-                const newArr = vals.map((inv) => {
-                  const existing = linkedInvoices.find((l) => l.inv.id === inv.id);
-                  return existing || { inv, rate: inv.exchangeRateToPkr ? String(inv.exchangeRateToPkr) : "" };
-                });
-                setLinkedInvoices(newArr);
-              }}
-              sx={{ "& .MuiAutocomplete-tag": { display: "none" } }}
-              renderInput={(params) => (
-                <TextField {...params} label="Link Invoices (Source of funds)" placeholder="Select invoices to use..." />
+            {/* Second Row: Invoices Linkage */}
+            <Grid size={12}>
+              <Autocomplete
+                multiple
+                options={availableInvoices}
+                getOptionLabel={(o) => `${o.number} — ${o.currency} ${formatAmount(getOutstanding(o))} outstanding`}
+                value={linkedInvoices.map((i) => i.inv)}
+                isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                onChange={(_, vals) => {
+                  const newArr = vals.map((inv) => {
+                    const existing = linkedInvoices.find((l) => l.inv.id === inv.id);
+                    return existing || { inv, rate: inv.exchangeRateToPkr ? String(inv.exchangeRateToPkr) : "" };
+                  });
+                  setLinkedInvoices(newArr);
+                }}
+                sx={{ "& .MuiAutocomplete-tag": { display: "none" } }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Link Invoices (Source of funds)" placeholder="Select invoices to use..." />
+                )}
+              />
+              {linkedInvoices.length > 0 && (
+                <Box sx={{ mt: 2, display: "flex", flexWrap: "wrap", gap: 2 }}>
+                  {linkedInvoices.map((item, index) => {
+                    const outstanding = getOutstanding(item.inv);
+                    return (
+                      <Paper key={item.inv.id} variant="outlined" sx={{ p: 2, display: "flex", alignItems: "center", gap: 3, borderRadius: 3 }}>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {item.inv.number}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {item.inv.currency} {formatAmount(outstanding)} available
+                          </Typography>
+                        </Box>
+                        {item.inv.currency !== "PKR" && (
+                          <TextField
+                            size="small"
+                            label={`Rate to PKR`}
+                            type="number"
+                            value={item.rate}
+                            onChange={(e) => {
+                              const newArr = [...linkedInvoices];
+                              newArr[index].rate = e.target.value;
+                              setLinkedInvoices(newArr);
+                            }}
+                            sx={{ width: 120 }}
+                          />
+                        )}
+                        <IconButton size="small" onClick={() => setLinkedInvoices(linkedInvoices.filter((_, i) => i !== index))}>
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Paper>
+                    );
+                  })}
+                </Box>
               )}
-            />
-            {linkedInvoices.length > 0 && (
-              <Box sx={{ mt: 1.5, display: "flex", flexWrap: "wrap", gap: 1.5 }}>
-                {linkedInvoices.map((item, index) => {
-                  const outstanding = getOutstanding(item.inv);
-                  return (
-                    <Paper key={item.inv.id} variant="outlined" sx={{ p: 1.5, display: "flex", alignItems: "center", gap: 2, borderRadius: 2 }}>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {item.inv.number}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {item.inv.currency} {formatAmount(outstanding)} available
-                        </Typography>
-                      </Box>
-                      {item.inv.currency !== "PKR" && (
-                        <TextField
-                          size="small"
-                          label={`Rate to PKR`}
-                          type="number"
-                          value={item.rate}
-                          onChange={(e) => {
-                            const newArr = [...linkedInvoices];
-                            newArr[index].rate = e.target.value;
-                            setLinkedInvoices(newArr);
-                          }}
-                          sx={{ width: 120 }}
-                        />
-                      )}
-                      <IconButton size="small" onClick={() => setLinkedInvoices(linkedInvoices.filter((_, i) => i !== index))}>
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
-                    </Paper>
-                  );
-                })}
-              </Box>
-            )}
-          </Grid>
+            </Grid>
           
-          <Grid size={12} sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
-            <Button onClick={add} disabled={saving} variant="contained" sx={{ px: 4 }}>
-              {saving ? "Adding…" : "Add Allotment"}
-            </Button>
+            <Grid size={12} sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
+              <Button onClick={add} disabled={saving} variant="contained" sx={{ px: 4 }}>
+                {saving ? "Adding…" : "Add Allotment"}
+              </Button>
+            </Grid>
           </Grid>
-        </Grid>
-      </Paper>
+        </Paper>
+      </ScrollReveal>
 
       {error && (
         <Alert severity="error" sx={{ mt: 1.5 }}>
@@ -314,8 +317,9 @@ export default function AllotmentPage() {
         </Typography>
       </Box>
 
-      <Paper variant="outlined" sx={{ mt: 1.5, borderRadius: 3, overflowX: "auto" }}>
-        <Table sx={{ minWidth: 560 }}>
+      <ScrollReveal>
+        <Paper variant="outlined" sx={{ mt: 1.5, borderRadius: 3, overflowX: "auto" }}>
+          <Table sx={{ minWidth: 560 }}>
           <TableHead>
             <TableRow sx={{ bgcolor: "surface" }}>
               <TableCell>Section</TableCell>
@@ -345,8 +349,17 @@ export default function AllotmentPage() {
                   key={a.id}
                   hover
                   sx={{
+                    transition: "all 0.2s ease-in-out",
+                    position: "relative",
                     "& .row-actions": { opacity: 0 },
-                    "&:hover .row-actions": { opacity: 1 },
+                    "&:hover": {
+                      bgcolor: "action.hover",
+                      "& td": { color: "primary.main" },
+                      "& td:first-of-type": {
+                        boxShadow: "inset 3px 0 0 0 var(--mui-palette-primary-main)"
+                      },
+                      "& .row-actions": { opacity: 1 },
+                    }
                   }}
                 >
                   <TableCell sx={{ minWidth: 160 }}>
@@ -398,6 +411,7 @@ export default function AllotmentPage() {
           </TableBody>
         </Table>
       </Paper>
+      </ScrollReveal>
 
       <ConfirmDialog
         open={Boolean(toDelete)}

@@ -34,6 +34,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import InfoIcon from "@mui/icons-material/InfoOutlined";
 import { Toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { useLocalStorage } from "@/lib/hooks/useLocalStorage";
 import { downloadInvoicePdf } from "@/lib/utils/invoicePdf";
 import {
@@ -270,8 +271,9 @@ export default function InvoicesPage() {
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 4 }}>
       {/* Builder */}
       <ZiriumDetails />
-      <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
-        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
+      <ScrollReveal>
+        <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+          <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
           Create an invoice
         </Typography>
 
@@ -458,6 +460,7 @@ export default function InvoicesPage() {
           </Button>
         </Box>
       </Paper>
+      </ScrollReveal>
 
       {error && (
         <Alert severity="error" sx={{ mt: 1.5 }}>
@@ -469,8 +472,9 @@ export default function InvoicesPage() {
       <Typography variant="subtitle2" sx={{ mt: 4, mb: 1.5 }}>
         Saved invoices ({invoices.length})
       </Typography>
-      <Paper variant="outlined" sx={{ borderRadius: 3, overflowX: "auto" }}>
-        <Table sx={{ minWidth: 640 }}>
+      <ScrollReveal>
+        <Paper variant="outlined" sx={{ borderRadius: 3, overflowX: "auto" }}>
+          <Table sx={{ minWidth: 640 }}>
           <TableHead>
             <TableRow sx={{ bgcolor: "surface" }}>
               <TableCell>Invoice</TableCell>
@@ -498,7 +502,21 @@ export default function InvoicesPage() {
               </TableRow>
             ) : (
               invoices.map((inv) => (
-                <TableRow key={inv.id} hover>
+                <TableRow 
+                  key={inv.id} 
+                  hover
+                  sx={{
+                    transition: "all 0.2s ease-in-out",
+                    position: "relative",
+                    "&:hover": {
+                      bgcolor: "action.hover",
+                      "& td": { color: "primary.main" },
+                      "& td:first-of-type": {
+                        boxShadow: "inset 3px 0 0 0 var(--mui-palette-primary-main)"
+                      }
+                    }
+                  }}
+                >
                   <TableCell sx={{ fontWeight: 500 }}>{inv.number}</TableCell>
                   <TableCell sx={{ maxWidth: 200 }}>
                     <Typography variant="body2" sx={{ wordBreak: "break-word" }}>{inv.clientName}</Typography>
@@ -579,6 +597,7 @@ export default function InvoicesPage() {
           </TableBody>
         </Table>
       </Paper>
+      </ScrollReveal>
 
       <ConfirmDialog
         open={Boolean(toDelete)}

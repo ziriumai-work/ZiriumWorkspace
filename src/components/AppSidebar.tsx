@@ -306,9 +306,23 @@ export function AppSidebar() {
                   mx: collapsed ? "auto" : 0,
                   justifyContent: collapsed ? "center" : "flex-start",
                   color: "text.secondary",
+                  transition: "all 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
+                  "& .MuiListItemText-root": {
+                    transition: "transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
+                  },
+                  "& .MuiListItemIcon-root svg": {
+                    transition: "all 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
+                  },
                   "&:hover": {
                     bgcolor: "action.hover",
                     color: "text.primary",
+                    "& .MuiListItemText-root": {
+                      transform: "translateX(6px)",
+                    },
+                    "& .MuiListItemIcon-root svg": {
+                      transform: "scale(1.15) rotate(-5deg)",
+                      filter: "drop-shadow(0 2px 4px rgba(25,118,210,0.3))",
+                    }
                   },
                   "&.Mui-selected, &.Mui-selected:hover": {
                     bgcolor: "accentSoft",

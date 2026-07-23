@@ -28,6 +28,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { Money } from "@/components/finance/Money";
 import { Toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { useLocalStorage } from "@/lib/hooks/useLocalStorage";
 import {
   addMonthlyExpense,
@@ -256,8 +257,9 @@ export default function MonthlySheetPage() {
         </Box>
       </Box>
 
-      <Paper variant="outlined" sx={{ mt: 1.5, borderRadius: 3, overflowX: "auto" }}>
-        <Table sx={{ minWidth: 680 }}>
+      <ScrollReveal>
+        <Paper variant="outlined" sx={{ mt: 1.5, borderRadius: 3, overflowX: "auto" }}>
+          <Table sx={{ minWidth: 680 }}>
           <TableHead>
             <TableRow sx={{ bgcolor: "surface" }}>
               <TableCell>Type</TableCell>
@@ -289,8 +291,17 @@ export default function MonthlySheetPage() {
                   key={e.id}
                   hover
                   sx={{
+                    transition: "all 0.2s ease-in-out",
+                    position: "relative",
                     "& .row-actions": { opacity: 0 },
-                    "&:hover .row-actions": { opacity: 1 },
+                    "&:hover": {
+                      bgcolor: "action.hover",
+                      "& td": { color: "primary.main" },
+                      "& td:first-of-type": {
+                        boxShadow: "inset 3px 0 0 0 var(--mui-palette-primary-main)"
+                      },
+                      "& .row-actions": { opacity: 1 },
+                    }
                   }}
                 >
                   <TableCell sx={{ width: 150 }}>
@@ -347,6 +358,7 @@ export default function MonthlySheetPage() {
           </TableBody>
         </Table>
       </Paper>
+      </ScrollReveal>
 
       <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: "block" }}>
         Balance formula: money received on finance projects + all allotments −
@@ -370,12 +382,27 @@ export default function MonthlySheetPage() {
 function SummaryCard({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <Grid size={{ xs: 6, sm: 3 }}>
-      <Paper variant="outlined" sx={{ p: 1.75, borderRadius: 3, height: "100%" }}>
-        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-          {label}
-        </Typography>
-        <Box sx={{ mt: 0.5 }}>{children}</Box>
-      </Paper>
+      <ScrollReveal>
+        <Paper 
+          variant="outlined" 
+          sx={{ 
+            p: 1.75, 
+            borderRadius: 3, 
+            height: "100%",
+            transition: "transform 0.2s ease, box-shadow 0.2s ease",
+            "&:hover": {
+              transform: "translateY(-4px)",
+              boxShadow: "0 8px 16px -8px rgba(0,0,0,0.1)",
+              borderColor: "primary.main",
+            }
+          }}
+        >
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+            {label}
+          </Typography>
+          <Box sx={{ mt: 0.5 }}>{children}</Box>
+        </Paper>
+      </ScrollReveal>
     </Grid>
   );
 }
