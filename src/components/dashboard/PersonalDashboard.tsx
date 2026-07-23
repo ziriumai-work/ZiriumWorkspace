@@ -213,7 +213,6 @@ export function PersonalDashboard() {
                       variant="outlined"
                       sx={{
                         display: "flex",
-                        alignItems: "flex-start",
                         gap: 1.5,
                         borderRadius: 3,
                         px: 2,
@@ -222,23 +221,25 @@ export function PersonalDashboard() {
                         "&:hover": { boxShadow: 1 },
                       }}
                     >
-                      <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {t.title}
-                        </Typography>
-                        {t.description && (
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            noWrap
-                            sx={{ mt: 0.5 }}
-                          >
-                            {t.description}
+                      <Box sx={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 1.5 }}>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {t.title}
                           </Typography>
-                        )}
+                          {t.description && (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              noWrap
+                              sx={{ mt: 0.5 }}
+                            >
+                              {t.description}
+                            </Typography>
+                          )}
+                        </Box>
+                        
                         <Box
                           sx={{
-                            mt: 1.5,
                             display: "flex",
                             flexWrap: "wrap",
                             alignItems: "center",
@@ -273,28 +274,52 @@ export function PersonalDashboard() {
                               sx={{ bgcolor: "surface", fontSize: 11, height: 22 }}
                             />
                           )}
-                          <MuiLink
-                            component={Link}
-                            href="/tasks"
-                            variant="caption"
-                            color="text.secondary"
-                            underline="hover"
-                            sx={{ ml: 'auto' }}
-                          >
-                            Submit report
-                          </MuiLink>
                         </Box>
                       </Box>
 
-                      <Box sx={{ width: 140 }}>
+                      <Box sx={{ width: 140, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1.5, flexShrink: 0 }}>
                         <PillSelect
                           value={t.status}
-                          options={DAILY_TASK_STATUSES}
+                          options={role === "admin" ? DAILY_TASK_STATUSES : DAILY_TASK_STATUSES.filter(s => s.value !== "done")}
                           color={TASK_STATUS_COLORS[t.status]}
                           onChange={(status: DailyTaskStatus) =>
                             updateTask(t.id, { status })
                           }
                         />
+                        <MuiLink
+                          component={Link}
+                          href="/tasks"
+                          variant="caption"
+                          underline="none"
+                          sx={{
+                            position: "relative",
+                            fontWeight: 600,
+                            color: "text.secondary",
+                            transition: "color 0.2s ease",
+                            "&:hover": {
+                              color: "primary.main",
+                            },
+                            "&::after": {
+                              content: '""',
+                              position: "absolute",
+                              bottom: -2,
+                              left: 0,
+                              width: "100%",
+                              height: "2px",
+                              borderRadius: "2px",
+                              bgcolor: "primary.main",
+                              transform: "scaleX(0)",
+                              transformOrigin: "right",
+                              transition: "transform 0.3s ease",
+                            },
+                            "&:hover::after": {
+                              transform: "scaleX(1)",
+                              transformOrigin: "left",
+                            },
+                          }}
+                        >
+                          Submit report
+                        </MuiLink>
                       </Box>
                     </Paper>
                   ))}

@@ -3,7 +3,7 @@
 // Tasks. Admins assign dated tasks to employees and see everything; employees
 // see only their own tasks and submit a report (text + links + files) per task.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Alert from "@mui/material/Alert";
 import {
   Avatar,
@@ -93,7 +93,6 @@ export default function TasksPage() {
         () => setLoading(false),
       );
     }
-    // Neither resolved yet — stay in the loading state until a role is known.
   }, [isAdmin, employee]);
 
   // TEMP DATA FIX: Fix any corrupted tasks with overtimeCost > 0 but compensatesWeeklyHours === true
@@ -124,16 +123,26 @@ export default function TasksPage() {
   const [filterStatus, setFilterStatus] = useState<DailyTaskStatus | "all">("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
 
-  // Admin needs employees (assignee picker) and projects (optional link).
+  // Fetch developers for profile photos & admin picker, plus projects for admins.
   useEffect(() => {
-    if (!isAdmin) return;
     const u1 = subscribeToDevelopers(setEmployees);
-    const u2 = subscribeToProjects(setProjects);
+    const u2 = isAdmin ? subscribeToProjects(setProjects) : () => {};
     return () => {
       u1();
       u2();
     };
   }, [isAdmin]);
+
+  // Quick stats summary
+  const stats = useMemo(() => {
+    const total = tasks.length;
+    const todo = tasks.filter(t => t.status === "todo").length;
+    const inProgress = tasks.filter(t => t.status === "in_progress").length;
+    const review = tasks.filter(t => t.status === "review").length;
+    const done = tasks.filter(t => t.status === "done").length;
+    const overtime = tasks.filter(t => t.isOvertime).length;
+    return { total, todo, inProgress, review, done, overtime };
+  }, [tasks]);
 
   // Filter and Group tasks by date (already sorted newest-first).
   const groups = useMemo(() => {
@@ -166,14 +175,65 @@ export default function TasksPage() {
   }, [tasks, searchQuery, filterDate, filterStatus, filterAssignee, isAdmin]);
 
   return (
-    <Box sx={{ mx: "auto", width: "100%", maxWidth: 860, px: 4, py: 5 }}>
-      <Box component="header" sx={{ mb: 3 }}>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: { xs: 2, sm: 4, md: 6 }, py: 5 }}>
+      <Box component="header" sx={{ mb: 2 }}>
         <Typography variant="h1">{isAdmin ? "Tasks" : "My Tasks"}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           {isAdmin
             ? "Assign daily tasks to employees and track their reports."
             : "Your assigned tasks. Update status and submit a report for each."}
         </Typography>
+      </Box>
+
+      {/* Minimalist Linear Statusline with Hover Lift & Glow */}
+      <Box
+        sx={{
+          mb: 3.5,
+          p: 1.25,
+          px: 2.25,
+          borderRadius: 3,
+          bgcolor: "surface",
+          border: "1px solid",
+          borderColor: "divider",
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: { xs: 1.5, sm: 2.5 },
+          fontSize: 12,
+          fontFamily: "var(--font-geist-mono), monospace",
+          transition: "all 0.25s ease-in-out",
+          cursor: "default",
+          "&:hover": {
+            borderColor: "primary.main",
+            boxShadow: "0 6px 20px -6px rgba(13, 147, 199, 0.18)",
+            transform: "translateY(-2px)",
+          },
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "primary.main" }} />
+          <Typography variant="caption" sx={{ fontFamily: "inherit", fontWeight: 600, color: "text.primary" }}>
+            {stats.total} {stats.total === 1 ? "Task" : "Tasks"}
+          </Typography>
+        </Box>
+        <Divider orientation="vertical" flexItem sx={{ height: 12, my: "auto" }} />
+        <Typography variant="caption" sx={{ fontFamily: "inherit", color: "text.secondary" }}>
+          <Box component="span" sx={{ color: TASK_STATUS_COLORS.todo, fontWeight: 600 }}>{stats.todo}</Box> to do
+        </Typography>
+        <Typography variant="caption" sx={{ fontFamily: "inherit", color: "text.secondary" }}>
+          <Box component="span" sx={{ color: TASK_STATUS_COLORS.in_progress, fontWeight: 600 }}>{stats.inProgress}</Box> in progress
+        </Typography>
+        <Typography variant="caption" sx={{ fontFamily: "inherit", color: "text.secondary" }}>
+          <Box component="span" sx={{ color: TASK_STATUS_COLORS.done, fontWeight: 600 }}>{stats.done}</Box> complete
+        </Typography>
+        {stats.overtime > 0 && (
+          <>
+            <Divider orientation="vertical" flexItem sx={{ height: 12, my: "auto" }} />
+            <Typography variant="caption" sx={{ fontFamily: "inherit", color: "#ef4444", fontWeight: 600 }}>
+              ⚡ {stats.overtime} overtime
+            </Typography>
+          </>
+        )}
       </Box>
 
       {isAdmin && (
@@ -289,29 +349,34 @@ export default function TasksPage() {
                   variant="caption"
                   color="text.secondary"
                   sx={{
-                    mb: 1,
+                    mb: 1.25,
                     display: "block",
-                    fontWeight: 600,
+                    fontWeight: 700,
                     textTransform: "uppercase",
-                    letterSpacing: "0.05em",
+                    letterSpacing: "0.08em",
+                    fontSize: 11,
+                    fontFamily: "var(--font-geist-mono), monospace",
                   }}
                 >
                   {g.date}
                 </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  {g.items.map((t) => (
-                    <TaskCard
-                      key={t.id}
-                      task={t}
-                      showAssignee={isAdmin}
-                      canEdit={isAdmin || employee?.id === t.assigneeId}
-                      canDelete={isAdmin}
-                      currentUser={{
-                        uid: user?.uid ?? "",
-                        name: employee?.name ?? user?.displayName ?? "User",
-                        isAdmin,
-                      }}
-                    />
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                  {g.items.map((t, index) => (
+                    <ScrollReveal key={t.id}>
+                      <TaskCard
+                        task={t}
+                        showAssignee={isAdmin}
+                        canEdit={isAdmin || employee?.id === t.assigneeId}
+                        canDelete={isAdmin}
+                        currentUser={{
+                          uid: user?.uid ?? "",
+                          name: employee?.name ?? user?.displayName ?? "User",
+                          isAdmin,
+                        }}
+                        employees={employees}
+                        index={index}
+                      />
+                    </ScrollReveal>
                   ))}
                 </Box>
               </Box>
@@ -398,8 +463,8 @@ function AssignTaskForm({
   }
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
-      <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
+    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3.5, border: "1px solid", borderColor: "divider" }}>
+      <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, letterSpacing: "-0.01em" }}>
         Assign a task
       </Typography>
       <Grid container spacing={1.5}>
@@ -459,18 +524,6 @@ function AssignTaskForm({
             value={date}
             onChange={(e) => setDate(e.target.value)}
             fullWidth
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                transition: "all 0.2s ease-in-out",
-                "&:hover": {
-                  boxShadow: "0 0 12px var(--mui-palette-primary-main)",
-                  borderColor: "var(--mui-palette-primary-main)",
-                },
-                "&.Mui-focused": {
-                  boxShadow: "0 0 16px var(--mui-palette-primary-main)",
-                }
-              }
-            }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -517,7 +570,7 @@ function AssignTaskForm({
                     const selected = Array.from(e.target.files);
                     setFiles(prev => [...prev, ...selected]);
                   }
-                  e.target.value = ''; // reset to allow picking same file again
+                  e.target.value = '';
                 }} 
               />
             </Button>
@@ -573,96 +626,227 @@ function TaskCard({
   canEdit,
   canDelete,
   currentUser,
+  employees = [],
+  index = 0,
 }: {
   task: DailyTask;
   showAssignee: boolean;
   canEdit: boolean;
   canDelete: boolean;
   currentUser: { uid: string; name: string; isAdmin: boolean };
+  employees?: Employee[];
+  index?: number;
 }) {
   const { formatCurrency } = useCurrency();
   const [open, setOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const reportsCount = task.reports ? task.reports.length : (task.report.text || task.report.links.length || task.report.files.length ? 1 : 0);
+  const reportsCount = task.reports ? task.reports.length : (task.report?.text || task.report?.links?.length || task.report?.files?.length ? 1 : 0);
   const hasReport = reportsCount > 0;
 
+  const isLive = task.status === "in_progress" || task.status === "review";
+  const emp = employees.find((e) => e.id === task.assigneeId);
+
   return (
-    <Paper variant="outlined" sx={{ borderRadius: 3 }}>
-      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, px: 2, py: 1.5 }}>
+    <Paper
+      variant="outlined"
+      sx={{
+        borderRadius: 3,
+        position: "relative",
+        overflow: "hidden",
+        transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        borderColor: open ? "primary.main" : "divider",
+        bgcolor: open ? "surface" : "background.paper",
+        "&:hover": {
+          borderColor: "primary.main",
+          boxShadow: "0 8px 24px -6px rgba(0, 0, 0, 0.12)",
+          transform: "translateY(-4px) scale(1.015)",
+          "& .docket-scanline": {
+            transform: "translateX(100%)",
+          },
+        },
+      }}
+    >
+      {/* Top subtle scanline sweep effect on hover */}
+      <Box
+        className="docket-scanline"
+        sx={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "2px",
+          background: "linear-gradient(90deg, transparent, var(--mui-palette-primary-main), transparent)",
+          transform: "translateX(-100%)",
+          transition: "transform 0.6s ease-in-out",
+          zIndex: 2,
+        }}
+      />
+
+      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.75, px: 2.5, py: 2 }}>
+        {/* Employee / Intern Profile Avatar */}
+        <Avatar
+          src={emp?.photoURL || undefined}
+          sx={{
+            width: 38,
+            height: 38,
+            fontSize: 14,
+            fontWeight: 700,
+            bgcolor: "accentSoft",
+            color: "primary.main",
+            border: "1px solid",
+            borderColor: "divider",
+            flexShrink: 0,
+            mt: 0.25,
+          }}
+        >
+          {task.assigneeName?.charAt(0).toUpperCase() ?? "?"}
+        </Avatar>
+
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+            {/* Assignee Name Label */}
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 700,
+                color: "primary.main",
+                textTransform: "uppercase",
+                fontSize: 10.5,
+                letterSpacing: "0.04em",
+                fontFamily: "var(--font-geist-mono), monospace",
+              }}
+            >
+              {task.assigneeName || "Unassigned"}
+            </Typography>
+
+            {/* Live Indicator Dot */}
+            {isLive && (
+              <Box
+                sx={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  bgcolor: TASK_STATUS_COLORS[task.status],
+                  animation: "live-pulse 2s infinite",
+                  flexShrink: 0,
+                }}
+              />
+            )}
+          </Box>
+
+          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 14, color: "text.primary", mt: 0.25 }}>
             {task.title}
           </Typography>
+
           {task.description && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontSize: 13, lineHeight: 1.4 }}>
               {task.description}
             </Typography>
           )}
+
+          {/* Micro Tags Bar */}
           <Box
             sx={{
-              mt: 0.75,
+              mt: 1.25,
               display: "flex",
               flexWrap: "wrap",
               alignItems: "center",
               gap: 1,
             }}
           >
-            {showAssignee && (
-              <Chip
-                label={task.assigneeName || "Unassigned"}
-                sx={{
-                  bgcolor: "accentSoft",
-                  color: "primary.main",
-                  fontWeight: 500,
-                  fontSize: 11,
-                  height: 20,
-                }}
-              />
-            )}
             {task.projectTitle && (
               <Chip
                 label={task.projectTitle}
-                sx={{ bgcolor: "surface", fontSize: 11, height: 20 }}
+                size="small"
+                sx={{ bgcolor: "surface", fontSize: 11, height: 22, border: "1px solid", borderColor: "divider" }}
               />
             )}
             {!!task.assignedHours && task.assignedHours > 0 && (
               <Chip
                 label={`${task.assignedHours}h assigned`}
-                sx={{ bgcolor: "surface", fontSize: 11, height: 20 }}
+                size="small"
+                sx={{ bgcolor: "surface", fontSize: 11, height: 22, border: "1px solid", borderColor: "divider" }}
               />
             )}
             {task.isOvertime && (
               <Chip
                 label={task.compensatesWeeklyHours ? "Compensatory Task" : `Overtime (${formatCurrency(task.overtimeCost || 0)})`}
-                sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 500, fontSize: 11, height: 20 }}
+                size="small"
+                sx={{ bgcolor: "#ef444415", color: "#ef4444", fontWeight: 600, fontSize: 11, height: 22, border: "1px solid #ef444433" }}
               />
             )}
             {task.attachments && task.attachments.length > 0 && (
               <Chip
                 label={`${task.attachments.length} doc(s)`}
-                sx={{ bgcolor: "surface", fontSize: 11, height: 20, cursor: "pointer" }}
+                size="small"
+                sx={{ bgcolor: "surface", fontSize: 11, height: 22, border: "1px solid", borderColor: "divider", cursor: "pointer" }}
                 onClick={() => setOpen(true)}
               />
             )}
+
             <MuiLink
               component="button"
               variant="caption"
-              color="text.secondary"
-              underline="hover"
+              underline="none"
               onClick={() => setOpen((v) => !v)}
+              sx={{
+                position: "relative",
+                fontWeight: 600,
+                color: open ? "primary.main" : "text.secondary",
+                fontSize: 12,
+                transition: "color 0.2s ease",
+                border: "none",
+                background: "none",
+                cursor: "pointer",
+                p: 0,
+                ml: 0.5,
+                "&:hover": {
+                  color: "primary.main",
+                },
+                "&::after": {
+                  content: '""',
+                  position: "absolute",
+                  bottom: -2,
+                  left: 0,
+                  width: "100%",
+                  height: "2px",
+                  borderRadius: "2px",
+                  bgcolor: "primary.main",
+                  transform: open ? "scaleX(1)" : "scaleX(0)",
+                  transformOrigin: "right",
+                  transition: "transform 0.3s ease",
+                },
+                "&:hover::after": {
+                  transform: "scaleX(1)",
+                  transformOrigin: "left",
+                },
+              }}
             >
               {open ? "Hide updates" : hasReport ? `View ${reportsCount} update${reportsCount > 1 ? "s" : ""}` : "Add update"}
             </MuiLink>
           </Box>
         </Box>
 
-        <PillSelect
-          value={task.status}
-          options={DAILY_TASK_STATUSES}
-          color={TASK_STATUS_COLORS[task.status]}
-          disabled={!currentUser.isAdmin}
-          onChange={(status: DailyTaskStatus) => updateTask(task.id, { status })}
-        />
+        {/* Status Dropdown / Complete Chip */}
+        {!currentUser.isAdmin && task.status === "done" ? (
+          <Chip
+            label="Complete"
+            sx={{
+              bgcolor: TASK_STATUS_COLORS.done,
+              color: "white",
+              fontWeight: 600,
+              fontSize: 12,
+              height: 28,
+            }}
+          />
+        ) : (
+          <PillSelect
+            value={task.status}
+            options={currentUser.isAdmin ? DAILY_TASK_STATUSES : DAILY_TASK_STATUSES.filter((s) => s.value !== "done")}
+            color={TASK_STATUS_COLORS[task.status]}
+            onChange={(status: DailyTaskStatus) => updateTask(task.id, { status })}
+          />
+        )}
 
         {canDelete && (
           <IconButton
@@ -679,7 +863,7 @@ function TaskCard({
       <Collapse in={open}>
         <Divider />
         {task.attachments && task.attachments.length > 0 && (
-          <Box sx={{ px: 2, pt: 1.5 }}>
+          <Box sx={{ px: 2.5, pt: 1.5 }}>
             <Typography variant="caption" sx={{ fontWeight: 600, display: "block", mb: 1, color: "text.secondary" }}>
               Assigned Documents:
             </Typography>
@@ -696,26 +880,27 @@ function TaskCard({
                     alignItems: "center",
                     gap: 0.5,
                     bgcolor: "surface",
-                    px: 1,
+                    px: 1.25,
                     py: 0.5,
-                    borderRadius: 1,
+                    borderRadius: 1.5,
                     border: "1px solid",
                     borderColor: "divider",
-                    "&:hover": { bgcolor: "action.hover" },
-                    textDecoration: "none"
+                    fontSize: 12,
+                    "&:hover": { bgcolor: "action.hover", borderColor: "primary.main" },
+                    textDecoration: "none",
                   }}
                 >
-                  <AttachFileIcon sx={{ fontSize: 16 }} />
+                  <AttachFileIcon sx={{ fontSize: 15 }} />
                   {f.name}
                 </MuiLink>
               ))}
             </Box>
           </Box>
         )}
-        <Box sx={{ px: 2, py: 1.5 }}>
+        <Box sx={{ px: 2.5, py: 2 }}>
           <TaskReportEditor
             taskId={task.id}
-            reports={task.reports ?? (task.report.text || task.report.links.length || task.report.files.length ? [task.report] : [])}
+            reports={task.reports ?? (task.report?.text || task.report?.links?.length || task.report?.files?.length ? [task.report] : [])}
             editable={canEdit}
             currentUser={currentUser}
             onSave={(reports: TaskReport[]) => updateTask(task.id, { reports })}
@@ -736,5 +921,46 @@ function TaskCard({
         onCancel={() => setDeleteDialogOpen(false)}
       />
     </Paper>
+  );
+}
+
+function ScrollReveal({ children }: { children: React.ReactNode }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [offsetY, setOffsetY] = useState(30);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        } else {
+          // Reset animation state when scrolled out of view
+          setIsVisible(false);
+          // Determine where it went out (top or bottom) to prepare next entry direction
+          if (entry.boundingClientRect.top < 0) {
+            setOffsetY(-30); // Went out top, so come from top next time
+          } else {
+            setOffsetY(30);  // Went out bottom, so come from bottom next time
+          }
+        }
+      },
+      { threshold: 0.1, rootMargin: "0px" }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? "translateY(0)" : `translateY(${offsetY}px)`,
+        transition: "opacity 0.4s ease-out, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+      }}
+    >
+      {children}
+    </div>
   );
 }

@@ -200,7 +200,7 @@ export default function ProjectDetailPage({
   ];
 
   return (
-    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 4 }}>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: { xs: 2, sm: 4, md: 6 }, py: 4 }}>
       <Button
         component={Link}
         href="/projects"

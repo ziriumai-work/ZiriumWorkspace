@@ -439,7 +439,7 @@ export interface SalaryRecord {
   lineItems: SalaryLineItem[];
   status: SalaryStatus;
   receiptUrl?: string | null;
-  createdAt: Timestamp | null;
+  createdAt: Timestamp | import("firebase/firestore").FieldValue | null;
   paidAt: Timestamp | null;
   fulfilledAt: Timestamp | null;
 }

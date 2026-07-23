@@ -245,7 +245,7 @@ export default function ZiriumPage() {
               mx: "auto",
               display: "flex",
               minHeight: "100%",
-              maxWidth: 720,
+              maxWidth: 1400,
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",

@@ -64,8 +64,8 @@ export const yellow = { light: "#FAF3D2", main: "#D9B024", dark: "#96781A" };
 // CSS variables in globals.css.
 // ---------------------------------------------------------------------------
 export const light = {
-  background: neutral[0],
-  surface: neutral[50], //   sidebar, table headers, subtle fills
+  background: neutral[50],
+  surface: neutral[100], // slightly darker surface for variety, or keep 50
   card: neutral[0],
   border: neutral[200],
   text: neutral[900],

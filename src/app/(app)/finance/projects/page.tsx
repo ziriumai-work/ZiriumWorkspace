@@ -31,6 +31,7 @@ import { Toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useLocalStorage } from "@/lib/hooks/useLocalStorage";
 import { chipSx } from "@/components/projectMeta";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { amber, green } from "@/lib/theme/colors";
 import {
   addFinanceProject,
@@ -135,7 +136,7 @@ export default function FinanceProjectsPage() {
   }
 
   return (
-    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 4 }}>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 4 }}>
       {/* Add a project */}
       <Paper variant="outlined" sx={{ p: 4, borderRadius: 4, mb: 4, bgcolor: "surface" }}>
         <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
@@ -276,8 +277,25 @@ export default function FinanceProjectsPage() {
         <Grid container spacing={2}>
           {projects.map((p) => (
             <Grid key={p.id} size={{ xs: 12, sm: 6, md: 4 }}>
-              <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
-                <Box sx={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 1 }}>
+              <ScrollReveal>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 2, 
+                    borderRadius: 3, 
+                    position: "relative", 
+                    height: "100%", 
+                    display: "flex", 
+                    flexDirection: "column",
+                    transition: "transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      boxShadow: "0 12px 24px -10px rgba(0,0,0,0.1)",
+                      borderColor: "primary.main",
+                    }
+                  }}
+                >
+                  <Box sx={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 1 }}>
                   <IconButton
                     size="small"
                     title="Restore App Workspace"
@@ -453,6 +471,7 @@ export default function FinanceProjectsPage() {
                   </Box>
                 </Box>
               </Paper>
+              </ScrollReveal>
             </Grid>
           ))}
         </Grid>

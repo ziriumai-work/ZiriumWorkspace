@@ -68,7 +68,7 @@ export default function AnnouncementsPage() {
   }
 
   return (
-    <Box sx={{ p: 4, maxWidth: 800, mx: "auto" }}>
+    <Box sx={{ p: 4, maxWidth: 1400, mx: "auto" }}>
       <Typography variant="h4" sx={{ fontWeight: 800, mb: 1, letterSpacing: "-0.02em" }}>
         Announcements
       </Typography>

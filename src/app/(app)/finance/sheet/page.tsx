@@ -158,7 +158,7 @@ export default function MonthlySheetPage() {
   }
 
   return (
-    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 4 }}>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 4 }}>
       {/* Live balance strip */}
       <Grid container spacing={1.5}>
         <SummaryCard label="Money in (received)">

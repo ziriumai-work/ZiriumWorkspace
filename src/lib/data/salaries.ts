@@ -23,6 +23,7 @@ import {
   DEFAULT_OFFICE_SETTINGS,
 } from "./types";
 import { dailySalary } from "@/lib/utils/salaryMath";
+import { computeMonthlySummary } from "./attendance";
 
 export const SALARIES_COL = "salaries";
 
@@ -87,41 +88,26 @@ export async function generateSalariesForMonth(month: string): Promise<void> {
     let deductionsTotal = 0;
     let overtimeTotal = 0;
 
-    // Process Lates
-    const lateRecords = myAtt.filter(a => a.isLate).sort((a, b) => a.date.localeCompare(b.date));
-    let lateCount = 0;
-    for (const late of lateRecords) {
-      lateCount++;
-      if (lateCount > settings.lateThresholdDays) {
-        const penalty = Math.round(dailyRate * 0.5); // 50% deduction
-        deductionsTotal += penalty;
-        lineItems.push({
-          description: "Late Penalty (Over Threshold)",
-          amount: -penalty,
-          dateStr: late.date,
-        });
-      }
-    }
+    const isIntern = emp.accessLevel === "intern";
+    const summary = computeMonthlySummary(myAtt, allTasks.filter(t => t.assigneeId === emp.id && t.date.startsWith(month)), settings, isIntern, emp);
 
-    // Process Absents (Assuming "absent" status means a full day deduction)
-    const absentRecords = myAtt.filter(a => a.status === "absent");
-    for (const abs of absentRecords) {
-      const penalty = Math.round(dailyRate); // 100% deduction
+    if (summary.deductionDays > 0) {
+      const penalty = Math.round(summary.deductionDays * dailyRate);
       deductionsTotal += penalty;
       lineItems.push({
-        description: "Absent Deduction",
+        description: `Attendance Deductions (${summary.deductionDays} days)`,
         amount: -penalty,
-        dateStr: abs.date,
+        dateStr: month,
       });
     }
 
-    // Process Overtime Tasks
+    // Process explicitly paid Overtime Tasks
     for (const task of myTasks) {
       const cost = Math.round(task.overtimeCost || 0);
       if (cost > 0) {
         overtimeTotal += cost;
         lineItems.push({
-          description: "Overtime",
+          description: `Overtime (${task.title})`,
           amount: cost,
           dateStr: task.date,
         });

@@ -219,7 +219,7 @@ export default function LeavesPage() {
   }
 
   return (
-    <Box sx={{ px: { xs: 2, sm: 4 }, py: 4, maxWidth: 1000, mx: "auto" }}>
+    <Box sx={{ px: { xs: 2, sm: 4 }, py: 4, maxWidth: 1400, mx: "auto" }}>
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 4 }}>
         <Box>
           <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>

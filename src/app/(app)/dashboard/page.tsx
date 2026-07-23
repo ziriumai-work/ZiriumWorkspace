@@ -20,6 +20,7 @@ import { PROJECT_STATUSES, type Project } from "@/lib/data/types";
 import { STATUS_META, chipSx } from "@/components/projectMeta";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { PersonalDashboard } from "@/components/dashboard/PersonalDashboard";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 export default function DashboardPage() {
   const { user, employee, isAdmin } = useAuth();
@@ -62,7 +63,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 5 }}>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: { xs: 2, sm: 4, md: 6 }, py: 5 }}>
       <Box component="header" sx={{ mb: 4 }}>
         <Typography variant="h1">Welcome back, {firstName}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -75,31 +76,33 @@ export default function DashboardPage() {
       <Grid container spacing={1.5}>
         {PROJECT_STATUSES.map((s) => (
           <Grid key={s.value} size={{ xs: 6, sm: 4, lg: 2 }}>
-            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                <Box
+            <ScrollReveal>
+              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 3 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: STATUS_META[s.value].color,
+                    }}
+                  />
+                  <Typography variant="caption" color="text.secondary">
+                    {s.label}
+                  </Typography>
+                </Box>
+                <Typography
+                  variant="h5"
                   sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    bgcolor: STATUS_META[s.value].color,
+                    mt: 0.5,
+                    fontWeight: 600,
+                    fontVariantNumeric: "tabular-nums",
                   }}
-                />
-                <Typography variant="caption" color="text.secondary">
-                  {s.label}
+                >
+                  {counts[s.value] ?? 0}
                 </Typography>
-              </Box>
-              <Typography
-                variant="h5"
-                sx={{
-                  mt: 0.5,
-                  fontWeight: 600,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {counts[s.value] ?? 0}
-              </Typography>
-            </Paper>
+              </Paper>
+            </ScrollReveal>
           </Grid>
         ))}
       </Grid>
@@ -154,31 +157,52 @@ export default function DashboardPage() {
           <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
             <List disablePadding>
               {recent.map((p, i) => (
-                <ListItemButton
-                  key={p.id}
-                  component={Link}
-                  href={`/projects/${p.id}`}
-                  divider={i < recent.length - 1}
-                  sx={{ gap: 1.5, px: 2, py: 1.5 }}
-                >
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      flexShrink: 0,
-                      borderRadius: "50%",
-                      bgcolor: STATUS_META[p.status].color,
-                    }}
-                  />
-                  <Typography variant="body2" noWrap sx={{ flex: 1 }}>
-                    {p.title}
-                  </Typography>
-                  <Chip
-                    label={STATUS_META[p.status].label}
-                    sx={chipSx(STATUS_META[p.status].color)}
-                  />
-                </ListItemButton>
+                <ScrollReveal key={p.id}>
+                  <ListItemButton
+                    component={Link}
+                    href={`/projects/${p.id}`}
+                    divider={i < recent.length - 1}
+                    sx={{ py: 1.5, px: 2 }}
+                  >
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", width: "100%", gap: 2 }}
+                    >
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: 600, mb: 0.25 }}
+                          noWrap
+                        >
+                          {p.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                          Updated {new Date(p.updatedAt).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={STATUS_META[p.status].label}
+                        size="small"
+                        sx={{ ...chipSx(STATUS_META[p.status].color), ml: "auto" }}
+                      />
+                    </Box>
+                  </ListItemButton>
+                </ScrollReveal>
               ))}
+              {recent.length === 0 && (
+                <Box sx={{ p: 4, textAlign: "center" }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No projects yet.
+                  </Typography>
+                  <MuiLink
+                    component={Link}
+                    href="/projects"
+                    variant="body2"
+                    sx={{ mt: 1, display: "inline-block", fontWeight: 500 }}
+                  >
+                    Create your first project
+                  </MuiLink>
+                </Box>
+              )}
             </List>
           </Paper>
         )}

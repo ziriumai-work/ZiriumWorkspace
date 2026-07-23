@@ -99,29 +99,57 @@ export function TaskReportEditor({
 
   // Common render for a single report item
   const renderReportItem = (r: TaskReport, index: number) => (
-    <Box key={r.id || index} sx={{ mb: 2, p: 1.5, bgcolor: "surface", borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1, alignItems: "center" }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: r.type === "review" ? "primary.main" : "text.primary" }}>
-          {r.createdByName || "Unknown"} {r.type === "review" ? "(Admin Review)" : "(Report)"}
-        </Typography>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Typography variant="caption" color="text.secondary">
-            {r.createdAt ? new Date(r.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : ""}
-          </Typography>
-          {(currentUser?.isAdmin || r.createdBy === currentUser?.uid) && (
-            <IconButton size="small" onClick={() => setReportToDelete(r.id ?? null)} sx={{ color: "text.secondary", "&:hover": { color: "error.main" } }}>
-              <DeleteIcon sx={{ fontSize: 14 }} />
-            </IconButton>
-          )}
-        </Box>
+    <Box key={r.id || index} sx={{ display: "flex", gap: 2, mb: 3, position: "relative" }}>
+      {/* Timeline Line */}
+      <Box sx={{ 
+        position: "absolute", 
+        left: "7px", 
+        top: "20px", 
+        bottom: "-24px", 
+        width: "2px", 
+        bgcolor: "divider",
+        display: index === reports.length - 1 ? "none" : "block"
+      }} />
+      
+      {/* Timeline Dot */}
+      <Box sx={{ mt: 0.5, flexShrink: 0 }}>
+        <Box sx={{ 
+          width: 16, 
+          height: 16, 
+          borderRadius: "50%", 
+          bgcolor: r.type === "review" ? "primary.main" : "text.secondary",
+          border: "3px solid",
+          borderColor: "background.paper",
+          position: "relative",
+          zIndex: 1
+        }} />
       </Box>
-      {r.text && (
-        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mb: 1 }}>
-          {r.text}
-        </Typography>
-      )}
-      <LinkList links={r.links} />
-      <FileList files={r.files} />
+
+      {/* Content */}
+      <Box sx={{ flex: 1, pb: 1 }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5, alignItems: "center" }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: r.type === "review" ? "primary.main" : "text.primary" }}>
+            {r.createdByName || "Unknown"} {r.type === "review" ? "(Admin Review)" : "(Report)"}
+          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              {r.createdAt ? new Date(r.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : ""}
+            </Typography>
+            {(currentUser?.isAdmin || r.createdBy === currentUser?.uid) && (
+              <IconButton size="small" onClick={() => setReportToDelete(r.id ?? null)} sx={{ color: "text.secondary", "&:hover": { color: "error.main" }, p: 0.5 }}>
+                <DeleteIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            )}
+          </Box>
+        </Box>
+        {r.text && (
+          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mb: 1.5, color: "text.secondary" }}>
+            {r.text}
+          </Typography>
+        )}
+        <LinkList links={r.links} />
+        <FileList files={r.files} />
+      </Box>
     </Box>
   );
 

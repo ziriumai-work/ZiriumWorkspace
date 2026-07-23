@@ -267,7 +267,7 @@ export default function InvoicesPage() {
   const symbol = currencySymbol(currency);
 
   return (
-    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 4 }}>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 4 }}>
       {/* Builder */}
       <ZiriumDetails />
       <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>

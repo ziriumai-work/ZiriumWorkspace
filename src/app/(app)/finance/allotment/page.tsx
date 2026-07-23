@@ -174,7 +174,7 @@ export default function AllotmentPage() {
   }
 
   return (
-    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 4 }}>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 4 }}>
       {/* Month selector + add form */}
       <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
         <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>

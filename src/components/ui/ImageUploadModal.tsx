@@ -159,7 +159,7 @@ export function ImageUploadModal({
               <PhotoCameraIcon fontSize="large" />
             </Box>
             <Box>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }} gutterBottom>
                 Upload your photo
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>

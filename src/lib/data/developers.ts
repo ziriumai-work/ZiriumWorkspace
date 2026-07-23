@@ -36,6 +36,7 @@ function toDeveloper(id: string, data: Record<string, unknown>): Developer {
     customDepartment: (data.customDepartment as string) ?? "",
     employmentType: (data.employmentType as EmploymentType) ?? "full_time",
     startDate: (data.startDate as string | null) ?? null,
+    endDate: (data.endDate as string | null) ?? null,
     status: (data.status as EmployeeStatus) ?? "active",
     accessLevel: (data.accessLevel as AccessLevel) ?? "employee",
     uid: (data.uid as string | null) ?? null,

@@ -708,8 +708,8 @@ export function computeMonthlySummary(
       totalAbsent,
       totalHoursWorked: Math.round(totalHoursWorked * 100) / 100,
       totalOvertimeMinutes: Math.max(0, netOvertime),
-      lateDaysOverThreshold: grossLatePenalties,
-      excessLeaves,
+      lateDaysOverThreshold: 0,
+      excessLeaves: 0,
       deductionDays: 0,
       overtimeDueMinutes: netOvertime < 0 ? Math.abs(netOvertime) : 0,
     };
@@ -721,8 +721,8 @@ export function computeMonthlySummary(
       grossLatePenalties - overtimeOffsetDays,
     );
 
-    // Each excess late day = 0.5 day deduction; each excess leave = 1 day deduction.
-    const deductionDays = lateDaysOverThreshold * 0.5 + excessLeaves;
+    // Each excess late day = 0.5 day deduction; each excess leave = 1 day deduction. Each absent day = 1 day deduction.
+    const deductionDays = lateDaysOverThreshold * 0.5 + excessLeaves + totalAbsent;
 
     return {
       totalPresent,

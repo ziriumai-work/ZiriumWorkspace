@@ -25,6 +25,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import Collapse from "@mui/material/Collapse";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { AvatarUpload } from "@/components/employees/AvatarUpload";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import {
   subscribeToDevelopers,
   addDeveloper,
@@ -94,7 +96,7 @@ export default function EmployeesPage() {
 
   if (!isAdmin) {
     return (
-      <Box sx={{ mx: "auto", width: "100%", maxWidth: 720, px: 4, py: 5 }}>
+      <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 5 }}>
         <Typography variant="h1">Employees</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           You don’t have permission to manage employees. Ask an admin.
@@ -134,7 +136,7 @@ export default function EmployeesPage() {
   });
 
   return (
-    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 5 }}>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 5 }}>
       <Box component="header" sx={{ mb: 3 }}>
         <Typography variant="h1">Employees</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -144,8 +146,9 @@ export default function EmployeesPage() {
       </Box>
 
       {/* Add employee */}
-      <Paper elevation={3} sx={{ p: 4, borderRadius: 4, bgcolor: "background.paper", backgroundImage: "linear-gradient(to right bottom, rgba(255,255,255,0.05), rgba(255,255,255,0))" }}>
-        <Typography variant="h6" sx={{ mb: 3, fontWeight: 700 }}>Add New Team Member</Typography>
+      <ScrollReveal>
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 4, bgcolor: "background.paper", backgroundImage: "linear-gradient(to right bottom, rgba(255,255,255,0.05), rgba(255,255,255,0))" }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 700 }}>Add New Team Member</Typography>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <Field label="Full name *">
@@ -344,6 +347,7 @@ export default function EmployeesPage() {
           </Grid>
         </Grid>
       </Paper>
+      </ScrollReveal>
 
       {error && (
         <Alert severity="error" sx={{ mt: 1.5 }}>
@@ -419,123 +423,125 @@ export default function EmployeesPage() {
           <Grid container spacing={3}>
             {filteredEmployees.map((e) => (
               <Grid size={{ xs: 12, sm: 6, md: 4 }} key={e.id}>
-                <Paper 
-                  elevation={1} 
-                  sx={{ 
-                    p: 3, 
-                    borderRadius: 4, 
-                    position: "relative",
-                    border: "1px solid transparent",
-                    transition: "all 0.2s ease-in-out",
-                    "&:hover": {
-                      transform: "translateY(-4px)",
-                      borderColor: "primary.main",
-                      boxShadow: "0 8px 24px rgba(25, 118, 210, 0.15)",
-                    }
-                  }}
-                >
-                  <IconButton
-                    size="small"
-                    onClick={() => setEditForm(e)}
-                    sx={{
-                      position: "absolute",
-                      top: 12,
-                      right: 12,
-                      color: "text.secondary",
-                      "&:hover": { color: "primary.main", bgcolor: "primary.soft" }
+                <ScrollReveal>
+                  <Paper 
+                    elevation={1} 
+                    sx={{ 
+                      p: 3, 
+                      borderRadius: 4, 
+                      position: "relative",
+                      border: "1px solid transparent",
+                      transition: "all 0.2s ease-in-out",
+                      "&:hover": {
+                        transform: "translateY(-4px)",
+                        borderColor: "primary.main",
+                        boxShadow: "0 8px 24px rgba(25, 118, 210, 0.15)",
+                      }
                     }}
                   >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
-                    <Avatar
-                      src={e.photoURL || undefined}
+                    <IconButton
+                      size="small"
+                      onClick={() => setEditForm(e)}
                       sx={{
-                        width: 48,
-                        height: 48,
-                        fontSize: 18,
-                        fontWeight: 600,
-                        bgcolor: "accentSoft",
-                        color: "primary.main",
+                        position: "absolute",
+                        top: 12,
+                        right: 12,
+                        color: "text.secondary",
+                        "&:hover": { color: "primary.main", bgcolor: "primary.soft" }
                       }}
                     >
-                      {e.name.charAt(0).toUpperCase()}
-                    </Avatar>
-                    <Box sx={{ minWidth: 0, pr: 3 }}>
-                      <Typography variant="subtitle1" noWrap sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-                        {e.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
-                        {e.email}
-                      </Typography>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
+                      <Avatar
+                        src={e.photoURL || undefined}
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          fontSize: 18,
+                          fontWeight: 600,
+                          bgcolor: "accentSoft",
+                          color: "primary.main",
+                        }}
+                      >
+                        {e.name.charAt(0).toUpperCase()}
+                      </Avatar>
+                      <Box sx={{ minWidth: 0, pr: 3 }}>
+                        <Typography variant="subtitle1" noWrap sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+                          {e.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
+                          {e.email}
+                        </Typography>
+                      </Box>
                     </Box>
-                  </Box>
 
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                    <CardRow label="Department">
-                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
-                        {e.department === "custom" ? (e.customDepartment || "Custom") : (DEPARTMENTS.find(d => d.value === e.department)?.label ?? "—")}
-                      </Typography>
-                    </CardRow>
-                    
-                    <CardRow label="Job Title">
-                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
-                        {e.jobTitle || "—"}
-                      </Typography>
-                    </CardRow>
-
-                    <CardRow label="Role/Level">
-                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
-                        {e.role || "—"}
-                      </Typography>
-                    </CardRow>
-
-                    <CardRow label="Employment">
-                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
-                        {EMPLOYMENT_TYPES.find((t) => t.value === e.employmentType)?.label ?? "—"}
-                      </Typography>
-                    </CardRow>
-
-                    <CardRow label="Salary (PKR)">
-                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
-                        {e.monthlySalary ? e.monthlySalary.toLocaleString() : "—"}
-                      </Typography>
-                    </CardRow>
-
-                    <CardRow label="Office / Flex">
-                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
-                        {e.officeHours ?? "—"} Hrs / {e.flexibilityHours ?? "—"} Flex
-                      </Typography>
-                    </CardRow>
-
-                    <CardRow label="Start Date">
-                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
-                        {e.startDate || "—"}
-                      </Typography>
-                    </CardRow>
-
-                    {e.endDate && (
-                      <CardRow label="End Date">
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                      <CardRow label="Department">
                         <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
-                          {e.endDate}
+                          {e.department === "custom" ? (e.customDepartment || "Custom") : (DEPARTMENTS.find(d => d.value === e.department)?.label ?? "—")}
                         </Typography>
                       </CardRow>
-                    )}
+                      
+                      <CardRow label="Job Title">
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
+                          {e.jobTitle || "—"}
+                        </Typography>
+                      </CardRow>
 
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
-                      <PillSelect
-                        value={e.status}
-                        options={EMPLOYEE_STATUSES}
-                        color={EMPLOYEE_STATUS_COLORS[e.status]}
-                        onChange={(status: EmployeeStatus) => updateDeveloper(e.id, { status })}
-                      />
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontWeight: 500, textTransform: "capitalize" }}>
-                        {e.accessLevel}
-                      </Typography>
+                      <CardRow label="Role/Level">
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
+                          {e.role || "—"}
+                        </Typography>
+                      </CardRow>
+
+                      <CardRow label="Employment">
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
+                          {EMPLOYMENT_TYPES.find((t) => t.value === e.employmentType)?.label ?? "—"}
+                        </Typography>
+                      </CardRow>
+
+                      <CardRow label="Salary (PKR)">
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
+                          {e.monthlySalary ? e.monthlySalary.toLocaleString() : "—"}
+                        </Typography>
+                      </CardRow>
+
+                      <CardRow label="Office / Flex">
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
+                          {e.officeHours ?? "—"} Hrs / {e.flexibilityHours ?? "—"} Flex
+                        </Typography>
+                      </CardRow>
+
+                      <CardRow label="Start Date">
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
+                          {e.startDate || "—"}
+                        </Typography>
+                      </CardRow>
+
+                      {e.endDate && (
+                        <CardRow label="End Date">
+                          <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13 }}>
+                            {e.endDate}
+                          </Typography>
+                        </CardRow>
+                      )}
+
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
+                        <PillSelect
+                          value={e.status}
+                          options={EMPLOYEE_STATUSES}
+                          color={EMPLOYEE_STATUS_COLORS[e.status]}
+                          onChange={(status: EmployeeStatus) => updateDeveloper(e.id, { status })}
+                        />
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontWeight: 500, textTransform: "capitalize" }}>
+                          {e.accessLevel}
+                        </Typography>
+                      </Box>
                     </Box>
-                  </Box>
-                </Paper>
+                  </Paper>
+                </ScrollReveal>
               </Grid>
             ))}
           </Grid>

@@ -113,7 +113,7 @@ export default function FinanceDashboardPage() {
   }
 
   return (
-    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 4 }}>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 4 }}>
       <Box
         sx={{
           mb: 3,

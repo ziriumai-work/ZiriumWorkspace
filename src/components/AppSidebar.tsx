@@ -43,7 +43,7 @@ const NAV: {
     {
       href: "/dashboard",
       label: "Dashboard",
-      roles: ["admin", "member", "employee", "intern"],
+      roles: ["admin", "employee", "intern"],
       icon: (
         <>
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -54,7 +54,7 @@ const NAV: {
     {
       href: "/projects",
       label: "Projects",
-      roles: ["admin", "member", "employee", "intern"],
+      roles: ["admin", "employee", "intern"],
       icon: (
         <>
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -67,8 +67,11 @@ const NAV: {
       roles: ["admin", "employee", "intern"],
       icon: (
         <>
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-          <polyline points="22 4 12 14.01 9 11.01" />
+          <rect x="3" y="5" width="6" height="6" rx="1" />
+          <path d="m3 17 2 2 4-4" />
+          <path d="M13 6h8" />
+          <path d="M13 12h8" />
+          <path d="M13 18h8" />
         </>
       ),
     },
@@ -122,7 +125,7 @@ const NAV: {
     {
       href: "/documents",
       label: "Documents",
-      roles: ["admin", "member", "employee", "intern"],
+      roles: ["admin", "employee", "intern"],
       icon: (
         <>
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -164,7 +167,8 @@ export function AppSidebar() {
       }
       return false;
     }
-    return item.roles.includes(role ?? "member");
+    if (!role) return false;
+    return item.roles.includes(role);
   });
 
   return (

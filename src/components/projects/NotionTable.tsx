@@ -963,7 +963,7 @@ function TextCell({
             onChange={(e) => setDraft(e.target.value)}
             onBlur={() => draft !== value && onCommit(draft)}
             variant="standard"
-            InputProps={{ disableUnderline: true, sx: { fontSize: 16, lineHeight: 1.5 } }}
+            slotProps={{ input: { disableUnderline: true, sx: { fontSize: 16, lineHeight: 1.5 } } }}
             placeholder="Empty..."
             autoFocus
           />

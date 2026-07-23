@@ -316,7 +316,7 @@ export default function SalariesPage() {
   const fulfilledSalaries = salaries.filter(s => s.status !== "due");
 
   return (
-    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: 4, py: 4 }}>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 4 }}>
       {isAdmin && (
         <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
           <TextField

@@ -55,17 +55,21 @@ body {
 /* Quiet, professional scrollbars. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: color-mix(in srgb, var(--muted) 40%, transparent) transparent;
 }
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 *::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
   border-radius: 9999px;
   border: 3px solid transparent;
   background-clip: content-box;
+  transition: background 0.3s ease;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
 }
 
 ::selection {
@@ -96,6 +100,33 @@ body {
 }
 .animate-pop-in {
   animation: pop-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes docket-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(13, 147, 199, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(13, 147, 199, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(13, 147, 199, 0);
+  }
+}
+
+.animate-docket-slide {
+  animation: docket-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Hide number input spinners globally */

@@ -206,7 +206,7 @@ Enjoy your time at Zirium, and let's build something great together!`;
   }
 
   return (
-    <Box sx={{ maxWidth: 860, mx: "auto", px: 4, py: 5 }}>
+    <Box sx={{ maxWidth: 1400, mx: "auto", px: 4, py: 5 }}>
       <Box component="header" sx={{ mb: 4 }}>
         <Typography variant="h1">Documents & Guidelines</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
