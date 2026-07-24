@@ -22,6 +22,7 @@ import type {
   EmployeeStatus,
   AccessLevel,
 } from "@/lib/data/types";
+import { logAdminAction } from "./logs";
 
 const COLLECTION = "developers";
 
@@ -96,6 +97,7 @@ export async function addDeveloper(input: NewEmployee): Promise<string> {
     uid: null,
     createdAt: serverTimestamp(),
   });
+  await logAdminAction("Added Employee", `Added employee: ${input.name} (${input.email})`);
   return ref.id;
 }
 
@@ -104,8 +106,11 @@ export async function updateDeveloper(
   patch: Partial<Omit<Developer, "id" | "createdAt">>,
 ): Promise<void> {
   await updateDoc(doc(db, COLLECTION, id), patch);
+  const updates = Object.keys(patch).join(", ");
+  await logAdminAction("Updated Employee", `Updated employee (ID: ${id}) fields: ${updates}`);
 }
 
 export async function deleteDeveloper(id: string): Promise<void> {
   await deleteDoc(doc(db, COLLECTION, id));
+  await logAdminAction("Deleted Employee", `Deleted employee (ID: ${id})`);
 }

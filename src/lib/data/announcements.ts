@@ -10,6 +10,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/client";
 import type { Announcement } from "./types";
+import { logAdminAction } from "./logs";
 
 export function subscribeToAnnouncements(
   onData: (announcements: Announcement[]) => void,
@@ -44,6 +45,7 @@ export async function createAnnouncement(data: Omit<Announcement, "id" | "create
     ...data,
     createdAt: serverTimestamp(),
   });
+  await logAdminAction("Created Announcement", `Created announcement: ${data.title}`);
   return ref.id;
 }
 
@@ -51,9 +53,11 @@ export async function updateAnnouncement(id: string, data: Partial<Omit<Announce
   const ref = doc(db, "announcements", id);
   // We use setDoc with merge to update fields, as we're treating the whole doc.
   await setDoc(ref, data, { merge: true });
+  await logAdminAction("Updated Announcement", `Updated announcement (ID: ${id})`);
 }
 
 export async function deleteAnnouncement(id: string) {
   const ref = doc(db, "announcements", id);
   await deleteDoc(ref);
+  await logAdminAction("Deleted Announcement", `Deleted announcement (ID: ${id})`);
 }

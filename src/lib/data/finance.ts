@@ -26,6 +26,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { defaultColumns } from "@/lib/firebase/db";
+import { logAdminAction } from "./logs";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -236,6 +237,7 @@ export async function addFinanceProject(
     updatedAt: serverTimestamp(),
   });
 
+  await logAdminAction("Added Finance Project", `Added finance project "${input.name}" with worth ${input.currency} ${input.worth}`);
   return ref.id;
 }
 
@@ -248,6 +250,9 @@ export async function updateFinanceProject(
     updatedAt: serverTimestamp(),
   });
 
+  const updates = Object.keys(patch).join(", ");
+  await logAdminAction("Updated Finance Project", `Updated finance project (ID: ${id}) fields: ${updates}`);
+
   // Sync files to App Project if they were updated
   if (patch.files) {
     await updateDoc(doc(db, "projects", id), {
@@ -259,6 +264,7 @@ export async function updateFinanceProject(
 
 export async function deleteFinanceProject(id: string): Promise<void> {
   await deleteDoc(doc(db, PROJECTS, id));
+  await logAdminAction("Deleted Finance Project", `Deleted finance project (ID: ${id})`);
 }
 
 // ---------------------------------------------------------------------------
@@ -308,6 +314,7 @@ export async function addInvoice(
     ...input,
     createdAt: serverTimestamp(),
   });
+  await logAdminAction("Generated Invoice", `Generated invoice for ${input.clientName} (Amount: ${input.currency} ${invoiceTotal(input as any)})`);
   return ref.id;
 }
 
@@ -316,10 +323,12 @@ export async function updateInvoice(
   patch: Partial<Omit<Invoice, "id" | "createdAt">>,
 ): Promise<void> {
   await updateDoc(doc(db, INVOICES, id), patch);
+  await logAdminAction("Updated Invoice", `Updated invoice (ID: ${id})`);
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
   await deleteDoc(doc(db, INVOICES, id));
+  await logAdminAction("Deleted Invoice", `Deleted invoice (ID: ${id})`);
 }
 
 /** Generate the next invoice number, e.g. INV-2026-001 */
@@ -385,6 +394,7 @@ export async function addAllotment(input: {
     ...input,
     createdAt: serverTimestamp(),
   });
+  await logAdminAction("Allocated Budget", `Allotted ${input.amount} PKR for ${input.label} (${input.month})`);
   return ref.id;
 }
 
@@ -393,10 +403,12 @@ export async function updateAllotment(
   patch: Partial<Omit<Allotment, "id" | "createdAt">>,
 ): Promise<void> {
   await updateDoc(doc(db, ALLOTMENTS, id), patch);
+  await logAdminAction("Updated Budget Allotment", `Updated budget allotment (ID: ${id})`);
 }
 
 export async function deleteAllotment(id: string): Promise<void> {
   await deleteDoc(doc(db, ALLOTMENTS, id));
+  await logAdminAction("Deleted Budget Allotment", `Deleted allotment (ID: ${id})`);
 }
 
 // ---------------------------------------------------------------------------
@@ -440,6 +452,7 @@ export async function addMonthlyExpense(input: {
     ...input,
     createdAt: serverTimestamp(),
   });
+  await logAdminAction("Added Expense", `Added expense: ${input.amount} PKR for ${input.label} (${input.type})`);
   return ref.id;
 }
 
@@ -448,10 +461,12 @@ export async function updateMonthlyExpense(
   patch: Partial<Omit<MonthlyExpense, "id" | "createdAt">>,
 ): Promise<void> {
   await updateDoc(doc(db, EXPENSES, id), patch);
+  await logAdminAction("Updated Expense", `Updated expense entry (ID: ${id})`);
 }
 
 export async function deleteMonthlyExpense(id: string): Promise<void> {
   await deleteDoc(doc(db, EXPENSES, id));
+  await logAdminAction("Deleted Expense", `Deleted expense entry (ID: ${id})`);
 }
 
 // ---------------------------------------------------------------------------

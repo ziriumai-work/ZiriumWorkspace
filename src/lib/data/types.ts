@@ -22,6 +22,17 @@ export interface Member {
   createdAt: Timestamp | null;
 }
 
+// admin_logs/{logId} — tracks actions performed by admins
+export interface AdminLog {
+  id: string;
+  adminId: string;
+  adminName: string;
+  adminPhotoUrl: string | null;
+  action: string;
+  details: string;
+  timestamp: Timestamp | null;
+}
+
 // documents/{docId} — company guidelines, NDAs, etc.
 export interface CompanyDocument {
   id: string; // "guidelines_employee" or "guidelines_intern"

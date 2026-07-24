@@ -26,6 +26,7 @@ import {
   type Developer,
   type DailyTask,
 } from "@/lib/data/types";
+import { logAdminAction } from "./logs";
 
 const COL = "attendance";
 
@@ -61,6 +62,7 @@ export async function updateOfficeSettings(
   settings: Partial<OfficeSettings>,
 ): Promise<void> {
   await setDoc(doc(db, "settings", "office"), settings, { merge: true });
+  await logAdminAction("Updated Office Settings", `Updated office config: ${Object.keys(settings).join(", ")}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -580,6 +582,7 @@ export async function markAttendance(
     },
     { merge: true },
   );
+  await logAdminAction("Marked Attendance", `Marked attendance for ${employeeName} on ${date} as ${status}`);
 }
 
 /** Update an existing attendance record (partial). */
@@ -591,11 +594,14 @@ export async function updateAttendance(
     ...patch,
     updatedAt: serverTimestamp(),
   });
+  const updates = Object.keys(patch).join(", ");
+  await logAdminAction("Updated Attendance", `Updated attendance (ID: ${id}) fields: ${updates}`);
 }
 
 /** Delete an attendance record. */
 export async function deleteAttendance(id: string): Promise<void> {
   await deleteDoc(doc(db, COL, id));
+  await logAdminAction("Deleted Attendance", `Deleted attendance record (ID: ${id})`);
 }
 
 // ---------------------------------------------------------------------------

@@ -19,6 +19,7 @@ import {
 import { db } from "@/lib/firebase/client";
 import type { DbColumn, DbRow, NewProject, Project, TaskItem, TaskFile } from "@/lib/data/types";
 import { defaultColumns } from "@/lib/firebase/db";
+import { logAdminAction } from "./logs";
 
 const COLLECTION = "projects";
 
@@ -102,6 +103,7 @@ export async function createProject(
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+  await logAdminAction("Created Project", `Created project "${input.title}"`);
   return ref.id;
 }
 
@@ -132,8 +134,13 @@ export async function updateProject(
     ...patch,
     updatedAt: serverTimestamp(),
   });
+  
+  // Create a human-readable summary of what changed
+  const updates = Object.keys(patch).join(", ");
+  await logAdminAction("Updated Project", `Updated project settings/status (${updates})`);
 }
 
 export async function deleteProject(id: string): Promise<void> {
   await deleteDoc(doc(db, COLLECTION, id));
+  await logAdminAction("Deleted Project", `Deleted project (ID: ${id})`);
 }

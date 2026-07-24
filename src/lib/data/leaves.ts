@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { LeaveRequest, LeaveRequestStatus } from "./types";
+import { logAdminAction } from "./logs";
 
 const COL = "leaveRequests";
 
@@ -99,6 +100,7 @@ export async function updateLeaveRequestStatus(
     status,
     updatedAt: serverTimestamp(),
   });
+  await logAdminAction("Leave Request Evaluated", `Marked leave request (ID: ${id}) as ${status}`);
 }
 
 /** Delete a leave request (Admin/Employee before approval) */

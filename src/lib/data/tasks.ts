@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { DailyTask, TaskReport, TaskFile } from "@/lib/data/types";
+import { logAdminAction } from "./logs";
 
 const COLLECTION = "tasks";
 
@@ -139,6 +140,7 @@ export async function createTask(
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+  await logAdminAction("Created Task", `Assigned task "${input.title}" to ${input.assigneeName}`);
   return id;
 }
 
@@ -152,8 +154,12 @@ export async function updateTask(
     ...patch,
     updatedAt: serverTimestamp(),
   });
+  
+  const updates = Object.keys(patch).join(", ");
+  await logAdminAction("Updated Task", `Updated task (ID: ${id}) fields: ${updates}`);
 }
 
 export async function deleteTask(id: string): Promise<void> {
   await deleteDoc(doc(db, COLLECTION, id));
+  await logAdminAction("Deleted Task", `Deleted task (ID: ${id})`);
 }

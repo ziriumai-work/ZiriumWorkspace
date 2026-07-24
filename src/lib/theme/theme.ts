@@ -154,13 +154,14 @@ export const theme = createTheme({
             borderRadius: "100px",
             transition: "all 0.2s ease",
             textDecoration: "none",
+            lineHeight: 1,
             "&:hover": {
               backgroundColor: "var(--mui-palette-primary-main)",
               color: "var(--mui-palette-primary-contrastText)",
               "&::after": {
-                width: 14,
+                maxWidth: 24,
                 opacity: 1,
-                transform: "translateX(2px)",
+                transform: "translate(2px, -1px)",
                 marginLeft: 4,
               }
             },
@@ -168,11 +169,13 @@ export const theme = createTheme({
               content: '"→"',
               fontFamily: "var(--font-geist-sans), sans-serif",
               display: "inline-block",
-              width: 0,
+              lineHeight: 1,
+              maxWidth: 0,
               opacity: 0,
-              transform: "translateX(-4px)",
+              transform: "translate(-4px, -1px)",
               transition: "all 0.2s ease",
               overflow: "hidden",
+              whiteSpace: "nowrap",
             }
           }
         },
@@ -187,13 +190,14 @@ export const theme = createTheme({
             borderRadius: "100px",
             transition: "all 0.2s ease",
             textDecoration: "none",
+            lineHeight: 1,
             "&:hover": {
               backgroundColor: "var(--mui-palette-primary-main)",
               color: "var(--mui-palette-primary-contrastText)",
               "&::before": {
-                width: 14,
+                maxWidth: 24,
                 opacity: 1,
-                transform: "translateX(-2px)",
+                transform: "translate(-2px, -1px)",
                 marginRight: 4,
               }
             },
@@ -201,11 +205,13 @@ export const theme = createTheme({
               content: '"←"',
               fontFamily: "var(--font-geist-sans), sans-serif",
               display: "inline-block",
-              width: 0,
+              lineHeight: 1,
+              maxWidth: 0,
               opacity: 0,
-              transform: "translateX(4px)",
+              transform: "translate(4px, -1px)",
               transition: "all 0.2s ease",
               overflow: "hidden",
+              whiteSpace: "nowrap",
             }
           }
         },
@@ -231,10 +237,13 @@ export const theme = createTheme({
               borderRadius: "2px",
               backgroundColor: "var(--mui-palette-primary-main)",
               transform: "scaleX(0)",
-              transformOrigin: "left",
+              transformOrigin: "right",
               transition: "transform 0.3s ease",
             },
-            "&:hover::after": { transform: "scaleX(1)" },
+            "&:hover::after": { 
+              transform: "scaleX(1)",
+              transformOrigin: "left",
+            },
           },
         }
       ]

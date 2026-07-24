@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { CompanyDocument } from "@/lib/data/types";
+import { logAdminAction } from "./logs";
 
 export const DOCUMENTS_COLLECTION = "documents";
 
@@ -42,4 +43,5 @@ export async function updateCompanyDocument(docId: string, data: Partial<Omit<Co
     ...data,
     updatedAt: serverTimestamp(),
   }, { merge: true });
+  await logAdminAction("Updated Company Document", `Updated document: ${docId}`);
 }

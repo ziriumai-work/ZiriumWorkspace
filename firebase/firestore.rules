@@ -167,6 +167,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Admin Logs
+    match /admin_logs/{id} {
+      allow read: if isAdmin();
+      allow create: if isMember();
+      allow update, delete: if false;
+    }
+
     // Everything else is locked until the phase that introduces it defines
     // explicit rules.
   }
