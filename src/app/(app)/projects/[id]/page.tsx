@@ -31,6 +31,7 @@ import { useAi } from "@/components/ai/AiProvider";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { NotionTable } from "@/components/projects/NotionTable";
 import { ProjectDevelopers } from "@/components/projects/ProjectDevelopers";
+import { SlackChannelSelect } from "@/components/projects/SlackChannelSelect";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Developer } from "@/lib/data/types";
 import {
@@ -292,6 +293,15 @@ export default function ProjectDetailPage({
             }
           />
         </PropRow>
+
+        {isAdmin && (
+          <PropRow label="Slack Channel">
+            <SlackChannelSelect
+              value={project.slackChannelId}
+              onChange={(slackChannelId) => updateProject(id, { slackChannelId })}
+            />
+          </PropRow>
+        )}
 
         <PropRow label="Due date">
           {!isAdmin ? (

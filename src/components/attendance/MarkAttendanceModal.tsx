@@ -115,6 +115,7 @@ export function MarkAttendanceModal({
           }}
         >
           <MenuItem value="on_leave">On Leave</MenuItem>
+          <MenuItem value="absent">Absent</MenuItem>
         </Select>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>

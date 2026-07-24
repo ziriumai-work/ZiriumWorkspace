@@ -120,22 +120,41 @@ export default function ProjectsPage() {
         <Typography variant="h2">Projects</Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {isAdmin && (
-            <Button
-              onClick={() => setShowAgent(true)}
-              sx={{ bgcolor: "accentSoft", color: "primary.main" }}
-              startIcon={
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
-                </svg>
-              }
-            >
-              Generate with AI
-            </Button>
+            <>
+              <Button
+                onClick={() => setShowAgent(true)}
+                sx={{ bgcolor: "accentSoft", color: "primary.main" }}
+                startIcon={
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+                  </svg>
+                }
+              >
+                Generate with AI
+              </Button>
+              <Button
+                href="https://us-central1-ziriumai-workspace-5c840.cloudfunctions.net/slackAuth"
+                target="_blank"
+                sx={{ bgcolor: "accentSoft", color: "primary.main" }}
+                startIcon={
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M12.001 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75-4.365-9.75-9.75-9.75zm.974 13.916v-2.022h-1.996v2.022a1.002 1.002 0 11-2.003 0v-2.022H6.98a1.002 1.002 0 110-2.003h1.996v-1.996H6.98a1.002 1.002 0 110-2.003h1.996V6.115a1.002 1.002 0 112.003 0v2.023h1.996V6.115a1.002 1.002 0 112.003 0v2.023h1.996a1.002 1.002 0 110 2.003h-1.996v1.996h1.996a1.002 1.002 0 110 2.003h-1.996v2.022a1.002 1.002 0 11-2.004 0zm1.996-4.025h-1.996v-1.996h1.996v1.996z" />
+                  </svg>
+                }
+              >
+                Connect Slack
+              </Button>
+            </>
           )}
           <ToggleButtonGroup
             value={tab}

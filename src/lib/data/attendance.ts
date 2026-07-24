@@ -5,6 +5,7 @@
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -564,6 +565,47 @@ export async function markAttendance(
     isOvertime = overtime > 0;
   }
 
+  let finalStatus: AttendanceStatus = status === "present" && isLate ? "late" : status;
+  let adminApprovedLeave = false;
+
+  // New admin leave/absent fallback logic
+  if (finalStatus === "absent" || finalStatus === "on_leave") {
+    const devQuery = query(collection(db, "developers"), where("uid", "==", uid));
+    const devSnap = await getDocs(devQuery);
+    const employee = devSnap.empty ? null : devSnap.docs[0].data() as any;
+    
+    if (employee) {
+      const isIntern = employee.accessLevel === "intern";
+      const allowedLeaves = isIntern ? settings.internLeavesPerMonth : settings.employeeLeavesPerMonth;
+      
+      const monthPrefix = date.slice(0, 7);
+      const start = `${monthPrefix}-01`;
+      const end = `${monthPrefix}-31`;
+      
+      const attQuery = query(
+        collection(db, COL),
+        where("uid", "==", uid)
+      );
+      
+      const snap = await getDocs(attQuery);
+      let totalLeavesThisMonth = 0;
+      snap.forEach(d => {
+        const r = d.data() as AttendanceRecord;
+        if (r.date >= start && r.date <= end && r.date !== date && r.status === "on_leave") {
+          totalLeavesThisMonth++;
+        }
+      });
+      
+      if (finalStatus === "absent") {
+        if (totalLeavesThisMonth < allowedLeaves) {
+          finalStatus = "on_leave";
+        }
+      } else if (finalStatus === "on_leave") {
+        adminApprovedLeave = true;
+      }
+    }
+  }
+
   await setDoc(
     doc(db, COL, id),
     {
@@ -572,17 +614,18 @@ export async function markAttendance(
       date,
       checkIn: checkIn ?? null,
       checkOut: checkOut ?? null,
-      status: status === "present" && isLate ? "late" : status,
+      status: finalStatus,
       hoursWorked: Math.round(hoursWorked * 100) / 100,
       isLate,
       isOvertime,
       overtimeMinutes: overtime,
+      ...(adminApprovedLeave ? { adminApprovedLeave: true } : { adminApprovedLeave: deleteField() }),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     },
     { merge: true },
   );
-  await logAdminAction("Marked Attendance", `Marked attendance for ${employeeName} on ${date} as ${status}`);
+  await logAdminAction("Marked Attendance", `Marked attendance for ${employeeName} on ${date} as ${finalStatus}`);
 }
 
 /** Update an existing attendance record (partial). */
@@ -636,6 +679,7 @@ export function computeMonthlySummary(
   let totalAbsent = 0;
   let totalHoursWorked = 0;
   let totalOvertimeMinutes = 0;
+  let totalAdminApprovedLeaves = 0;
 
   for (const r of records) {
     switch (r.status) {
@@ -647,6 +691,7 @@ export function computeMonthlySummary(
         break;
       case "on_leave":
         totalLeaves++;
+        if (r.adminApprovedLeave) totalAdminApprovedLeaves++;
         break;
       case "sick_leave":
         totalSickLeaves++;
@@ -682,6 +727,7 @@ export function computeMonthlySummary(
     : settings.employeeLeavesPerMonth;
 
   const excessLeaves = Math.max(0, totalLeaves - allowedLeaves);
+  const excessLeavesToPenalize = Math.max(0, excessLeaves - totalAdminApprovedLeaves);
 
   // Late penalty: after threshold late days, every late day costs 0.5 day salary.
   // BUT overtime can offset late penalties: each 480 min (8h) of overtime
@@ -698,7 +744,7 @@ export function computeMonthlySummary(
     const dailyMinutes = dailyHours * 60;
     
     // Total missing minutes from absentees and excess leaves
-    const missingMinutesFromAbsences = (totalAbsent + excessLeaves) * dailyMinutes;
+    const missingMinutesFromAbsences = (totalAbsent + excessLeavesToPenalize) * dailyMinutes;
     // Missing minutes from late days over threshold
     const missingMinutesFromLates = grossLatePenalties * (dailyMinutes / 2);
     
@@ -728,7 +774,7 @@ export function computeMonthlySummary(
     );
 
     // Each excess late day = 0.5 day deduction; each excess leave = 1 day deduction. Each absent day = 1 day deduction.
-    const deductionDays = lateDaysOverThreshold * 0.5 + excessLeaves + totalAbsent;
+    const deductionDays = lateDaysOverThreshold * 0.5 + excessLeavesToPenalize + totalAbsent;
 
     return {
       totalPresent,

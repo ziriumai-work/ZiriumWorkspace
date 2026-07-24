@@ -102,7 +102,7 @@ export function MonthlySummaryCard({
             {summary.excessLeaves > 0 && (
               <Chip
                 size="small"
-                label={`${summary.excessLeaves} excess leave${summary.excessLeaves > 1 ? "s" : ""} → 1 day deduction each`}
+                label={`${summary.excessLeaves} excess leave${summary.excessLeaves > 1 ? "s" : ""}`}
                 sx={{ bgcolor: `${amber.main}22`, color: amber.main, fontWeight: 600, fontSize: 11 }}
               />
             )}
@@ -156,7 +156,7 @@ export function MonthlySummaryCard({
             {summary.excessLeaves > 0 && (
               <Chip
                 size="small"
-                label={`${summary.excessLeaves} excess leave${summary.excessLeaves > 1 ? "s" : ""} → 1 day deduction each`}
+                label={`${summary.excessLeaves} excess leave${summary.excessLeaves > 1 ? "s" : ""}`}
                 sx={{ bgcolor: `${amber.main}22`, color: amber.main, fontWeight: 600, fontSize: 11 }}
               />
             )}

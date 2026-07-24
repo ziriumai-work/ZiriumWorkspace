@@ -388,6 +388,7 @@ export interface AttendanceRecord {
   flexibilityUsed?: number; // minutes of flexibility used today
   isOvertime: boolean; // true if checked out after office end time
   overtimeMinutes: number; // extra minutes past office end time
+  adminApprovedLeave?: boolean; // true if admin explicitly marked as on_leave (penalty exempt)
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 }

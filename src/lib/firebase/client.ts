@@ -20,6 +20,11 @@ import {
   getStorage,
   type FirebaseStorage,
 } from "firebase/storage";
+import {
+  connectFunctionsEmulator,
+  getFunctions,
+  type Functions,
+} from "firebase/functions";
 
 const useEmulator =
   process.env.NEXT_PUBLIC_FIREBASE_USE_EMULATOR === "true";
@@ -61,6 +66,9 @@ export const db: Firestore = canInit
 export const storage: FirebaseStorage = canInit
   ? getStorage(firebaseApp)
   : (undefined as unknown as FirebaseStorage);
+export const functions: Functions = canInit
+  ? getFunctions(firebaseApp)
+  : (undefined as unknown as Functions);
 
 // Local development against the Firebase emulators (see firebase.json). Set
 // NEXT_PUBLIC_FIREBASE_USE_EMULATOR=true in .env.local to develop without a real
@@ -74,6 +82,7 @@ if (
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
   connectStorageEmulator(storage, "127.0.0.1", 9199);
+  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
   // @ts-expect-error — see above
   globalThis.__FIREBASE_EMULATORS_CONNECTED__ = true;
 }

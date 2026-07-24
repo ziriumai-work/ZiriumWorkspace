@@ -150,14 +150,16 @@ export function ProjectTable({
                       </Typography>
                     </Box>
                   ) : (
-                    <Typography variant="body2" color="text.disabled">
-                      —
+                    <Typography variant="caption" color="text.secondary">
+                      Unassigned
                     </Typography>
                   )}
                 </TableCell>
 
                 <TableCell sx={{ color: "text.secondary" }}>
-                  {formatDueDate(p.dueDate)}
+                  <Typography variant="body2">
+                    {p.dueDate ? formatDueDate(p.dueDate) : "—"}
+                  </Typography>
                 </TableCell>
 
                 <TableCell align="right">
