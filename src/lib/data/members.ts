@@ -1,7 +1,14 @@
 // Data access for company members (used by people pickers, e.g. project
 // assignee) and their public profiles.
 
-import { collection, onSnapshot, doc, getDoc, updateDoc } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  doc,
+  getDoc,
+  updateDoc,
+  setDoc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Member, UserProfile } from "@/lib/data/types";
 
@@ -52,4 +59,11 @@ export async function markWelcomeSeen(uid: string): Promise<void> {
   await updateDoc(doc(db, "members", uid), {
     hasSeenWelcome: true,
   });
+}
+
+export async function updateMemberRole(
+  uid: string,
+  role: "member" | "admin" | "owner",
+): Promise<void> {
+  await setDoc(doc(db, "members", uid), { role }, { merge: true });
 }

@@ -6,6 +6,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -25,6 +26,7 @@ import {
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "@/lib/firebase/client";
 import { subscribeToDevelopers, updateDeveloper } from "@/lib/data/developers";
+import { updateMemberRole } from "@/lib/data/members";
 import type { AppRole, Employee, Member } from "@/lib/data/types";
 
 interface AuthState {
@@ -137,6 +139,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateDeveloper(employee.id, { uid: user.uid }).catch(() => {});
     }
   }, [employee, user]);
+
+  // Automatically sync employee.accessLevel with members.role whenever an admin/owner is logged in!
+  const syncedRolesRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!user || !member || !employees) return;
+    const isPrivileged = member.role === "owner" || member.role === "admin";
+    if (!isPrivileged) return;
+
+    employees.forEach((emp) => {
+      if (!emp.uid) return;
+      const targetRole = emp.accessLevel === "admin" ? "admin" : "member";
+      const cacheKey = `${emp.uid}_${targetRole}`;
+      if (!syncedRolesRef.current.has(cacheKey)) {
+        syncedRolesRef.current.add(cacheKey);
+        updateMemberRole(emp.uid, targetRole).catch(() => {});
+      }
+    });
+  }, [user, member, employees]);
 
   const [accessBlocked, setAccessBlocked] = useState<string | null>(null);
 
