@@ -84,6 +84,7 @@ export interface Project {
   developerIds: string[];
   // Custom roles per developer for this specific project (e.g. { devId: "Project Lead" })
   projectRoles?: Record<string, string>;
+  slackChannelId?: string; // linked Slack channel for automated notifications
   // Notion-style database: customizable columns + rows (see below).
   columns: DbColumn[];
   rows: DbRow[];
@@ -278,6 +279,7 @@ export interface DbColumn {
   id: string;
   name: string;
   type: ColumnType;
+  width?: number;
   options?: SelectOption[]; // for select/status
 }
 

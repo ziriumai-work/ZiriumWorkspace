@@ -21,6 +21,8 @@ import { useAuth } from "@/lib/firebase/auth-context";
 import type { Developer, Project } from "@/lib/data/types";
 import { ProjectTable } from "@/components/projects/ProjectTable";
 import { AiProjectAgent } from "@/components/projects/AiProjectAgent";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase/client";
 
 export default function ProjectsPage() {
   const { user, employee, isAdmin } = useAuth();
@@ -34,6 +36,7 @@ export default function ProjectsPage() {
   const [newTitle, setNewTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"pending" | "completed">("pending");
+  const [slackInfo, setSlackInfo] = useState<{ connected?: boolean; teamName?: string | null }>({});
 
   useEffect(() => {
     const unsubProjects = subscribeToProjects(
@@ -47,11 +50,18 @@ export default function ProjectsPage() {
       },
     );
     const unsubDevs = subscribeToDevelopers(setDevelopers);
+    if (isAdmin) {
+      const getSlack = httpsCallable(functions, "getSlackChannels");
+      getSlack().then(res => {
+        const data = res.data as any;
+        setSlackInfo({ connected: data?.connected, teamName: data?.teamName });
+      }).catch(err => console.error("Slack status check failed:", err));
+    }
     return () => {
       unsubProjects();
       unsubDevs();
     };
-  }, []);
+  }, [isAdmin]);
 
   // Roster lookup for rendering assigned developers in the table/board.
   const devMap = useMemo(
@@ -140,7 +150,13 @@ export default function ProjectsPage() {
               <Button
                 href="https://us-central1-ziriumai-workspace-5c840.cloudfunctions.net/slackAuth"
                 target="_blank"
-                sx={{ bgcolor: "accentSoft", color: "primary.main" }}
+                sx={{
+                  bgcolor: slackInfo.connected ? "success.light" : "accentSoft",
+                  color: slackInfo.connected ? "success.dark" : "primary.main",
+                  border: slackInfo.connected ? "1px solid" : "none",
+                  borderColor: "success.main"
+                }}
+                title={slackInfo.connected ? "Click to reconnect or change workspace" : "Connect Slack Workspace"}
                 startIcon={
                   <svg
                     width="13"
@@ -152,7 +168,7 @@ export default function ProjectsPage() {
                   </svg>
                 }
               >
-                Connect Slack
+                {slackInfo.connected ? `✅ Connected: ${slackInfo.teamName || "Slack"}` : "Connect Slack"}
               </Button>
             </>
           )}

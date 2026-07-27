@@ -270,10 +270,9 @@ export function AiProjectAgent({
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                             display: "flex",
-                            alignItems: "center",
                           }}
                         >
-                          <Typography variant="body2" noWrap title={display}>
+                          <Typography variant="body2" noWrap title={String(display ?? "")}>
                             {display}
                           </Typography>
                         </Box>

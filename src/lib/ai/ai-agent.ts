@@ -206,7 +206,7 @@ export async function generateTableImport(
       newCol.options = options;
       
       const lblMap = new Map<string, string>();
-      options.forEach(o => lblMap.set(o.label, o.id));
+      options.forEach((o: SelectOption) => lblMap.set(o.label, o.id));
       optionMap.set(colId, lblMap);
     } else if (type === "status") {
        newCol.options = [...STATUS_OPTIONS];
@@ -223,7 +223,7 @@ export async function generateTableImport(
     colNameMap.set("Status", statusCol);
   }
 
-  const rows: DbRow[] = rawRows.map((r, i) => {
+  const rows: DbRow[] = rawRows.map((r: Record<string, any>, i: number) => {
     const cells: Record<string, any> = {};
     for (const colName of Object.keys(r)) {
       const col = colNameMap.get(colName);

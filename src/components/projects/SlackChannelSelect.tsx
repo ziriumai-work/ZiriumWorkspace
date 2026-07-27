@@ -31,10 +31,14 @@ export function SlackChannelSelect({ value, onChange }: Props) {
       try {
         const getChannels = httpsCallable(functions, "getSlackChannels");
         const result = await getChannels();
-        const data = result.data as { channels?: Channel[], connected?: boolean };
+        const data = result.data as { channels?: Channel[], connected?: boolean, error?: string, teamName?: string };
         
         if (mounted) {
-          if (data.channels) {
+          if (!data.connected) {
+            setError("Slack not connected");
+          } else if (data.error) {
+            setError(`Slack API Error: ${data.error}`);
+          } else if (data.channels) {
             setChannels(data.channels);
           }
           setLoading(false);
@@ -42,7 +46,7 @@ export function SlackChannelSelect({ value, onChange }: Props) {
       } catch (err: any) {
         if (mounted) {
           console.error("Failed to fetch Slack channels:", err);
-          setError("Failed to load");
+          setError(err.message || "Failed to load");
           setLoading(false);
         }
       }
@@ -58,8 +62,8 @@ export function SlackChannelSelect({ value, onChange }: Props) {
 
   if (error || channels.length === 0) {
     return (
-      <Select size="small" disabled displayEmpty value="" sx={{ minWidth: 120 }}>
-        <MenuItem value="">{error ? error : "No Channels"}</MenuItem>
+      <Select size="small" disabled displayEmpty value="" sx={{ minWidth: 160 }}>
+        <MenuItem value="">{error ? error : "No Channels (Invite bot / check scopes)"}</MenuItem>
       </Select>
     );
   }

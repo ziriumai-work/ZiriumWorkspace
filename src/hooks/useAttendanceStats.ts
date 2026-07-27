@@ -216,7 +216,8 @@ export function useAttendanceStats({
     });
 
     const totalWeeklyHours = weeklyHoursWorked + weeklyCompensatedHours;
-    const baseRequiredHours = employee.officeHours || 0;
+    const defaultWeeklyHours = employee.accessLevel === "intern" ? 30 : 40;
+    const baseRequiredHours = employee.officeHours || defaultWeeklyHours;
     const dailyHours = baseRequiredHours / 5;
     const requiredHours = Math.max(0, baseRequiredHours - (daysOnLeaveThisWeek * dailyHours));
     const remainingHours = Math.max(0, requiredHours - totalWeeklyHours);

@@ -3,7 +3,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { WebClient } from "@slack/web-api";
 
-export const getSlackChannels = onCall(async (request) => {
+export const getSlackChannels = onCall({ cors: true, invoker: "public" }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Must be logged in.");
   }
@@ -11,29 +11,60 @@ export const getSlackChannels = onCall(async (request) => {
   try {
     const doc = await getFirestore().collection("integrations").doc("slack").get();
     if (!doc.exists) {
-      return { channels: [], connected: false };
+      return { channels: [], colleagues: [], connected: false, teamName: null };
     }
     
-    const token = doc.data()?.accessToken;
+    const data = doc.data() || {};
+    const token = data.accessToken;
+    const teamName = data.teamName || null;
     if (!token) {
-      return { channels: [], connected: false };
+      return { channels: [], colleagues: [], connected: false, teamName: null };
     }
 
     const web = new WebClient(token);
-    const result = await web.conversations.list({ types: "public_channel,private_channel", exclude_archived: true, limit: 1000 });
     
-    if (result.ok) {
-      const channels = result.channels?.map(c => ({
-        id: c.id,
-        name: c.name
-      })) || [];
-      return { channels, connected: true };
-    } else {
-      console.error("Slack API error:", result.error);
-      return { channels: [], connected: true, error: result.error };
+    let channels: { id: string; name: string }[] = [];
+    let colleagues: { id: string; name: string; email?: string; avatar?: string }[] = [];
+    let error: string | null = null;
+
+    try {
+      const result = await web.conversations.list({
+        types: "public_channel,private_channel",
+        exclude_archived: true,
+        limit: 1000
+      });
+      if (result.ok && result.channels) {
+        channels = result.channels.map(c => ({
+          id: c.id!,
+          name: c.name!
+        }));
+      } else if (result.error) {
+        error = result.error;
+      }
+    } catch (err: any) {
+      console.error("Slack conversations.list error:", err);
+      error = err.message || "Failed to fetch channels";
     }
+
+    try {
+      const usersRes = await web.users.list({ limit: 1000 });
+      if (usersRes.ok && usersRes.members) {
+        colleagues = usersRes.members
+          .filter(u => !u.is_bot && !u.deleted && u.id !== "USLACKBOT")
+          .map(u => ({
+            id: u.id!,
+            name: u.real_name || u.name || u.profile?.real_name || "Unknown User",
+            email: u.profile?.email || "",
+            avatar: u.profile?.image_24 || ""
+          }));
+      }
+    } catch (err: any) {
+      console.error("Slack users.list error:", err);
+    }
+
+    return { channels, colleagues, connected: true, teamName, error };
   } catch (error: any) {
-    console.error("Error fetching Slack channels:", error);
+    console.error("Error fetching Slack info:", error);
     throw new HttpsError("internal", error.message);
   }
 });

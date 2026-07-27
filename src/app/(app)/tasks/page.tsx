@@ -137,7 +137,7 @@ export default function TasksPage() {
     const total = tasks.length;
     const todo = tasks.filter(t => t.status === "todo").length;
     const inProgress = tasks.filter(t => t.status === "in_progress").length;
-    const review = tasks.filter(t => t.status === "review").length;
+    const review = 0;
     const done = tasks.filter(t => t.status === "done").length;
     const overtime = tasks.filter(t => t.isOvertime).length;
     return { total, todo, inProgress, review, done, overtime };

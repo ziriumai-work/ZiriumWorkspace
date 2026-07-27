@@ -186,25 +186,18 @@ export async function clockIn(
   let isLate = false;
   let lateMinutes = 0;
 
-  if (employee.accessLevel === "intern") {
-    const dailyHours = (employee.officeHours || 30) / 5;
-    const requiredMinutes = dailyHours * 60;
-    
-    const officeEnd = new Date(now);
-    officeEnd.setHours(settings.endHour, settings.endMinute, 0, 0);
-    
-    const remainingMinutes = Math.floor((officeEnd.getTime() - now.getTime()) / 60000);
-    
-    if (remainingMinutes < requiredMinutes) {
-      isLate = true;
-      lateMinutes = requiredMinutes - remainingMinutes;
-    }
-  } else {
-    const officeStart = new Date(now);
-    officeStart.setHours(settings.startHour, settings.startMinute, 0, 0);
-    const diffMs = now.getTime() - officeStart.getTime();
-    lateMinutes = Math.max(0, Math.floor(diffMs / 60000));
-    isLate = isCheckInLate(checkInIso, settings);
+  const defaultWeeklyHours = employee.accessLevel === "intern" ? 30 : 40;
+  const dailyHours = (employee.officeHours || defaultWeeklyHours) / 5;
+  const requiredMinutes = dailyHours * 60;
+  
+  const officeEnd = new Date(now);
+  officeEnd.setHours(settings.endHour, settings.endMinute, 0, 0);
+  
+  const remainingMinutes = Math.max(0, Math.floor((officeEnd.getTime() - now.getTime()) / 60000));
+  
+  if (remainingMinutes < requiredMinutes) {
+    isLate = true;
+    lateMinutes = requiredMinutes - remainingMinutes;
   }
   let status: AttendanceStatus = isLate ? "late" : "present";
   let flexibilityUsed = 0;
@@ -767,7 +760,8 @@ export function computeMonthlySummary(
     };
   } else {
     // Employee penalty logic: deduction days and offset with overtime
-    const overtimeOffsetDays = Math.floor(totalOvertimeMinutes / 480);
+    const dailyMinutes = ((employee?.officeHours || 40) / 5) * 60;
+    const overtimeOffsetDays = Math.floor(totalOvertimeMinutes / dailyMinutes);
     const lateDaysOverThreshold = Math.max(
       0,
       grossLatePenalties - overtimeOffsetDays,

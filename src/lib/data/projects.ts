@@ -38,6 +38,7 @@ function toProject(id: string, data: Record<string, unknown>): Project {
     order: (data.order as number) ?? 0,
     developerIds: (data.developerIds as string[]) ?? [],
     projectRoles: (data.projectRoles as Record<string, string>) ?? {},
+    slackChannelId: (data.slackChannelId as string | undefined) ?? undefined,
     columns: (data.columns as DbColumn[]) ?? [],
     rows: (data.rows as DbRow[]) ?? [],
     tasks: (data.tasks as TaskItem[]) ?? [],
@@ -126,6 +127,7 @@ export async function updateProject(
       | "rows"
       | "tasks"
       | "projectRoles"
+      | "slackChannelId"
       | "financeFiles"
     >
   >,
