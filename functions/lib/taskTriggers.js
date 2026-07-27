@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onTaskStatusChanged = void 0;
+exports.onTaskCompletionSlackAlert = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
 const web_api_1 = require("@slack/web-api");
-exports.onTaskStatusChanged = (0, firestore_1.onDocumentUpdated)("tasks/{taskId}", async (event) => {
+exports.onTaskCompletionSlackAlert = (0, firestore_1.onDocumentUpdated)("tasks/{taskId}", async (event) => {
     var _a, _b, _c;
     const before = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before.data();
     const after = (_b = event.data) === null || _b === void 0 ? void 0 : _b.after.data();

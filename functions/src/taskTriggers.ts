@@ -3,7 +3,7 @@ import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { getFirestore } from "firebase-admin/firestore";
 import { WebClient } from "@slack/web-api";
 
-export const onTaskStatusChanged = onDocumentUpdated(
+export const onTaskCompletionSlackAlert = onDocumentUpdated(
   "tasks/{taskId}",
   async (event) => {
     const before = event.data?.before.data();

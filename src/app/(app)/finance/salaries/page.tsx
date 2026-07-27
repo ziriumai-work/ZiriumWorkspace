@@ -218,7 +218,7 @@ export default function SalariesPage() {
     const isFulfilled = s.status === "fulfilled";
 
     return (
-      <Grid item xs={12} md={6} key={s.id}>
+      <Grid size={{ xs: 12, md: 6 }} key={s.id}>
         <ScrollReveal>
           <Card 
             variant="outlined" 

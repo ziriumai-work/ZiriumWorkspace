@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onTaskStatusChanged = exports.getSlackChannels = exports.slackAuthCallback = exports.slackAuth = void 0;
+exports.onTaskCompletionSlackAlert = exports.getSlackChannels = exports.slackAuthCallback = exports.slackAuth = void 0;
 const admin = __importStar(require("firebase-admin"));
 admin.initializeApp();
 var slackAuth_1 = require("./slackAuth");
@@ -42,5 +42,5 @@ Object.defineProperty(exports, "slackAuthCallback", { enumerable: true, get: fun
 var slackChannels_1 = require("./slackChannels");
 Object.defineProperty(exports, "getSlackChannels", { enumerable: true, get: function () { return slackChannels_1.getSlackChannels; } });
 var taskTriggers_1 = require("./taskTriggers");
-Object.defineProperty(exports, "onTaskStatusChanged", { enumerable: true, get: function () { return taskTriggers_1.onTaskStatusChanged; } });
+Object.defineProperty(exports, "onTaskCompletionSlackAlert", { enumerable: true, get: function () { return taskTriggers_1.onTaskCompletionSlackAlert; } });
 //# sourceMappingURL=index.js.map
