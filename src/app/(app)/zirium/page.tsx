@@ -25,6 +25,7 @@ import {
   DEFAULT_MODEL_ID,
   MODEL_STORAGE_KEY,
   getModel,
+  WORKSPACE_SYSTEM_PROMPT,
 } from "@/lib/ai/ai-models";
 import { streamCompletion, type ChatMessage } from "@/lib/ai/ai-client";
 
@@ -35,10 +36,7 @@ interface ChatMsg {
   reasoning?: string;
 }
 
-const SYSTEM_PROMPT =
-  "You are Zirium AI, the in-house assistant for a company workspace. Be " +
-  "helpful, accurate, and professional. Use clear formatting with short " +
-  "paragraphs or bullet points where it helps.";
+const SYSTEM_PROMPT = WORKSPACE_SYSTEM_PROMPT;
 
 const SUGGESTIONS = [
   "Draft a project kickoff plan for a new feature",
@@ -48,7 +46,13 @@ const SUGGESTIONS = [
 ];
 
 export default function ZiriumPage() {
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [messages, setMessages] = useState<ChatMsg[]>([
+    {
+      id: "welcome-init",
+      role: "assistant",
+      content: "Hello! How can I help you today?",
+    },
+  ]);
   const [input, setInput] = useState("");
   // Restore the last model choice (shared with the quick assistant). Lazy init
   // is safe: this page only mounts client-side, after the auth guard resolves.
@@ -128,13 +132,19 @@ export default function ZiriumPage() {
 
   function newChat() {
     abortRef.current?.abort();
-    setMessages([]);
+    setMessages([
+      {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "Hello! How can I help you today?",
+      },
+    ]);
     setError(null);
     setInput("");
   }
 
   const model = getModel(modelId);
-  const empty = messages.length === 0;
+  const isInitialState = messages.length === 0 || (messages.length === 1 && messages[0].id === "welcome-init");
 
   return (
     <Box sx={{ display: "flex", height: "100%", flexDirection: "column" }}>
@@ -239,106 +249,104 @@ export default function ZiriumPage() {
 
       {/* Messages */}
       <Box ref={scrollRef} sx={{ flex: 1, overflowY: "auto", scrollBehavior: "smooth" }}>
-        {empty ? (
-          <Box
-            sx={{
-              mx: "auto",
-              display: "flex",
-              minHeight: "100%",
-              maxWidth: 760,
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              px: 3,
-              py: 6,
-              textAlign: "center",
-            }}
-          >
+        <Box sx={{ mx: "auto", maxWidth: 760, px: 3, py: 3 }}>
+          {isInitialState && (
             <Box
               sx={{
-                width: 64,
-                height: 64,
-                mb: 3,
-                borderRadius: "50%",
-                boxShadow: "0 8px 32px -8px rgba(0,0,0,0.15)",
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "linear-gradient(135deg, var(--mui-palette-primary-main), var(--mui-palette-secondary-main))",
-                p: "2px", // subtle gradient border effect
+                py: 4,
+                mb: 2,
+                textAlign: "center",
               }}
             >
-              <Box sx={{ width: "100%", height: "100%", bgcolor: "background.paper", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                <img src="/logo.png" alt="Zirium AI" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  mb: 3,
+                  borderRadius: "50%",
+                  boxShadow: "0 8px 32px -8px rgba(0,0,0,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "linear-gradient(135deg, var(--mui-palette-primary-main), var(--mui-palette-secondary-main))",
+                  p: "2px", // subtle gradient border effect
+                }}
+              >
+                <Box sx={{ width: "100%", height: "100%", bgcolor: "background.paper", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  <img src="/logo.png" alt="Zirium AI" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </Box>
+              </Box>
+              <Typography 
+                variant="h3" 
+                sx={{ 
+                  fontSize: { xs: "1.75rem", sm: "2.25rem" }, 
+                  fontWeight: 800, 
+                  letterSpacing: "-0.02em",
+                  background: "linear-gradient(90deg, var(--mui-palette-text-primary) 0%, var(--mui-palette-text-secondary) 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent"
+                }}
+              >
+                How can I help today?
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mt: 1.5, mb: 4, maxWidth: 400, mx: "auto" }}>
+                Ask anything, or start with one of the suggestions below to kick off your project.
+              </Typography>
+              <Box
+                sx={{
+                  display: "grid",
+                  width: "100%",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                  gap: 2,
+                  mb: 4,
+                }}
+              >
+                {SUGGESTIONS.map((s) => (
+                  <Paper
+                    key={s}
+                    component="button"
+                    variant="outlined"
+                    onClick={() => send(s)}
+                    sx={{
+                      p: 2,
+                      textAlign: "left",
+                      borderRadius: 4,
+                      cursor: "pointer",
+                      color: "text.secondary",
+                      bgcolor: "surface",
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      boxShadow: "0 2px 8px -4px rgba(0,0,0,0.05)",
+                      "&:hover": {
+                        borderColor: "primary.main",
+                        bgcolor: "background.paper",
+                        color: "text.primary",
+                        transform: "translateY(-2px)",
+                        boxShadow: "0 8px 16px -8px rgba(0,0,0,0.1)",
+                      },
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: 1.4 }}>{s}</Typography>
+                  </Paper>
+                ))}
               </Box>
             </Box>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                fontSize: { xs: "1.75rem", sm: "2.25rem" }, 
-                fontWeight: 800, 
-                letterSpacing: "-0.02em",
-                background: "linear-gradient(90deg, var(--mui-palette-text-primary) 0%, var(--mui-palette-text-secondary) 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent"
-              }}
-            >
-              How can I help today?
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mt: 1.5, mb: 5, maxWidth: 400, mx: "auto" }}>
-              Ask anything, or start with one of the suggestions below to kick off your project.
-            </Typography>
-            <Box
-              sx={{
-                display: "grid",
-                width: "100%",
-                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-                gap: 2,
-              }}
-            >
-              {SUGGESTIONS.map((s) => (
-                <Paper
-                  key={s}
-                  component="button"
-                  variant="outlined"
-                  onClick={() => send(s)}
-                  sx={{
-                    p: 2,
-                    textAlign: "left",
-                    borderRadius: 4,
-                    cursor: "pointer",
-                    color: "text.secondary",
-                    bgcolor: "surface",
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    border: "1px solid",
-                    borderColor: "divider",
-                    boxShadow: "0 2px 8px -4px rgba(0,0,0,0.05)",
-                    "&:hover": {
-                      borderColor: "primary.main",
-                      bgcolor: "background.paper",
-                      color: "text.primary",
-                      transform: "translateY(-2px)",
-                      boxShadow: "0 8px 16px -8px rgba(0,0,0,0.1)",
-                    },
-                  }}
-                >
-                  <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: 1.4 }}>{s}</Typography>
-                </Paper>
-              ))}
-            </Box>
-          </Box>
-        ) : (
-          <Box sx={{ mx: "auto", maxWidth: 760, px: 3, py: 3 }}>
-            {messages.map((m) => (
-              <Message key={m.id} msg={m} streaming={streaming} />
-            ))}
-            {error && (
-              <Alert severity="error" sx={{ mt: 1 }}>
-                {error}
-              </Alert>
-            )}
-          </Box>
-        )}
+          )}
+
+          {messages.map((m) => (
+            <Message key={m.id} msg={m} streaming={streaming} />
+          ))}
+          {error && (
+            <Alert severity="error" sx={{ mt: 1 }}>
+              {error}
+            </Alert>
+          )}
+        </Box>
       </Box>
 
       {/* Composer */}

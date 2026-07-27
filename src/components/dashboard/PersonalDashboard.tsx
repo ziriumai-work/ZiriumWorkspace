@@ -68,10 +68,11 @@ export function PersonalDashboard() {
 
   const myProjects = useMemo(
     () =>
-      employee
-        ? projects.filter((p) => p.developerIds.includes(employee.id))
-        : [],
-    [projects, employee],
+      projects.filter((p) => 
+        (user && (p.developerIds.includes(user.uid) || p.assigneeUid === user.uid)) ||
+        (employee && (p.developerIds.includes(employee.id) || p.assigneeUid === employee.id))
+      ),
+    [projects, user, employee],
   );
 
   const team = useMemo(

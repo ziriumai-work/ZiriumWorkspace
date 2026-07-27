@@ -28,9 +28,10 @@ interface Colleague {
 interface Props {
   value?: string;
   onChange: (channelId: string) => void;
+  disabled?: boolean;
 }
 
-export function SlackChannelSelect({ value, onChange }: Props) {
+export function SlackChannelSelect({ value, onChange, disabled = false }: Props) {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [colleagues, setColleagues] = useState<Colleague[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,6 +101,7 @@ export function SlackChannelSelect({ value, onChange }: Props) {
       <FormControl size="small" sx={{ minWidth: 180 }}>
         <Select
           value={value || ""}
+          disabled={disabled}
           displayEmpty
           onChange={(e) => onChange(e.target.value as string)}
           sx={{
@@ -144,28 +146,30 @@ export function SlackChannelSelect({ value, onChange }: Props) {
         </Select>
       </FormControl>
 
-      <Tooltip title="Refresh Slack channels & people in real-time">
-        <IconButton
-          size="small"
-          onClick={() => fetchChannels(true)}
-          disabled={refreshing}
-          sx={{
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: 1.5,
-            p: 0.6,
-            "&:hover": { bgcolor: "action.hover", borderColor: "primary.main" },
-          }}
-        >
-          {refreshing ? (
-            <CircularProgress size={14} />
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-            </svg>
-          )}
-        </IconButton>
-      </Tooltip>
+      {!disabled && (
+        <Tooltip title="Refresh Slack channels & people in real-time">
+          <IconButton
+            size="small"
+            onClick={() => fetchChannels(true)}
+            disabled={refreshing}
+            sx={{
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 1.5,
+              p: 0.6,
+              "&:hover": { bgcolor: "action.hover", borderColor: "primary.main" },
+            }}
+          >
+            {refreshing ? (
+              <CircularProgress size={14} />
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              </svg>
+            )}
+          </IconButton>
+        </Tooltip>
+      )}
     </Box>
   );
 }

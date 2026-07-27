@@ -87,8 +87,13 @@ export default function ProjectsPage() {
   // Admins see all projects; employees see only the ones they're assigned to.
   const visibleProjects = useMemo(() => {
     if (!user) return [];
-    return projects.filter(p => isAdmin || p.developerIds.includes(user.uid) || p.assigneeUid === user.uid);
-  }, [projects, user, isAdmin]);
+    return projects.filter(p => 
+      isAdmin || 
+      p.developerIds.includes(user.uid) || 
+      p.assigneeUid === user.uid || 
+      (employee && (p.developerIds.includes(employee.id) || p.assigneeUid === employee.id))
+    );
+  }, [projects, user, isAdmin, employee]);
 
   const displayedProjects = useMemo(() => {
     if (tab === "pending") {

@@ -67,7 +67,7 @@ exports.onTaskCompletionSlackAlert = (0, firestore_1.onDocumentUpdated)("tasks/{
     }
 });
 exports.onProjectTableUpdateSlackAlert = (0, firestore_1.onDocumentUpdated)("projects/{projectId}", async (event) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     const before = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before.data();
     const after = (_b = event.data) === null || _b === void 0 ? void 0 : _b.after.data();
     if (!before || !after)
@@ -111,23 +111,10 @@ exports.onProjectTableUpdateSlackAlert = (0, firestore_1.onDocumentUpdated)("pro
                 const projectUrl = `${baseUrl}/projects/${event.params.projectId}`;
                 const updaterName = ((_f = after.lastUpdatedBy) === null || _f === void 0 ? void 0 : _f.name) || "A team member";
                 const updaterAvatar = (_g = after.lastUpdatedBy) === null || _g === void 0 ? void 0 : _g.avatar;
-                const assignCol = columns.find((c) => {
-                    var _a, _b, _c, _d;
-                    return ((_a = c.name) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes("assign")) ||
-                        ((_b = c.name) === null || _b === void 0 ? void 0 : _b.toLowerCase().includes("dev")) ||
-                        ((_c = c.name) === null || _c === void 0 ? void 0 : _c.toLowerCase().includes("owner")) ||
-                        ((_d = c.name) === null || _d === void 0 ? void 0 : _d.toLowerCase().includes("person"));
-                });
-                let assignedTo = "Unassigned";
-                if (assignCol && ((_h = afterRow.cells) === null || _h === void 0 ? void 0 : _h[assignCol.id])) {
-                    const val = afterRow.cells[assignCol.id];
-                    const opt = (_j = assignCol.options) === null || _j === void 0 ? void 0 : _j.find((o) => o.id === val || o.value === val || o.label === val);
-                    assignedTo = opt ? opt.label : String(val);
-                }
                 const slackDoc = await (0, firestore_2.getFirestore)().collection("integrations").doc("slack").get();
                 if (!slackDoc.exists)
                     return;
-                const token = (_k = slackDoc.data()) === null || _k === void 0 ? void 0 : _k.accessToken;
+                const token = (_h = slackDoc.data()) === null || _h === void 0 ? void 0 : _h.accessToken;
                 if (!token)
                     return;
                 const web = new web_api_1.WebClient(token);
@@ -140,7 +127,7 @@ exports.onProjectTableUpdateSlackAlert = (0, firestore_1.onDocumentUpdated)("pro
                                 type: "section",
                                 text: {
                                     type: "mrkdwn",
-                                    text: `🔄 *Notion Table Status Changed*\n*Project:* <${projectUrl}|${projectName}>\n*Task:* ${taskTitle}\n*Status:* ~${oldLabel}~ ➔ *\`${newLabel}\`*\n*Assigned to:* ${assignedTo}`
+                                    text: `🔄 *Notion Table Status Changed*\n*Project:* <${projectUrl}|${projectName}>\n*Task:* ${taskTitle}\n*Status:* ~${oldLabel}~ ➔ *\`${newLabel}\`*`
                                 }
                             },
                             {

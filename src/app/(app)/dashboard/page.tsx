@@ -55,9 +55,13 @@ export default function DashboardPage() {
   // Admins see all projects; employees only their assigned ones.
   const projects = useMemo(() => {
     if (isAdmin) return allProjects;
-    if (!employee) return [];
-    return allProjects.filter((p) => p.developerIds.includes(employee.id));
-  }, [allProjects, isAdmin, employee]);
+    if (!user) return [];
+    return allProjects.filter((p) => 
+      p.developerIds.includes(user.uid) || 
+      p.assigneeUid === user.uid || 
+      (employee && (p.developerIds.includes(employee.id) || p.assigneeUid === employee.id))
+    );
+  }, [allProjects, isAdmin, user, employee]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};

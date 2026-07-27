@@ -33,6 +33,7 @@ import {
   DEFAULT_MODEL_ID,
   MODEL_STORAGE_KEY,
   getModel,
+  WORKSPACE_SYSTEM_PROMPT,
 } from "@/lib/ai/ai-models";
 import { streamCompletion } from "@/lib/ai/ai-client";
 import { useAuth } from "@/lib/firebase/auth-context";
@@ -85,11 +86,12 @@ export function AiProvider({ children }: { children: ReactNode }) {
       setStreaming(true);
       const controller = new AbortController();
       abortRef.current = controller;
+      const sys = system || WORKSPACE_SYSTEM_PROMPT;
       try {
         await streamCompletion(
           modelId,
           [
-            ...(system ? [{ role: "system" as const, content: system }] : []),
+            ...(sys ? [{ role: "system" as const, content: sys }] : []),
             { role: "user" as const, content: trimmed },
           ],
           {

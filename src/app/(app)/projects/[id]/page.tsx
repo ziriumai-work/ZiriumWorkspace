@@ -51,7 +51,7 @@ export default function ProjectDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const { openAi } = useAi();
-  const { isAdmin, employee } = useAuth();
+  const { user, isAdmin, employee } = useAuth();
 
   const [project, setProject] = useState<Project | null>(null);
   const [developers, setDevelopers] = useState<Developer[]>([]);
@@ -122,7 +122,11 @@ export default function ProjectDetailPage({
   }
 
   // Access guard: employees may only open projects they're assigned to.
-  if (!isAdmin && (!employee || !project.developerIds.includes(employee.id))) {
+  const hasAccess = isAdmin ||
+    (user && (project.developerIds.includes(user.uid) || project.assigneeUid === user.uid)) ||
+    (employee && (project.developerIds.includes(employee.id) || project.assigneeUid === employee.id));
+
+  if (!hasAccess) {
     return (
       <Box sx={{ px: 4, py: 5 }}>
         <Typography variant="body2" color="text.secondary">
@@ -294,14 +298,13 @@ export default function ProjectDetailPage({
           />
         </PropRow>
 
-        {isAdmin && (
-          <PropRow label="Slack Channel">
-            <SlackChannelSelect
-              value={project.slackChannelId}
-              onChange={(slackChannelId) => updateProject(id, { slackChannelId })}
-            />
-          </PropRow>
-        )}
+        <PropRow label="Slack Channel">
+          <SlackChannelSelect
+            value={project.slackChannelId}
+            onChange={(slackChannelId) => updateProject(id, { slackChannelId })}
+            disabled={!isAdmin}
+          />
+        </PropRow>
 
         <PropRow label="Due date">
           {!isAdmin ? (

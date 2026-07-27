@@ -123,19 +123,6 @@ export const onProjectTableUpdateSlackAlert = onDocumentUpdated(
           const updaterName = after.lastUpdatedBy?.name || "A team member";
           const updaterAvatar = after.lastUpdatedBy?.avatar;
 
-          const assignCol = columns.find((c: any) => 
-            c.name?.toLowerCase().includes("assign") || 
-            c.name?.toLowerCase().includes("dev") || 
-            c.name?.toLowerCase().includes("owner") || 
-            c.name?.toLowerCase().includes("person")
-          );
-          let assignedTo = "Unassigned";
-          if (assignCol && afterRow.cells?.[assignCol.id]) {
-            const val = afterRow.cells[assignCol.id];
-            const opt = assignCol.options?.find((o: any) => o.id === val || o.value === val || o.label === val);
-            assignedTo = opt ? opt.label : String(val);
-          }
-
           const slackDoc = await getFirestore().collection("integrations").doc("slack").get();
           if (!slackDoc.exists) return;
           const token = slackDoc.data()?.accessToken;
@@ -151,7 +138,7 @@ export const onProjectTableUpdateSlackAlert = onDocumentUpdated(
                   type: "section",
                   text: {
                     type: "mrkdwn",
-                    text: `🔄 *Notion Table Status Changed*\n*Project:* <${projectUrl}|${projectName}>\n*Task:* ${taskTitle}\n*Status:* ~${oldLabel}~ ➔ *\`${newLabel}\`*\n*Assigned to:* ${assignedTo}`
+                    text: `🔄 *Notion Table Status Changed*\n*Project:* <${projectUrl}|${projectName}>\n*Task:* ${taskTitle}\n*Status:* ~${oldLabel}~ ➔ *\`${newLabel}\`*`
                   }
                 },
                 {
