@@ -1,6 +1,4 @@
-// Data access for EMPLOYEES (Firestore collection "developers" — name kept for
-// backwards-compat). Client-side; access is gated by firestore.rules (members).
-// Admin-only management is enforced in the UI (see useAuth().isAdmin).
+// Data access for EMPLOYEES (Firestore collection "developers").
 
 import {
   addDoc,

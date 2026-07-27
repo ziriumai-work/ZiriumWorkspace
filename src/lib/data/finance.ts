@@ -1,14 +1,4 @@
 // Firestore data layer for the admin-only Finance section.
-//
-// Collections:
-//   financeProjects/{id}  — commercial projects with worth / received money.
-//   invoices/{id}         — generated invoices (items, currency, totals).
-//   allotments/{id}       — monthly money-allotment entries (where money goes).
-//   monthlyExpenses/{id}  — monthly sheet expense entries (salaries, utilities…).
-//
-// Everything is real-time: every section subscribes with onSnapshot, so a
-// change in one section (e.g. money received on a project) instantly updates
-// the dashboard and the monthly sheet's available balance.
 
 import {
   addDoc,

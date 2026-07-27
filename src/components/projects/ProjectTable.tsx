@@ -105,6 +105,7 @@ export function ProjectTable({
                     value={p.status}
                     options={PROJECT_STATUSES}
                     color={STATUS_META[p.status].color}
+                    disabled={!isAdmin}
                     onChange={(status: ProjectStatus) =>
                       updateProject(p.id, { status })
                     }
@@ -116,6 +117,7 @@ export function ProjectTable({
                     value={p.priority}
                     options={PROJECT_PRIORITIES}
                     color={PRIORITY_META[p.priority].color}
+                    disabled={!isAdmin}
                     onChange={(priority: ProjectPriority) =>
                       updateProject(p.id, { priority })
                     }
@@ -164,33 +166,35 @@ export function ProjectTable({
 
                 <TableCell align="right">
                   {isAdmin && (
-                    <Badge badgeContent={p.financeFiles?.length || 0} color="primary" sx={{ mr: 2 }}>
+                    <>
+                      <Badge badgeContent={p.financeFiles?.length || 0} color="primary" sx={{ mr: 2 }}>
+                        <Button
+                          size="small"
+                          color="inherit"
+                          onClick={() => setDocsProject(p)}
+                          startIcon={<AttachFileIcon sx={{ fontSize: 16 }} />}
+                          sx={{ fontSize: 12, fontWeight: 500, color: "text.secondary" }}
+                        >
+                          Docs
+                        </Button>
+                      </Badge>
                       <Button
+                        className="row-actions"
                         size="small"
                         color="inherit"
-                        onClick={() => setDocsProject(p)}
-                        startIcon={<AttachFileIcon sx={{ fontSize: 16 }} />}
-                        sx={{ fontSize: 12, fontWeight: 500, color: "text.secondary" }}
+                        onClick={() => setProjectToDelete(p)}
+                        sx={{
+                          fontSize: 12,
+                          fontWeight: 400,
+                          color: "text.secondary",
+                          transition: "opacity 0.15s",
+                          "&:hover": { color: "error.main" },
+                        }}
                       >
-                        Docs
+                        Delete
                       </Button>
-                    </Badge>
+                    </>
                   )}
-                  <Button
-                    className="row-actions"
-                    size="small"
-                    color="inherit"
-                    onClick={() => setProjectToDelete(p)}
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 400,
-                      color: "text.secondary",
-                      transition: "opacity 0.15s",
-                      "&:hover": { color: "error.main" },
-                    }}
-                  >
-                    Delete
-                  </Button>
                 </TableCell>
               </TableRow>
             );

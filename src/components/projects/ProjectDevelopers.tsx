@@ -1,9 +1,6 @@
 "use client";
 
-// Project-level developer assignment. Assign one developer to the whole project
-// to start; add more or remove someone if the team changes (e.g. a developer
-// leaves mid-project and is replaced). The first in the list is the lead.
-// People come from the shared roster (Team page).
+// Project-level developer assignment component.
 
 import { useState } from "react";
 import Link from "next/link";

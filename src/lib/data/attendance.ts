@@ -1,6 +1,4 @@
 // Firestore data-layer for attendance records + office settings.
-// Collection: attendance/{uid}_{date} — one document per employee per day.
-// Collection: settings/office — global office configuration.
 
 import {
   collection,

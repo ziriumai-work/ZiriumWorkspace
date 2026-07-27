@@ -1,8 +1,6 @@
 rules_version = '2';
 
-// Storage rules — hardened July 2026.
-// Principle: least-privilege per bucket path. Finance/salary files are
-// admin-only; personal paths are scoped to the owning user.
+// Storage rules — hardened July 2026. Least-privilege per bucket path.
 service firebase.storage {
   match /b/{bucket}/o {
 

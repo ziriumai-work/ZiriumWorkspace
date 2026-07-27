@@ -1,7 +1,4 @@
 // Data access for the Projects database (Firestore "projects" collection).
-//
-// All functions run client-side (Firebase Web SDK). Security is enforced by
-// firestore.rules — these helpers assume the caller is an authenticated member.
 
 import {
   addDoc,

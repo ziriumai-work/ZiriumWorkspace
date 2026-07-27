@@ -1,6 +1,4 @@
 // Data access for daily tasks (Firestore "tasks" collection).
-// Admins assign tasks to employees; employees update status + report.
-// Access is gated by firestore.rules; admin-only actions are gated in the UI.
 
 import {
   collection,

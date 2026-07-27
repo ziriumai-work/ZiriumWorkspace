@@ -1,7 +1,4 @@
 // Firebase client SDK initialization.
-// This module is imported only by Client Components, so it runs in the browser.
-// The config values are public (see .env.local.example) — security comes from
-// Firestore rules + Auth, not from hiding these.
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import {

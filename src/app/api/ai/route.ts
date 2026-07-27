@@ -28,9 +28,32 @@ export async function POST(request: Request) {
     );
   }
 
+  let validToken = false;
   try {
     await getAdminAuth().verifyIdToken(idToken);
+    validToken = true;
   } catch {
+    // Fallback for Vercel/serverless when Service Account key is restricted by IAM policy:
+    // Verify token directly against Google's Auth REST API using your Firebase public API key.
+    const fbApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    if (fbApiKey) {
+      try {
+        const res = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${fbApiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken }),
+          },
+        );
+        validToken = res.ok;
+      } catch {
+        validToken = false;
+      }
+    }
+  }
+
+  if (!validToken) {
     return Response.json(
       { error: "Invalid or expired authentication token." },
       { status: 401 },
