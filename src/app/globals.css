@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+/* Values mirror src/lib/theme/colors.js (the single source of truth). */
+:root {
+  --background: #ffffff;
+  --foreground: #15191c;
+  --muted: #6e7b84;
+  --border: #e2e7ea;
+  --card: #ffffff;
+  --surface: #f7f9fa;
+  /* Brand accent — Zirium sky blue, used for primary actions and AI features. */
+  --accent: #0d93c7;
+  --accent-foreground: #ffffff;
+  --accent-soft: #eaf9fe;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0c0f11;
+    --foreground: #eff2f4;
+    --muted: #9da9b0;
+    --border: #262e33;
+    --card: #111517;
+    --surface: #15191c;
+    --accent: #3ec8f4;
+    --accent-foreground: #0c0f11;
+    --accent-soft: #0e2a38;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* Use the loaded Geist variable font with sensible system fallbacks. */
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Quiet, professional scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 40%, transparent) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  transition: background 0.3s ease;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* Subtle entrance for overlays/panels. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.15s ease-out;
+}
+.animate-pop-in {
+  animation: pop-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes docket-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(13, 147, 199, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(13, 147, 199, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(13, 147, 199, 0);
+  }
+}
+
+.animate-docket-slide {
+  animation: docket-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Hide number input spinners globally */
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}

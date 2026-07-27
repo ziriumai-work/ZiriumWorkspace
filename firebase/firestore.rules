@@ -1,0 +1,215 @@
+rules_version = '2';
+
+// Enterprise security rules — hardened July 2026.
+// Principle: deny by default. Every collection must be explicitly allowed.
+// Role enforcement here is the REAL gate (the UI is only a convenience).
+//
+// Bootstrapping the first admin: the first user who signs in self-joins as a
+// plain 'member'. Promote them to 'owner' once, by hand, in the Firebase
+// console (members/{uid}.role = "owner"). After that, owners/admins manage
+// roles from the app. This avoids anyone self-assigning elevated access.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function memberDoc(uid) {
+      return get(/databases/$(database)/documents/members/$(uid)).data;
+    }
+
+    function isMember() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid));
+    }
+
+    function myRole() {
+      return memberDoc(request.auth.uid).role;
+    }
+
+    function isAdmin() {
+      return isMember() && myRole() in ['owner', 'admin'];
+    }
+
+    // User profiles (display name, photo, email).
+    match /users/{uid} {
+      allow read: if isMember();
+      allow create, update: if isSignedIn() && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // Company membership + role. This is the heart of permissions.
+    match /members/{uid} {
+      // You can always read your OWN membership (even before it exists, so the
+      // app can detect first sign-in). Members can read everyone's membership.
+      allow read: if isSignedIn() && (request.auth.uid == uid || isMember());
+
+      // Self-join is allowed only as a plain 'member' — never as owner/admin.
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == 'member';
+
+      // Only owners/admins can change roles or remove members. Members can only update hasSeenWelcome.
+      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hasSeenWelcome']));
+      allow delete: if isAdmin();
+    }
+
+    // Company Documents (guidelines, NDAs, etc) — admin-only writes.
+    match /documents/{docId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    // Teams inside the company.
+    match /teams/{teamId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    // -----------------------------------------------------------------------
+    // Projects — the Phase 1 tracker.
+    //
+    // Read: any member.
+    // Create: any member (must stamp createdBy).
+    // Update: admins can update any project; assigned developers can update
+    //         only the projects they're listed in (developerIds).
+    // Delete: admin only.
+    // -----------------------------------------------------------------------
+    match /projects/{projectId} {
+      allow read: if isMember();
+
+      // On create, the caller must stamp themselves as the creator.
+      allow create: if isMember()
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow update: if isAdmin()
+        || (isMember() && request.auth.uid in resource.data.developerIds);
+
+      allow delete: if isAdmin();
+    }
+
+    // -----------------------------------------------------------------------
+    // Developers roster — people you can assign tasks to.
+    // Only admins can add, edit, or remove employees from the roster.
+    // -----------------------------------------------------------------------
+    match /developers/{devId} {
+      allow read: if isMember();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // -----------------------------------------------------------------------
+    // Daily tasks assigned to employees.
+    //
+    // Read: any member (so dashboards/reports work).
+    // Create/Delete: admin only (admins assign and remove tasks).
+    // Update: admin can update any task; the assigned employee can update
+    //         only their own tasks (for submitting reports/status).
+    // -----------------------------------------------------------------------
+    match /tasks/{taskId} {
+      allow read: if isMember();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isMember() && resource.data.assigneeId == request.auth.uid);
+    }
+
+    // -----------------------------------------------------------------------
+    // Global settings (office hours, attendance policy, etc.)
+    // Only admins can change settings; all members can read them.
+    // -----------------------------------------------------------------------
+    match /settings/{settingId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    // -----------------------------------------------------------------------
+    // Attendance records — attendance/{uid}_{date}
+    //
+    // Access control:
+    //  - Admin (owner/admin): read + write ALL records.
+    //  - Employee/Intern: read + write only their OWN records.
+    //
+    // The doc ID format is "{uid}_{yyyy-mm-dd}", and every document contains a
+    // `uid` field that must match the signing-in user (unless admin).
+    // -----------------------------------------------------------------------
+    match /attendance/{recordId} {
+      // Read: admin can read everything; others only their own.
+      allow read: if isAdmin()
+        || (isMember() && (resource == null || resource.data.uid == request.auth.uid));
+
+      // Create: admin can create for anyone; others only for themselves.
+      allow create: if isAdmin()
+        || (isMember() && request.resource.data.uid == request.auth.uid);
+
+      // Update: admin can update any record; others only their own.
+      allow update: if isAdmin()
+        || (isMember() && resource.data.uid == request.auth.uid
+            && request.resource.data.uid == request.auth.uid);
+
+      // Delete: admin only.
+      allow delete: if isAdmin();
+    }
+
+    // -----------------------------------------------------------------------
+    // Finance (admin-only): commercial projects, invoices, money allotments,
+    // and the monthly expense sheet. Sensitive data — no member-level access.
+    // Requires members/{uid}.role to be 'owner' or 'admin'.
+    // -----------------------------------------------------------------------
+    match /financeProjects/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /invoices/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /allotments/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // Monthly Expenses — employees can create (salary fulfillment flow),
+    // but only admins can modify or delete existing records.
+    match /monthlyExpenses/{id} {
+      allow read: if isAdmin();
+      allow create: if isMember();
+      allow update, delete: if isAdmin();
+    }
+
+    // -----------------------------------------------------------------------
+    // Salaries — ADMIN ONLY. Previously open to the internet (if true).
+    // Now locked to owner/admin roles.
+    // -----------------------------------------------------------------------
+    match /salaries/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // Sick Leave Requests
+    match /leaveRequests/{id} {
+      allow read: if isAdmin() || (isMember() && resource.data.uid == request.auth.uid);
+      allow create: if isMember() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Announcements
+    match /announcements/{id} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    // Admin Logs — append-only for members; read by admins only.
+    match /admin_logs/{id} {
+      allow read: if isAdmin();
+      allow create: if isMember();
+      allow update, delete: if false;
+    }
+
+    // Integrations (Slack tokens, etc.) — server-only via Cloud Functions.
+    // Block all client-side access.
+    match /integrations/{id} {
+      allow read, write: if false;
+    }
+
+    // Everything else is locked until the phase that introduces it defines
+    // explicit rules.
+  }
+}

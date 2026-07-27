@@ -1,0 +1,66 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.slackAuthCallback = exports.slackAuth = void 0;
+const https_1 = require("firebase-functions/v2/https");
+const firestore_1 = require("firebase-admin/firestore");
+const web_api_1 = require("@slack/web-api");
+// Initialize Slack App OAuth Flow
+exports.slackAuth = (0, https_1.onRequest)((req, res) => {
+    const clientId = process.env.SLACK_CLIENT_ID;
+    const redirectUri = process.env.SLACK_REDIRECT_URI;
+    if (!clientId || !redirectUri) {
+        res.status(500).send("Slack credentials not configured.");
+        return;
+    }
+    // Redirect to Slack's OAuth v2 authorize page
+    const scopes = ["chat:write", "channels:read", "groups:read", "im:read", "mpim:read", "users:read", "users:read.email", "chat:write.public"];
+    const authUrl = `https://slack.com/oauth/v2/authorize?client_id=${clientId}&scope=${scopes.join(",")}&redirect_uri=${redirectUri}`;
+    res.redirect(authUrl);
+});
+exports.slackAuthCallback = (0, https_1.onRequest)(async (req, res) => {
+    var _a, _b;
+    const code = req.query.code;
+    const error = req.query.error;
+    if (error) {
+        res.status(400).send(`OAuth Error: ${error}`);
+        return;
+    }
+    if (!code) {
+        res.status(400).send("No code provided.");
+        return;
+    }
+    try {
+        const web = new web_api_1.WebClient();
+        const result = await web.oauth.v2.access({
+            client_id: process.env.SLACK_CLIENT_ID,
+            client_secret: process.env.SLACK_CLIENT_SECRET,
+            code,
+            redirect_uri: process.env.SLACK_REDIRECT_URI
+        });
+        if (result.ok) {
+            // Store the access token in Firestore
+            await (0, firestore_1.getFirestore)().collection("integrations").doc("slack").set({
+                accessToken: result.access_token,
+                teamId: (_a = result.team) === null || _a === void 0 ? void 0 : _a.id,
+                teamName: (_b = result.team) === null || _b === void 0 ? void 0 : _b.name,
+                connectedAt: firestore_1.FieldValue.serverTimestamp(),
+            });
+            res.send(`
+        <html>
+          <body>
+            <h1>Slack Connected Successfully!</h1>
+            <p>You can close this tab and return to the dashboard.</p>
+            <script>setTimeout(() => window.close(), 3000);</script>
+          </body>
+        </html>
+      `);
+        }
+        else {
+            res.status(400).send(`Failed to connect: ${result.error}`);
+        }
+    }
+    catch (err) {
+        res.status(500).send(`Error: ${err.message}`);
+    }
+});
+//# sourceMappingURL=slackAuth.js.map
