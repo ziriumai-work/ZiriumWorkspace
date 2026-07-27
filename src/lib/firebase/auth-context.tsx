@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     employees.forEach((emp) => {
       if (!emp.uid) return;
-      const targetRole = emp.accessLevel === "admin" ? "admin" : "member";
+      const targetRole = emp.accessLevel === "admin" ? "owner" : "member";
       const cacheKey = `${emp.uid}_${targetRole}`;
       if (!syncedRolesRef.current.has(cacheKey)) {
         syncedRolesRef.current.add(cacheKey);

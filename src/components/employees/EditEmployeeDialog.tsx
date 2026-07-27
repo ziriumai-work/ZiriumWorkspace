@@ -54,7 +54,7 @@ export function EditEmployeeDialog({
 
       // Sync Admin status with the strict Firebase rules database
       if (editForm.uid && patch.accessLevel) {
-        const newRole = patch.accessLevel === "admin" ? "admin" : "member";
+        const newRole = patch.accessLevel === "admin" ? "owner" : "member";
         const { doc, updateDoc } = await import("firebase/firestore");
         const { db } = await import("@/lib/firebase/client");
         await updateDoc(doc(db, "members", editForm.uid), { role: newRole }).catch(() => {});
