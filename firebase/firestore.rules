@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Phase 0 baseline security rules.
+// Enterprise security rules — hardened July 2026.
 // Principle: deny by default. Every collection must be explicitly allowed.
 // Role enforcement here is the REAL gate (the UI is only a convenience).
 //
@@ -56,10 +56,10 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Company Documents (guidelines, NDAs, etc)
+    // Company Documents (guidelines, NDAs, etc) — admin-only writes.
     match /documents/{docId} {
       allow read: if isMember();
-      allow write: if isMember();
+      allow write: if isAdmin();
     }
 
     // Teams inside the company.
@@ -68,8 +68,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Projects (the Phase 1 tracker). Any member can read and create projects
-    // and edit/delete them.
+    // -----------------------------------------------------------------------
+    // Projects — the Phase 1 tracker.
+    //
+    // Read: any member.
+    // Create: any member (must stamp createdBy).
+    // Update: admins can update any project; assigned developers can update
+    //         only the projects they're listed in (developerIds).
+    // Delete: admin only.
+    // -----------------------------------------------------------------------
     match /projects/{projectId} {
       allow read: if isMember();
 
@@ -77,19 +84,34 @@ service cloud.firestore {
       allow create: if isMember()
         && request.resource.data.createdBy == request.auth.uid;
 
-      allow update, delete: if isMember();
+      allow update: if isAdmin()
+        || (isMember() && request.auth.uid in resource.data.developerIds);
+
+      allow delete: if isAdmin();
     }
 
+    // -----------------------------------------------------------------------
     // Developers roster — people you can assign tasks to.
+    // Only admins can add, edit, or remove employees from the roster.
+    // -----------------------------------------------------------------------
     match /developers/{devId} {
       allow read: if isMember();
-      allow create, update, delete: if isMember();
+      allow create, update, delete: if isAdmin();
     }
 
+    // -----------------------------------------------------------------------
     // Daily tasks assigned to employees.
+    //
+    // Read: any member (so dashboards/reports work).
+    // Create/Delete: admin only (admins assign and remove tasks).
+    // Update: admin can update any task; the assigned employee can update
+    //         only their own tasks (for submitting reports/status).
+    // -----------------------------------------------------------------------
     match /tasks/{taskId} {
       allow read: if isMember();
-      allow create, update, delete: if isMember();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isMember() && resource.data.assigneeId == request.auth.uid);
     }
 
     // -----------------------------------------------------------------------
@@ -143,16 +165,23 @@ service cloud.firestore {
     match /allotments/{id} {
       allow read, write: if isAdmin();
     }
+
+    // Monthly Expenses — employees can create (salary fulfillment flow),
+    // but only admins can modify or delete existing records.
     match /monthlyExpenses/{id} {
       allow read: if isAdmin();
-      allow write: if isMember(); // Allow employees to create expense when fulfilling salary
+      allow create: if isMember();
+      allow update, delete: if isAdmin();
     }
-    
-    // Salaries
+
+    // -----------------------------------------------------------------------
+    // Salaries — ADMIN ONLY. Previously open to the internet (if true).
+    // Now locked to owner/admin roles.
+    // -----------------------------------------------------------------------
     match /salaries/{id} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
-    
+
     // Sick Leave Requests
     match /leaveRequests/{id} {
       allow read: if isAdmin() || (isMember() && resource.data.uid == request.auth.uid);
@@ -167,11 +196,17 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Admin Logs
+    // Admin Logs — append-only for members; read by admins only.
     match /admin_logs/{id} {
       allow read: if isAdmin();
       allow create: if isMember();
       allow update, delete: if false;
+    }
+
+    // Integrations (Slack tokens, etc.) — server-only via Cloud Functions.
+    // Block all client-side access.
+    match /integrations/{id} {
+      allow read, write: if false;
     }
 
     // Everything else is locked until the phase that introduces it defines

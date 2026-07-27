@@ -1,6 +1,8 @@
 // Client helper for talking to /api/ai. Consumes the line-delimited JSON stream
 // and invokes callbacks as reasoning / answer tokens arrive.
 
+import { getAuth } from "firebase/auth";
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -19,9 +21,18 @@ export async function streamCompletion(
   messages: ChatMessage[],
   { onText, onReasoning, signal }: StreamCallbacks = {},
 ): Promise<string> {
+  // Attach the signed-in user's Firebase ID token so the server can verify identity.
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  try {
+    const token = await getAuth().currentUser?.getIdToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  } catch {
+    // If token retrieval fails, proceed without — server will reject if auth is required.
+  }
+
   const res = await fetch("/api/ai", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ model, messages }),
     signal,
   });

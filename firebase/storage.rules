@@ -1,31 +1,56 @@
 rules_version = '2';
 
-// Storage rules for task-report file uploads.
-// Any signed-in user can read/write under task-reports/. (Tighten later to
-// restrict writes to the task's assignee or an admin.)
+// Storage rules — hardened July 2026.
+// Principle: least-privilege per bucket path. Finance/salary files are
+// admin-only; personal paths are scoped to the owning user.
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // Helper: check if the caller has an admin/owner role in Firestore.
+    function isAdmin() {
+      return request.auth != null
+        && firestore.get(/databases/(default)/documents/members/$(request.auth.uid)).data.role in ['owner', 'admin'];
+    }
+
+    // Task report attachments — any authenticated member can read/write.
     match /task-reports/{taskId}/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
+
+    // Company documents (NDAs, guidelines) — any member can read; write later
+    // scoped to admin in Firestore rules, storage mirrors read access.
     match /documents/{docId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
+
+    // Finance project files — admin only.
     match /financeProjects/{projectId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
+
+    // Salary slips / payroll PDFs — admin only.
     match /finance/salaries/{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
+
+    // Temporary AI import staging — any authenticated user.
     match /temp/ai-imports/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
+
+    // Leave request attachments — only the owner or an admin.
     match /leaveRequests/{uid}/{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth != null
+        && (request.auth.uid == uid || isAdmin());
     }
+
+    // Profile pictures — anyone can read; only the owner can write.
     match /profiles/{uid}/{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
     }
+
     // Deny everything else by default.
     match /{allPaths=**} {
       allow read, write: if false;

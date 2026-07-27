@@ -1,10 +1,6 @@
 "use client";
 
-// Zirium AI — a full chat experience (like ChatGPT / Claude). Multi-turn
-// conversation, model switching, streaming responses, and (for the Pro model)
-// collapsible reasoning. Powered by DeepSeek via /api/ai; the key stays server
-// side. Conversations live in component state for now (Phase: persist to
-// Firestore later so chats sync across devices).
+// Zirium AI executive assistant chat interface.
 
 import { useEffect, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";

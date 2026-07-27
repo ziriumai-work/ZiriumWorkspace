@@ -1,8 +1,6 @@
 "use client";
 
-// Dashboard: a live overview of the workspace. Phase 1 shows project counts by
-// status plus the most recently updated projects. As more databases and
-// automations land, this becomes the home for cross-workspace summaries.
+// Workspace dashboard providing metrics, project summaries, and activity overview.
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";

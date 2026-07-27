@@ -1,20 +1,7 @@
-// POST /api/ai — server-side proxy to DeepSeek's OpenAI-compatible chat API.
-//
-// Why a route handler: DEEPSEEK_API_KEY is a server-only secret (no NEXT_PUBLIC_
-// prefix), so the call MUST happen on the server. The browser never sees the key.
-//
-// Request body:  { model: string, messages: {role,content}[], temperature?: number }
-// Response:      a streamed NDJSON body. Each line is one JSON object:
-//                  { "type": "reasoning", "text": "..." }  (R1 thinking, optional)
-//                  { "type": "text",      "text": "..." }  (the answer, streamed)
-//                  { "type": "error",     "message": "..." }
-//
-// NOTE (security): this endpoint does not yet verify the caller's identity. The
-// secret is protected, but before exposing this publicly you should verify the
-// Firebase ID token (firebase-admin) or enable Firebase App Check. Tracked for a
-// later phase.
+// POST /api/ai — Authenticated server-side streaming proxy to DeepSeek API.
 
 import { getApiModelId } from "@/lib/ai/ai-models";
+import { getAdminAuth } from "@/lib/firebase/firebaseAdmin";
 
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
@@ -28,6 +15,29 @@ function jsonLine(obj: unknown): Uint8Array {
 }
 
 export async function POST(request: Request) {
+  // ── Auth gate: require a valid Firebase ID token ──────────────────
+  const authHeader = request.headers.get("Authorization") ?? "";
+  const idToken = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+
+  if (!idToken) {
+    return Response.json(
+      { error: "Authentication required." },
+      { status: 401 },
+    );
+  }
+
+  try {
+    await getAdminAuth().verifyIdToken(idToken);
+  } catch {
+    return Response.json(
+      { error: "Invalid or expired authentication token." },
+      { status: 401 },
+    );
+  }
+
+  // ── DeepSeek API key ─────────────────────────────────────────────
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     return Response.json(

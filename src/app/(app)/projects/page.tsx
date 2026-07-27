@@ -1,9 +1,6 @@
 "use client";
 
-// The Projects database. Subscribes to projects + member profiles in real time
-// and renders one of two views (Table / Board). Creating, editing status, and
-// deleting all write straight to Firestore; the subscription reflects changes
-// back instantly (and for every other signed-in user too).
+// Projects overview page with real-time Firestore subscriptions.
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";

@@ -1,11 +1,6 @@
 "use client";
 
-// AuthProvider: the single source of truth for "who is signed in" across the
-// app. It also ensures a user's profile + company membership documents exist on
-// first sign-in (self-join as a plain 'member' — see firestore.rules).
-//
-// React Context can't live in a Server Component, so this whole module is a
-// Client Component ("use client").
+// AuthProvider: global state management for Firebase user auth & membership roles.
 
 import {
   createContext,

@@ -1,8 +1,6 @@
 "use client";
 
-// Project detail page — the "open as page" experience. Title, properties, and
-// notes are all editable and persist to Firestore. In v16 the route `params`
-// arrive as a Promise, so we unwrap them with React's `use()`.
+// Project detail view with property editing and task management table.
 
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -430,44 +428,49 @@ export default function ProjectDetailPage({
         </Typography>
         <TextField
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={(e) => { if (isAdmin) setNotes(e.target.value); }}
           onBlur={() => {
-            if (notes !== project.description)
+            if (isAdmin && notes !== project.description)
               updateProject(id, { description: notes });
           }}
           multiline
           minRows={10}
-          placeholder="Write anything about this project…"
+          placeholder={isAdmin ? "Write anything about this project…" : ""}
           fullWidth
+          slotProps={{ input: { readOnly: !isAdmin } }}
         />
       </Box>
 
-      {/* Danger zone */}
-      <Divider sx={{ mt: 5 }} />
-      <Box sx={{ pt: 2 }}>
-        <Button
-          color="error"
-          onClick={() => setDeleteDialogOpen(true)}
-          sx={{ fontWeight: 400 }}
-        >
-          Delete project
-        </Button>
-      </Box>
+      {/* Danger zone — admin only */}
+      {isAdmin && (
+        <>
+          <Divider sx={{ mt: 5 }} />
+          <Box sx={{ pt: 2 }}>
+            <Button
+              color="error"
+              onClick={() => setDeleteDialogOpen(true)}
+              sx={{ fontWeight: 400 }}
+            >
+              Delete project
+            </Button>
+          </Box>
 
-      <ConfirmDialog
-        open={deleteDialogOpen}
-        title="Delete Project"
-        message={`Delete "${project.title}"? This cannot be undone.`}
-        type="error"
-        confirmLabel="Delete Project"
-        onConfirm={() => {
-          deleteProject(id).then(() => {
-            setDeleteDialogOpen(false);
-            router.replace("/projects");
-          });
-        }}
-        onCancel={() => setDeleteDialogOpen(false)}
-      />
+          <ConfirmDialog
+            open={deleteDialogOpen}
+            title="Delete Project"
+            message={`Delete "${project.title}"? This cannot be undone.`}
+            type="error"
+            confirmLabel="Delete Project"
+            onConfirm={() => {
+              deleteProject(id).then(() => {
+                setDeleteDialogOpen(false);
+                router.replace("/projects");
+              });
+            }}
+            onCancel={() => setDeleteDialogOpen(false)}
+          />
+        </>
+      )}
     </Box>
   );
 }
