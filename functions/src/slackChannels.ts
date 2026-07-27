@@ -27,17 +27,17 @@ export const getSlackChannels = onCall({ cors: true, invoker: "public" }, async 
     let colleagues: { id: string; name: string; email?: string; avatar?: string }[] = [];
     let error: string | null = null;
 
+    const allChannelsMap = new Map<string, string>();
     try {
       const result = await web.conversations.list({
-        types: "public_channel,private_channel",
+        types: "public_channel,private_channel,im,mpim",
         exclude_archived: true,
         limit: 1000
       });
       if (result.ok && result.channels) {
-        channels = result.channels.map(c => ({
-          id: c.id!,
-          name: c.name!
-        }));
+        result.channels.forEach(c => {
+          if (c.id) allChannelsMap.set(c.id, c.name || c.user || "channel");
+        });
       } else if (result.error) {
         error = result.error;
       }
@@ -45,6 +45,25 @@ export const getSlackChannels = onCall({ cors: true, invoker: "public" }, async 
       console.error("Slack conversations.list error:", err);
       error = err.message || "Failed to fetch channels";
     }
+
+    try {
+      const userConv = await web.users.conversations({
+        types: "public_channel,private_channel,im,mpim",
+        exclude_archived: true,
+        limit: 1000
+      });
+      if (userConv.ok && userConv.channels) {
+        userConv.channels.forEach(c => {
+          if (c.id && !allChannelsMap.has(c.id)) {
+            allChannelsMap.set(c.id, c.name || c.user || "channel");
+          }
+        });
+      }
+    } catch (err: any) {
+      console.error("Slack users.conversations error:", err);
+    }
+
+    channels = Array.from(allChannelsMap.entries()).map(([id, name]) => ({ id, name }));
 
     try {
       const usersRes = await web.users.list({ limit: 1000 });

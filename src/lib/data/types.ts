@@ -85,6 +85,7 @@ export interface Project {
   // Custom roles per developer for this specific project (e.g. { devId: "Project Lead" })
   projectRoles?: Record<string, string>;
   slackChannelId?: string; // linked Slack channel for automated notifications
+  lastUpdatedBy?: { uid: string; name: string; avatar?: string | null };
   // Notion-style database: customizable columns + rows (see below).
   columns: DbColumn[];
   rows: DbRow[];

@@ -13,6 +13,9 @@ import {
 import {
   connectFirestoreEmulator,
   getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   type Firestore,
 } from "firebase/firestore";
 import {
@@ -57,11 +60,24 @@ export const firebaseApp: FirebaseApp = getApps().length
 const isBrowser = typeof window !== "undefined";
 const canInit = isBrowser || Boolean(firebaseConfig.apiKey);
 
+function initFirestore(app: FirebaseApp): Firestore {
+  if (!isBrowser) return getFirestore(app);
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } catch {
+    return getFirestore(app);
+  }
+}
+
 export const auth: Auth = canInit
   ? getAuth(firebaseApp)
   : (undefined as unknown as Auth);
 export const db: Firestore = canInit
-  ? getFirestore(firebaseApp)
+  ? initFirestore(firebaseApp)
   : (undefined as unknown as Firestore);
 export const storage: FirebaseStorage = canInit
   ? getStorage(firebaseApp)

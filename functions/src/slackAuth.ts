@@ -14,7 +14,7 @@ export const slackAuth = onRequest((req, res) => {
   }
 
   // Redirect to Slack's OAuth v2 authorize page
-  const scopes = ["chat:write", "channels:read", "groups:read", "users:read", "chat:write.public"];
+  const scopes = ["chat:write", "channels:read", "groups:read", "im:read", "mpim:read", "users:read", "users:read.email", "chat:write.public"];
   const authUrl = `https://slack.com/oauth/v2/authorize?client_id=${clientId}&scope=${scopes.join(",")}&redirect_uri=${redirectUri}`;
   
   res.redirect(authUrl);

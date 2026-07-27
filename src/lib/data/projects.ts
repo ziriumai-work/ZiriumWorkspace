@@ -16,7 +16,7 @@ import {
   Timestamp,
   updateDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { db, auth } from "@/lib/firebase/client";
 import type { DbColumn, DbRow, NewProject, Project, TaskItem, TaskFile } from "@/lib/data/types";
 import { defaultColumns } from "@/lib/firebase/db";
 import { logAdminAction } from "./logs";
@@ -39,6 +39,7 @@ function toProject(id: string, data: Record<string, unknown>): Project {
     developerIds: (data.developerIds as string[]) ?? [],
     projectRoles: (data.projectRoles as Record<string, string>) ?? {},
     slackChannelId: (data.slackChannelId as string | undefined) ?? undefined,
+    lastUpdatedBy: (data.lastUpdatedBy as Project["lastUpdatedBy"]) ?? undefined,
     columns: (data.columns as DbColumn[]) ?? [],
     rows: (data.rows as DbRow[]) ?? [],
     tasks: (data.tasks as TaskItem[]) ?? [],
@@ -132,9 +133,19 @@ export async function updateProject(
     >
   >,
 ): Promise<void> {
+  const user = auth?.currentUser;
+  const lastUpdatedBy = user
+    ? {
+        uid: user.uid,
+        name: user.displayName || user.email?.split("@")[0] || "Team Member",
+        avatar: user.photoURL || null,
+      }
+    : undefined;
+
   await updateDoc(doc(db, COLLECTION, id), {
     ...patch,
     updatedAt: serverTimestamp(),
+    ...(lastUpdatedBy ? { lastUpdatedBy } : {}),
   });
   
   // Create a human-readable summary of what changed

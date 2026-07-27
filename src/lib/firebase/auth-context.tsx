@@ -55,10 +55,9 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// Create the profile + membership docs the first time we see a user.
-async function ensureUserDocs(user: User): Promise<Member> {
-  // Profile (merge so we refresh name/photo on every sign-in).
-  await setDoc(
+// Non-blocking profile sync in the background so it never slows down login/boot.
+function syncUserProfile(user: User): void {
+  setDoc(
     doc(db, "users", user.uid),
     {
       uid: user.uid,
@@ -68,9 +67,11 @@ async function ensureUserDocs(user: User): Promise<Member> {
       createdAt: serverTimestamp(),
     },
     { merge: true },
-  );
+  ).catch((err) => console.error("Profile sync failed:", err));
+}
 
-  // Membership: create once as a plain 'member' if it doesn't exist yet.
+// Membership: read immediately (served instantly from local cache if available).
+async function fetchOrCreateMember(user: User): Promise<Member> {
   const memberRef = doc(db, "members", user.uid);
   const snap = await getDoc(memberRef);
   if (!snap.exists()) {
@@ -94,9 +95,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
+      // 1. Set auth user immediately so dependent subscriptions fire in parallel without delay!
+      setUser(nextUser);
       if (nextUser) {
+        // 2. Fire off profile write asynchronously in background
+        syncUserProfile(nextUser);
+
+        // 3. Fetch membership (instant from IndexedDB cache when available)
         try {
-          setMember(await ensureUserDocs(nextUser));
+          const m = await fetchOrCreateMember(nextUser);
+          setMember(m);
         } catch (err) {
           console.error("Failed to load membership", err);
           setMember(null);
@@ -104,7 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setMember(null);
       }
-      setUser(nextUser);
       setLoading(false);
     });
     return unsubscribe;
@@ -140,8 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check for unauthorized access or turnover statuses
   useEffect(() => {
-    if (user && employees) {
-      const isPrivileged = member?.role === "owner" || member?.role === "admin";
+    if (!loading && user && employees && member) {
+      const isPrivileged = member.role === "owner" || member.role === "admin";
       if (employee) {
         if (employee.status === "terminated" || employee.status === "offboarded") {
           setAccessBlocked("Your account access has been revoked. If you believe this is an error, please contact your administrator.");
@@ -154,7 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         firebaseSignOut(auth).catch(() => {});
       }
     }
-  }, [user, employee, employees, member]);
+  }, [loading, user, employee, employees, member]);
 
   // Admin if EITHER:
   //  - a privileged member role, OR

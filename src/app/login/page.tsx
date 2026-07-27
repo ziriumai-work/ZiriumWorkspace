@@ -53,6 +53,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Prefetch destination routes so JavaScript bundles compile in browser memory before sign in.
+  useEffect(() => {
+    router.prefetch("/dashboard");
+    router.prefetch("/projects");
+    router.prefetch("/intern");
+  }, [router]);
+
   // Already signed in → straight to the role's home screen.
   useEffect(() => {
     if (!loading && user && role) router.replace(ROLE_HOME[role]);

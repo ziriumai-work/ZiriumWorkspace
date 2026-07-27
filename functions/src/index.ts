@@ -3,4 +3,4 @@ admin.initializeApp();
 
 export { slackAuth, slackAuthCallback } from "./slackAuth";
 export { getSlackChannels } from "./slackChannels";
-export { onTaskCompletionSlackAlert } from "./taskTriggers";
+export { onTaskCompletionSlackAlert, onProjectTableUpdateSlackAlert } from "./taskTriggers";

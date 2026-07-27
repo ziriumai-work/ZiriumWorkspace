@@ -44,6 +44,13 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Prefetch destination routes so JavaScript bundles compile in browser memory before registration.
+  useEffect(() => {
+    router.prefetch("/dashboard");
+    router.prefetch("/projects");
+    router.prefetch("/intern");
+  }, [router]);
+
   useEffect(() => {
     if (!loading && user && role) router.replace(ROLE_HOME[role]);
   }, [user, role, loading, router]);

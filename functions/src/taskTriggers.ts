@@ -69,3 +69,113 @@ export const onTaskCompletionSlackAlert = onDocumentUpdated(
       }
     }
   });
+
+export const onProjectTableUpdateSlackAlert = onDocumentUpdated(
+  "projects/{projectId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+
+    if (!before || !after) return;
+    const slackChannelId = after.slackChannelId;
+    if (!slackChannelId) return;
+
+    const beforeRows: Array<any> = before.rows || [];
+    const afterRows: Array<any> = after.rows || [];
+    const columns: Array<any> = after.columns || [];
+
+    const statusCols = columns.filter((c: any) => c.type === "status" || c.type === "select" || c.name?.toLowerCase().includes("status"));
+    if (statusCols.length === 0) return;
+
+    const titleCol = columns.find((c: any) => c.type === "text" || c.name?.toLowerCase().includes("name") || c.name?.toLowerCase().includes("task") || c.name?.toLowerCase().includes("title")) || columns[0];
+
+    const beforeRowMap = new Map(beforeRows.map((r: any) => [r.id, r]));
+
+    for (const afterRow of afterRows) {
+      const beforeRow = beforeRowMap.get(afterRow.id);
+      if (!beforeRow) continue;
+
+      for (const col of statusCols) {
+        const oldVal = beforeRow.cells?.[col.id];
+        const newVal = afterRow.cells?.[col.id];
+
+        if (oldVal !== newVal && newVal !== undefined && newVal !== null) {
+          const resolveLabel = (val: any) => {
+            if (!val) return "None";
+            const opt = col.options?.find((o: any) => o.id === val || o.value === val || o.label === val);
+            return opt ? opt.label : String(val);
+          };
+
+          const oldLabel = resolveLabel(oldVal);
+          const newLabel = resolveLabel(newVal);
+
+          if (oldLabel === newLabel) continue;
+
+          let taskTitle = "Untitled Task";
+          if (titleCol && afterRow.cells?.[titleCol.id]) {
+            taskTitle = String(afterRow.cells[titleCol.id]);
+          }
+
+          const projectName = after.title || after.name || "Project";
+          const baseUrl = process.env.APP_URL || "http://localhost:3000";
+          const projectUrl = `${baseUrl}/projects/${event.params.projectId}`;
+
+          const updaterName = after.lastUpdatedBy?.name || "A team member";
+          const updaterAvatar = after.lastUpdatedBy?.avatar;
+
+          const assignCol = columns.find((c: any) => 
+            c.name?.toLowerCase().includes("assign") || 
+            c.name?.toLowerCase().includes("dev") || 
+            c.name?.toLowerCase().includes("owner") || 
+            c.name?.toLowerCase().includes("person")
+          );
+          let assignedTo = "Unassigned";
+          if (assignCol && afterRow.cells?.[assignCol.id]) {
+            const val = afterRow.cells[assignCol.id];
+            const opt = assignCol.options?.find((o: any) => o.id === val || o.value === val || o.label === val);
+            assignedTo = opt ? opt.label : String(val);
+          }
+
+          const slackDoc = await getFirestore().collection("integrations").doc("slack").get();
+          if (!slackDoc.exists) return;
+          const token = slackDoc.data()?.accessToken;
+          if (!token) return;
+
+          const web = new WebClient(token);
+          try {
+            await web.chat.postMessage({
+              channel: slackChannelId,
+              text: `🔄 Task "${taskTitle}" status changed from "~${oldLabel}~" to "${newLabel}" by ${updaterName}`,
+              blocks: [
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: `🔄 *Notion Table Status Changed*\n*Project:* <${projectUrl}|${projectName}>\n*Task:* ${taskTitle}\n*Status:* ~${oldLabel}~ ➔ *\`${newLabel}\`*\n*Assigned to:* ${assignedTo}`
+                  }
+                },
+                {
+                  type: "context",
+                  elements: [
+                    ...(updaterAvatar && updaterAvatar.startsWith("http") ? [{
+                      type: "image" as const,
+                      image_url: updaterAvatar,
+                      alt_text: updaterName
+                    }] : []),
+                    {
+                      type: "mrkdwn" as const,
+                      text: `*Updated by:* ${updaterName} • <${projectUrl}|Open Project Table>`
+                    }
+                  ]
+                }
+              ]
+            });
+            console.log(`Slack alert sent for row ${afterRow.id} in project ${event.params.projectId}`);
+          } catch (err) {
+            console.error(`Failed to send Slack alert for project ${event.params.projectId}:`, err);
+          }
+        }
+      }
+    }
+  }
+);
