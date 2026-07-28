@@ -15,59 +15,61 @@ function jsonLine(obj: unknown): Uint8Array {
 }
 
 export async function POST(request: Request) {
-  // ── Auth gate: require a valid Firebase ID token ──────────────────
-  const authHeader = request.headers.get("Authorization") ?? "";
-  const idToken = authHeader.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : null;
-
-  if (!idToken) {
-    return Response.json(
-      { error: "Authentication required." },
-      { status: 401 },
-    );
-  }
-
-  let validToken = false;
   try {
-    await getAdminAuth().verifyIdToken(idToken);
-    validToken = true;
-  } catch {
-    // Fallback for Vercel/serverless when Service Account key is restricted by IAM policy:
-    // Verify token directly against Google's Auth REST API using your Firebase public API key.
-    const fbApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-    if (fbApiKey) {
-      try {
-        const res = await fetch(
-          `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${fbApiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ idToken }),
-          },
-        );
-        validToken = res.ok;
-      } catch {
-        validToken = false;
+    // ── Auth gate: require a valid Firebase ID token ──────────────────
+    const authHeader = request.headers.get("Authorization") ?? "";
+    const idToken = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : null;
+
+    if (!idToken) {
+      return Response.json(
+        { error: "Authentication required." },
+        { status: 401 },
+      );
+    }
+
+    let validToken = false;
+    try {
+      await getAdminAuth().verifyIdToken(idToken);
+      validToken = true;
+    } catch {
+      // Fallback for Vercel/serverless when Service Account key is restricted by IAM policy:
+      // Verify token directly against Google's Auth REST API using your Firebase public API key.
+      const fbApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+      if (fbApiKey) {
+        try {
+          const res = await fetch(
+            `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${fbApiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ idToken }),
+            },
+          );
+          validToken = res.ok;
+        } catch {
+          validToken = false;
+        }
       }
     }
-  }
 
-  if (!validToken) {
-    return Response.json(
-      { error: "Invalid or expired authentication token." },
-      { status: 401 },
-    );
-  }
+    if (!validToken) {
+      return Response.json(
+        { error: "Invalid or expired authentication token." },
+        { status: 401 },
+      );
+    }
 
-  // ── DeepSeek API key ─────────────────────────────────────────────
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
-    return Response.json(
-      { error: "DEEPSEEK_API_KEY is not configured on the server." },
-      { status: 500 },
-    );
-  }
+    // ── DeepSeek API key ─────────────────────────────────────────────
+    const apiKey = (process.env.DEEPSEEK_API_KEY || "").trim();
+    if (!apiKey) {
+      console.error("DEEPSEEK_API_KEY missing in process.env");
+      return Response.json(
+        { error: "DEEPSEEK_API_KEY is not configured on Vercel environment variables." },
+        { status: 500 },
+      );
+    }
 
   let body: {
     model?: string;
@@ -174,10 +176,17 @@ export async function POST(request: Request) {
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "application/x-ndjson; charset=utf-8",
-      "Cache-Control": "no-store",
-    },
-  });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "application/x-ndjson; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (error) {
+    console.error("Unhandled error in /api/ai route:", error);
+    return Response.json(
+      { error: error instanceof Error ? error.message : "Internal Server Error" },
+      { status: 500 },
+    );
+  }
 }
