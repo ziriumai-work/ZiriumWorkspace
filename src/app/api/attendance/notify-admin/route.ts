@@ -122,10 +122,10 @@ export async function POST(request: Request) {
 
     if (!cleanUser || !cleanPass) {
       console.warn("Gmail App Password / User not configured in server env");
-      return NextResponse.json(
-        { error: "Gmail SMTP credentials not configured on server" },
-        { status: 500 }
-      );
+      return NextResponse.json({
+        success: false,
+        warning: "Gmail SMTP credentials not configured on server",
+      });
     }
 
     const transporter = nodemailer.createTransport({
@@ -191,9 +191,9 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error("Failed to send admin notification email:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      warning: error.message || "Failed to send email notification",
+    });
   }
 }
