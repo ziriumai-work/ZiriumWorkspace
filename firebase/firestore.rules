@@ -26,6 +26,19 @@ service cloud.firestore {
       return isMember() && myRole() in ['owner', 'admin'];
     }
 
+    function isMyDeveloperDoc(devId) {
+      return isSignedIn()
+        && devId != null
+        && devId != ""
+        && (
+          devId == request.auth.uid ||
+          (
+            exists(/databases/$(database)/documents/developers/$(devId)) &&
+            get(/databases/$(database)/documents/developers/$(devId)).data.uid == request.auth.uid
+          )
+        );
+    }
+
     // User profiles (display name, photo, email).
     match /users/{uid} {
       allow read: if isMember();
@@ -66,8 +79,7 @@ service cloud.firestore {
     //
     // Read: any member.
     // Create: any member (must stamp createdBy).
-    // Update: admins can update any project; assigned developers can update
-    //         only the projects they're listed in (developerIds).
+    // Update: any member can update projects / Kanban boards.
     // Delete: admin only.
     // -----------------------------------------------------------------------
     match /projects/{projectId} {
@@ -77,8 +89,7 @@ service cloud.firestore {
       allow create: if isMember()
         && request.resource.data.createdBy == request.auth.uid;
 
-      allow update: if isAdmin()
-        || (isMember() && request.auth.uid in resource.data.developerIds);
+      allow update: if isMember();
 
       allow delete: if isAdmin();
     }
@@ -104,7 +115,10 @@ service cloud.firestore {
       allow read: if isMember();
       allow create, delete: if isAdmin();
       allow update: if isAdmin()
-        || (isMember() && resource.data.assigneeId == request.auth.uid);
+        || (isMember() && (
+             resource.data.assigneeId == request.auth.uid ||
+             isMyDeveloperDoc(resource.data.assigneeId)
+           ));
     }
 
     // -----------------------------------------------------------------------
@@ -122,23 +136,20 @@ service cloud.firestore {
     // Access control:
     //  - Admin (owner/admin): read + write ALL records.
     //  - Employee/Intern: read + write only their OWN records.
-    //
-    // The doc ID format is "{uid}_{yyyy-mm-dd}", and every document contains a
-    // `uid` field that must match the signing-in user (unless admin).
     // -----------------------------------------------------------------------
     match /attendance/{recordId} {
       // Read: admin can read everything; others only their own.
       allow read: if isAdmin()
-        || (isMember() && (resource == null || resource.data.uid == request.auth.uid));
+        || (isMember() && (resource == null || resource.data.uid == request.auth.uid || isMyDeveloperDoc(resource.data.uid)));
 
       // Create: admin can create for anyone; others only for themselves.
       allow create: if isAdmin()
-        || (isMember() && request.resource.data.uid == request.auth.uid);
+        || (isMember() && (request.resource.data.uid == request.auth.uid || isMyDeveloperDoc(request.resource.data.uid)));
 
       // Update: admin can update any record; others only their own.
       allow update: if isAdmin()
-        || (isMember() && resource.data.uid == request.auth.uid
-            && request.resource.data.uid == request.auth.uid);
+        || (isMember() && (resource.data.uid == request.auth.uid || isMyDeveloperDoc(resource.data.uid))
+            && (request.resource.data.uid == request.auth.uid || isMyDeveloperDoc(request.resource.data.uid)));
 
       // Delete: admin only.
       allow delete: if isAdmin();
@@ -177,8 +188,8 @@ service cloud.firestore {
 
     // Sick Leave Requests
     match /leaveRequests/{id} {
-      allow read: if isAdmin() || (isMember() && resource.data.uid == request.auth.uid);
-      allow create: if isMember() && request.resource.data.uid == request.auth.uid;
+      allow read: if isAdmin() || (isMember() && (resource.data.uid == request.auth.uid || isMyDeveloperDoc(resource.data.uid)));
+      allow create: if isMember() && (request.resource.data.uid == request.auth.uid || isMyDeveloperDoc(request.resource.data.uid));
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
