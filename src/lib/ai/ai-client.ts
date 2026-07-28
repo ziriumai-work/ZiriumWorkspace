@@ -43,7 +43,7 @@ export async function streamCompletion(
       const err = await res.json();
       if (err?.error) message = err.error;
     } catch {
-      /* keep default */
+      
     }
     throw new Error(message);
   }

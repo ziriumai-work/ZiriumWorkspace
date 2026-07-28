@@ -90,7 +90,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "messages is required." }, { status: 400 });
   }
 
-  // Call DeepSeek with streaming enabled.
   let upstream: Response;
   try {
     upstream = await fetch(DEEPSEEK_URL, {
@@ -121,7 +120,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // Transform DeepSeek's SSE ("data: {json}\n\n", terminated by "data: [DONE]")
   // into our line-delimited JSON stream.
   const reader = upstream.body.getReader();
   const decoder = new TextDecoder();

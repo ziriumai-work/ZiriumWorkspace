@@ -12,11 +12,6 @@ import {
 import { db, auth } from "@/lib/firebase/client";
 import type { AdminLog } from "./types";
 
-/**
- * Reusable helper to log an action performed by an admin.
- * Pulls the current user directly from Firebase Auth.
- * Falls back to "Unknown Admin" if details can't be found.
- */
 export async function logAdminAction(action: string, details: string) {
   if (!auth.currentUser) return; // Silent return if no authenticated user
   const uid = auth.currentUser.uid;
@@ -50,9 +45,6 @@ export async function logAdminAction(action: string, details: string) {
   }
 }
 
-/**
- * Subscribes to the 1000 most recent admin logs.
- */
 export function subscribeToLogs(
   callback: (logs: AdminLog[]) => void,
   maxLogs = 1000

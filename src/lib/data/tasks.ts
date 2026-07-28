@@ -1,4 +1,3 @@
-// Data access for daily tasks (Firestore "tasks" collection).
 
 import {
   collection,

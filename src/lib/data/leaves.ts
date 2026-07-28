@@ -17,7 +17,6 @@ import { logAdminAction } from "./logs";
 
 const COL = "leaveRequests";
 
-/** Subscribe to all leave requests across the company (Admin view) */
 export function subscribeToAllLeaveRequests(
   onData: (reqs: LeaveRequest[]) => void,
   onError?: (err: Error) => void,
@@ -31,7 +30,6 @@ export function subscribeToAllLeaveRequests(
   );
 }
 
-/** Subscribe to pending leave requests (Admin Notification Badge) */
 export function subscribeToPendingLeaveRequests(
   onData: (reqs: LeaveRequest[]) => void,
   onError?: (err: Error) => void,
@@ -45,7 +43,6 @@ export function subscribeToPendingLeaveRequests(
   );
 }
 
-/** Subscribe to a single user's leave requests */
 export function subscribeToMyLeaveRequests(
   uid: string,
   onData: (reqs: LeaveRequest[]) => void,
@@ -70,7 +67,6 @@ export function subscribeToMyLeaveRequests(
   );
 }
 
-/** Submit a new sick leave request */
 export async function submitLeaveRequest(
   uid: string,
   employeeName: string,
@@ -91,7 +87,6 @@ export async function submitLeaveRequest(
   });
 }
 
-/** Update status of a leave request (Admin) */
 export async function updateLeaveRequestStatus(
   id: string,
   status: LeaveRequestStatus,
@@ -103,7 +98,6 @@ export async function updateLeaveRequestStatus(
   await logAdminAction("Leave Request Evaluated", `Marked leave request (ID: ${id}) as ${status}`);
 }
 
-/** Delete a leave request (Admin/Employee before approval) */
 export async function deleteLeaveRequest(id: string): Promise<void> {
   await deleteDoc(doc(db, COL, id));
 }

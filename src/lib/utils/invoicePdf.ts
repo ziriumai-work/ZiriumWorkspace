@@ -70,8 +70,6 @@ export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
     }
   };
 
-  // --- Page 1 ---------------------------------------------------------------
-  
   // Header Bar
   doc.setFillColor(CYAN);
   doc.rect(0, 0, pageWidth, 16, "F");
@@ -301,7 +299,6 @@ export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
     doc.text(lines, margin + 12 + titleW, y + 22);
   }
 
-  // --- Page 2: Standard Company Footer / Information ------------------------
   doc.addPage();
   
   let page2Y = margin;

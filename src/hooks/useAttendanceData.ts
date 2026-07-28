@@ -49,7 +49,6 @@ export function useAttendanceData() {
     return unsub;
   }, [user]);
 
-  // Subscribe to attendance records.
   useEffect(() => {
     if (!user) return;
     if (role === null) return;
@@ -72,7 +71,6 @@ export function useAttendanceData() {
     return unsub;
   }, [user, isAdmin, role]);
 
-  // Subscribe to tasks. Admins need all tasks for overtime calculation.
   useEffect(() => {
     if (isAdmin) {
       return subscribeToAllTasks((t) => setTasks(t));

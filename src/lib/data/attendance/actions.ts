@@ -13,7 +13,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { auth, db } from "@/lib/firebase/client";
 import type {
   AttendanceRecord,
   AttendanceStatus,
@@ -30,7 +30,6 @@ import {
 
 const COL = "attendance";
 
-// Build a deterministic doc id so there's exactly one record per user per day.
 function recordId(uid: string, date: string): string {
   return `${uid}_${date}`;
 }
@@ -66,7 +65,6 @@ async function fetchSubscribedAdminEmails(): Promise<string[]> {
   return Array.from(emailsSet);
 }
 
-/** Clock in for the current user. Auto-detects if late. */
 export async function clockIn(
   employee: Developer,
   settings: OfficeSettings,
@@ -205,10 +203,14 @@ export async function clockIn(
       "Triggering admin email notification for Clock In:",
       employee.name,
     );
-    fetchSubscribedAdminEmails().then((adminEmails) => {
+    fetchSubscribedAdminEmails().then(async (adminEmails) => {
+      const idToken = await auth.currentUser?.getIdToken().catch(() => null);
       fetch("/api/attendance/notify-admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({
           userName: employee.name,
           userEmail: employee.email,
@@ -229,7 +231,6 @@ export async function clockIn(
   return returnResult;
 }
 
-/** Clock out — sets checkOut, calculates hoursWorked and overtime. */
 export async function clockOut(
   uid: string,
   settings: OfficeSettings,
@@ -294,10 +295,14 @@ export async function clockOut(
       "Triggering admin email notification for Clock Out:",
       emp?.name || uid,
     );
-    fetchSubscribedAdminEmails().then((adminEmails) => {
+    fetchSubscribedAdminEmails().then(async (adminEmails) => {
+      const idToken = await auth.currentUser?.getIdToken().catch(() => null);
       fetch("/api/attendance/notify-admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({
           userName: emp?.name || "Employee",
           userEmail: emp?.email || "",
@@ -508,7 +513,6 @@ export async function autoFillMissingAttendance(
   }
 }
 
-/** Admin: manually mark attendance for any employee. */
 export async function markAttendance(
   uid: string,
   employeeName: string,
@@ -614,7 +618,6 @@ export async function markAttendance(
   );
 }
 
-/** Update an existing attendance record (partial). */
 export async function updateAttendance(
   id: string,
   patch: Partial<Omit<AttendanceRecord, "id">>,
@@ -630,7 +633,6 @@ export async function updateAttendance(
   );
 }
 
-/** Delete an attendance record. */
 export async function deleteAttendance(id: string): Promise<void> {
   await deleteDoc(doc(db, COL, id));
   await logAdminAction(

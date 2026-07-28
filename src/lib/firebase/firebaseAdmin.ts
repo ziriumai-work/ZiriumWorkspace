@@ -39,12 +39,10 @@ function getAdminApp(): App {
   return adminApp;
 }
 
-/** Lazily initialised Firebase Admin Auth instance. */
 export function getAdminAuth(): Auth {
   return getAuth(getAdminApp());
 }
 
-/** Lazily initialised Firebase Admin Firestore instance. */
 export function getAdminDb(): Firestore {
   return getFirestore(getAdminApp());
 }

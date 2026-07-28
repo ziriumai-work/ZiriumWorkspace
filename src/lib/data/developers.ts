@@ -1,4 +1,3 @@
-// Data access for EMPLOYEES (Firestore collection "developers").
 
 import {
   addDoc,
@@ -48,7 +47,6 @@ function toDeveloper(id: string, data: Record<string, unknown>): Developer {
   };
 }
 
-// Subscribe to the employee directory, alphabetical by name.
 export function subscribeToDevelopers(
   onData: (devs: Developer[]) => void,
   onError?: (err: Error) => void,

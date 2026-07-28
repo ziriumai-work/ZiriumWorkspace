@@ -8,7 +8,6 @@ import type {
   OfficeSettings,
 } from "@/lib/data/types";
 
-/** Check if a check-in time is considered late given office settings. */
 export function isCheckInLate(
   checkInIso: string,
   settings: OfficeSettings,
@@ -20,7 +19,6 @@ export function isCheckInLate(
   return checkIn > deadline;
 }
 
-/** Calculate overtime minutes (how many minutes past office end time). */
 export function calcOvertimeMinutes(
   checkOutIso: string,
   settings: OfficeSettings,
@@ -32,7 +30,6 @@ export function calcOvertimeMinutes(
   return Math.max(0, Math.round(diff));
 }
 
-/** Helper to safely get YYYY-MM-DD in the local timezone */
 export function getLocalISODate(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -250,14 +247,12 @@ export function computeMonthlySummary(
     excessLeaves - totalAdminApprovedLeaves,
   );
 
-  // Late penalty: after threshold late days, every late day costs 0.5 day salary.
   const grossLatePenalties = Math.max(
     0,
     totalLate - settings.lateThresholdDays,
   );
 
   if (isIntern) {
-    // Intern penalty logic: penalties become negative overtime (overtimeDue).
     const dailyHours = (employee?.officeHours || 30) / 5;
     const dailyMinutes = dailyHours * 60;
 
@@ -286,7 +281,6 @@ export function computeMonthlySummary(
       overtimeDueMinutes: netOvertime < 0 ? Math.abs(netOvertime) : 0,
     };
   } else {
-    // Employee penalty logic: deduction days and offset with overtime
     const dailyMinutes = ((employee?.officeHours || 40) / 5) * 60;
     const overtimeOffsetDays = Math.floor(
       totalOvertimeMinutes / dailyMinutes,

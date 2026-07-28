@@ -1,4 +1,3 @@
-// Shared domain types. The Firestore data model is documented in DATA-MODEL.md.
 
 import type { Timestamp } from "firebase/firestore";
 
@@ -53,9 +52,6 @@ export interface Team {
   createdAt: Timestamp | null;
 }
 
-// ---------------------------------------------------------------------------
-// Workspace content (Notion-style)
-// ---------------------------------------------------------------------------
 // Phase 1 ships an opinionated Projects tracker. The shapes below are designed
 // so the generic "databases with custom properties" engine (Phase 2) can grow
 // on top of them without a rewrite.
@@ -190,9 +186,7 @@ export const ACCESS_LEVELS: { value: AccessLevel; label: string }[] = [
   { value: "admin", label: "Admin" },
 ];
 
-// ---------------------------------------------------------------------------
 // Daily tasks assigned to employees (tasks/{id})
-// ---------------------------------------------------------------------------
 export type DailyTaskStatus = "todo" | "in_progress" | "done" | "not_completed";
 
 export interface TaskFile {
@@ -247,9 +241,7 @@ export const TASK_STATUSES: { value: TaskStatus; label: string }[] = [
   { value: "blocked", label: "Blocked" },
 ];
 
-// ---------------------------------------------------------------------------
 // Notion-style database (flexible columns + rows), stored on the project doc.
-// ---------------------------------------------------------------------------
 
 export type ColumnType =
   | "text"
@@ -337,9 +329,7 @@ export const PROJECT_PRIORITIES: { value: ProjectPriority; label: string }[] = [
   { value: "urgent", label: "Urgent" },
 ];
 
-// ---------------------------------------------------------------------------
 // Office Settings (settings/office)
-// ---------------------------------------------------------------------------
 export interface OfficeSettings {
   startHour: number; // e.g. 10
   startMinute: number; // e.g. 0
@@ -364,9 +354,7 @@ export const DEFAULT_OFFICE_SETTINGS: OfficeSettings = {
   appUrl: process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "https://zirium.vercel.app",
 };
 
-// ---------------------------------------------------------------------------
 // Attendance (attendance/{recordId})
-// ---------------------------------------------------------------------------
 export type AttendanceStatus =
   | "present"
   | "absent"
@@ -401,9 +389,7 @@ export interface AttendanceRecord {
   updatedAt: Timestamp | null;
 }
 
-// ---------------------------------------------------------------------------
 // Leave Requests (leaveRequests/{id})
-// ---------------------------------------------------------------------------
 export type LeaveRequestStatus = "pending" | "approved" | "rejected";
 
 export interface LeaveRequest {
@@ -418,15 +404,9 @@ export interface LeaveRequest {
   updatedAt: Timestamp | null;
 }
 
-// ---------------------------------------------------------------------------
 // Attendance helpers
-// ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
 // Announcements
-// ---------------------------------------------------------------------------
 export interface Announcement {
   id: string;
   title: string;
@@ -436,9 +416,7 @@ export interface Announcement {
   createdBy: string;
 }
 
-// ---------------------------------------------------------------------------
 // Salaries
-// ---------------------------------------------------------------------------
 export type SalaryStatus = "due" | "paid" | "fulfilled";
 
 export interface SalaryLineItem {
@@ -463,4 +441,4 @@ export interface SalaryRecord {
   paidAt: Timestamp | null;
   fulfilledAt: Timestamp | null;
 }
-
+

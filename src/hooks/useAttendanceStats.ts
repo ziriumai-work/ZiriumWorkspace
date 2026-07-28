@@ -55,7 +55,6 @@ export function useAttendanceStats({
     return result;
   }, [records, filterUid, filterDepartment, filterRole, isAdmin, user, employees]);
 
-  // Monthly summary — filter records by the selected month.
   const monthRecords = useMemo(() => {
     const target = summaryMonth; // "yyyy-mm"
     let result = records.filter(r => r.date.startsWith(target));

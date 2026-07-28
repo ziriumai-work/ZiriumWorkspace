@@ -27,7 +27,6 @@ import { computeMonthlySummary } from "./attendance";
 
 export const SALARIES_COL = "salaries";
 
-/** Generate or update salaries for all employees for a given month (yyyy-MM) */
 export async function generateSalariesForMonth(month: string): Promise<void> {
   const [yearStr, monthStr] = month.split("-");
   const y = parseInt(yearStr, 10);
@@ -146,7 +145,6 @@ export async function generateSalariesForMonth(month: string): Promise<void> {
   }
 }
 
-/** Admin: subscribe to all salaries for a specific month */
 export function subscribeToSalariesByMonth(
   month: string,
   onData: (records: SalaryRecord[]) => void,
@@ -165,7 +163,6 @@ export function subscribeToSalariesByMonth(
   });
 }
 
-/** Non-Admin: subscribe to own salaries */
 export function subscribeToMySalaries(
   employeeId: string,
   onData: (records: SalaryRecord[]) => void,
@@ -184,7 +181,6 @@ export function subscribeToMySalaries(
   });
 }
 
-/** Admin: Mark a salary as paid and attach a receipt */
 export async function markSalaryPaid(salaryId: string, receiptUrl: string): Promise<void> {
   await updateDoc(doc(db, SALARIES_COL, salaryId), {
     status: "paid",
@@ -193,7 +189,6 @@ export async function markSalaryPaid(salaryId: string, receiptUrl: string): Prom
   });
 }
 
-/** Employee: Mark a salary as received (fulfilled) */
 export async function markSalaryFulfilled(salaryId: string): Promise<void> {
   const docRef = doc(db, SALARIES_COL, salaryId);
   const snap = await getDoc(docRef);

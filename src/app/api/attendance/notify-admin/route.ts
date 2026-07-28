@@ -1,9 +1,65 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { getAdminDb } from "@/lib/firebase/firebaseAdmin";
+import { getAdminAuth, getAdminDb } from "@/lib/firebase/firebaseAdmin";
 
 export async function POST(request: Request) {
   try {
+    // 1. CORS / Origin Validation (CSRF Protection)
+    const origin = request.headers.get("origin");
+    const host = request.headers.get("host");
+    if (origin) {
+      const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
+      const allowedAppUrl = process.env.NEXT_PUBLIC_APP_URL || "https://zirium.vercel.app";
+      const isAllowedOrigin = origin === allowedAppUrl || isLocalhost || (host && origin.includes(host));
+      if (!isAllowedOrigin) {
+        return NextResponse.json(
+          { error: "Forbidden: Invalid origin request" },
+          { status: 403 }
+        );
+      }
+    }
+
+    // 2. Firebase Session Authentication Gate
+    const authHeader = request.headers.get("Authorization") ?? "";
+    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!idToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    let validToken = false;
+    try {
+      await getAdminAuth().verifyIdToken(idToken);
+      validToken = true;
+    } catch {
+      // Identity Toolkit REST API Fallback
+      const fbApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+      if (fbApiKey) {
+        try {
+          const res = await fetch(
+            `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${fbApiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ idToken }),
+            }
+          );
+          validToken = res.ok;
+        } catch {
+          validToken = false;
+        }
+      }
+    }
+
+    if (!validToken) {
+      return NextResponse.json(
+        { error: "Invalid or expired session token" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
       userName,

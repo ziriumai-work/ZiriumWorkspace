@@ -9,7 +9,6 @@ export const DOCUMENTS_COLLECTION = "documents";
 export const GUIDELINES_EMPLOYEE_ID = "guidelines_employee";
 export const GUIDELINES_INTERN_ID = "guidelines_intern";
 
-// Subscribe to a specific document
 export function subscribeToDocument(
   docId: string,
   onData: (doc: CompanyDocument | null) => void,

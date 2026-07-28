@@ -13,7 +13,6 @@ import type { AttendanceRecord } from "@/lib/data/types";
 
 const COL = "attendance";
 
-/** Subscribe to ALL attendance records (admin view). */
 export function subscribeToAllAttendance(
   onData: (records: AttendanceRecord[]) => void,
   onError?: (err: Error) => void,
@@ -29,7 +28,6 @@ export function subscribeToAllAttendance(
   );
 }
 
-/** Subscribe to a single employee's attendance records. */
 export function subscribeToMyAttendance(
   uid: string,
   onData: (records: AttendanceRecord[]) => void,

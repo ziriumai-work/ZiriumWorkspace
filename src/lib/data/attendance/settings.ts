@@ -5,7 +5,6 @@ import { db } from "@/lib/firebase/client";
 import { DEFAULT_OFFICE_SETTINGS, type OfficeSettings } from "@/lib/data/types";
 import { logAdminAction } from "../logs";
 
-/** Subscribe to the global office settings document. */
 export function subscribeToOfficeSettings(
   onData: (settings: OfficeSettings) => void,
   onError?: (err: Error) => void,
@@ -23,7 +22,6 @@ export function subscribeToOfficeSettings(
   );
 }
 
-/** Admin: update the global office settings. */
 export async function updateOfficeSettings(
   settings: Partial<OfficeSettings>,
 ): Promise<void> {
@@ -34,7 +32,6 @@ export async function updateOfficeSettings(
   );
 }
 
-/** Check if currently within allowed clock-in/out window. */
 export function isWithinOfficeHours(settings: OfficeSettings): boolean {
   const now = new Date();
   const start = new Date(now);

@@ -1,4 +1,3 @@
-// Data access for the Projects database (Firestore "projects" collection).
 
 import {
   addDoc,
@@ -47,7 +46,6 @@ function toProject(id: string, data: Record<string, unknown>): Project {
   };
 }
 
-// Subscribe to all projects, newest-updated first. Returns an unsubscribe fn.
 export function subscribeToProjects(
   onData: (projects: Project[]) => void,
   onError?: (err: Error) => void,
@@ -60,7 +58,6 @@ export function subscribeToProjects(
   );
 }
 
-// Subscribe to a single project by id. Calls onData(null) if it doesn't exist.
 export function subscribeToProject(
   id: string,
   onData: (project: Project | null) => void,

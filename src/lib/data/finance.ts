@@ -18,9 +18,7 @@ import { db } from "@/lib/firebase/client";
 import { defaultColumns } from "@/lib/firebase/db";
 import { logAdminAction } from "./logs";
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 export type FinanceProjectStatus = "ongoing" | "completed";
 
@@ -138,7 +136,6 @@ export function currencySymbol(code: string): string {
   return CURRENCIES.find((c) => c.code === code)?.symbol ?? code;
 }
 
-/** Format a number as money, e.g. 1234567.5 → "1,234,567.50". */
 export function formatAmount(n: number): string {
   return n.toLocaleString(undefined, {
     minimumFractionDigits: 0,
@@ -146,14 +143,11 @@ export function formatAmount(n: number): string {
   });
 }
 
-/** Current month in the "yyyy-MM" key format used by allotments/expenses. */
 export function currentMonth(): string {
   return new Date().toISOString().slice(0, 7);
 }
 
-// ---------------------------------------------------------------------------
 // financeProjects
-// ---------------------------------------------------------------------------
 
 const PROJECTS = "financeProjects";
 
@@ -257,9 +251,7 @@ export async function deleteFinanceProject(id: string): Promise<void> {
   await logAdminAction("Deleted Finance Project", `Deleted finance project (ID: ${id})`);
 }
 
-// ---------------------------------------------------------------------------
 // invoices
-// ---------------------------------------------------------------------------
 
 const INVOICES = "invoices";
 
@@ -321,7 +313,6 @@ export async function deleteInvoice(id: string): Promise<void> {
   await logAdminAction("Deleted Invoice", `Deleted invoice (ID: ${id})`);
 }
 
-/** Generate the next invoice number, e.g. INV-2026-001 */
 export function nextInvoiceNumber(invoices: Pick<Invoice, "number">[]): string {
   const year = new Date().getFullYear();
   const prefix = `INV-${year}-`;
@@ -341,9 +332,7 @@ export function nextInvoiceNumber(invoices: Pick<Invoice, "number">[]): string {
   return `${prefix}${nextNum}`;
 }
 
-// ---------------------------------------------------------------------------
 // allotments (money allotment: where the money goes each month)
-// ---------------------------------------------------------------------------
 
 const ALLOTMENTS = "allotments";
 
@@ -401,9 +390,7 @@ export async function deleteAllotment(id: string): Promise<void> {
   await logAdminAction("Deleted Budget Allotment", `Deleted allotment (ID: ${id})`);
 }
 
-// ---------------------------------------------------------------------------
 // monthlyExpenses (the monthly sheet)
-// ---------------------------------------------------------------------------
 
 const EXPENSES = "monthlyExpenses";
 
@@ -459,9 +446,7 @@ export async function deleteMonthlyExpense(id: string): Promise<void> {
   await logAdminAction("Deleted Expense", `Deleted expense entry (ID: ${id})`);
 }
 
-// ---------------------------------------------------------------------------
 // Shared balance math — the single formula every section displays.
-// ---------------------------------------------------------------------------
 
 export interface BalanceBreakdown {
   totalReceived: number; //   money in (all finance projects)

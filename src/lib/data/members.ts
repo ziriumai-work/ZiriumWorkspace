@@ -1,4 +1,3 @@
-// Data access for company members (used by people pickers, e.g. project
 // assignee) and their public profiles.
 
 import {
@@ -12,7 +11,6 @@ import {
 import { db } from "@/lib/firebase/client";
 import type { Member, UserProfile } from "@/lib/data/types";
 
-// Subscribe to the full member list. Members can read all memberships per the
 // rules. Returns an unsubscribe fn.
 export function subscribeToMembers(
   onData: (members: Member[]) => void,
@@ -28,7 +26,6 @@ export function subscribeToMembers(
   );
 }
 
-// Subscribe to every user profile (display name / photo) keyed by uid, so the
 // UI can resolve an assigneeUid to a name+avatar.
 export function subscribeToUserProfiles(
   onData: (byUid: Record<string, UserProfile>) => void,
