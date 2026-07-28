@@ -49,12 +49,19 @@ export function EditEmployeeDialog({
     if (!editForm) return;
     setSavingEdit(true);
     try {
-      const { id, ...patch } = editForm;
-      await updateDeveloper(id, patch);
+      // Exclude id and createdAt — they are not updatable fields.
+      const { id, createdAt, ...patch } = editForm as Developer & { createdAt?: unknown };
 
-      // Sync Admin status with the strict Firebase rules database
-      if (editForm.uid && patch.accessLevel) {
-        const newRole = patch.accessLevel === "admin" ? "owner" : "member";
+      // Strip undefined values to avoid Firestore rejecting the update.
+      const cleanPatch = Object.fromEntries(
+        Object.entries(patch).filter(([, v]) => v !== undefined)
+      ) as Partial<Omit<Developer, "id" | "createdAt">>;
+
+      await updateDeveloper(id, cleanPatch);
+
+      // Sync member role when accessLevel changes.
+      if (editForm.uid && cleanPatch.accessLevel) {
+        const newRole = cleanPatch.accessLevel === "admin" ? "owner" : "member";
         const { doc, updateDoc } = await import("firebase/firestore");
         const { db } = await import("@/lib/firebase/client");
         await updateDoc(doc(db, "members", editForm.uid), { role: newRole }).catch(() => {});
@@ -62,7 +69,7 @@ export function EditEmployeeDialog({
 
       onClose();
     } catch (e) {
-      console.error(e);
+      console.error("Edit save error:", e);
     } finally {
       setSavingEdit(false);
     }

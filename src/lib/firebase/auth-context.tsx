@@ -189,14 +189,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [loading, user, employee, employees, member]);
 
-  // Admin determination:
-  // If an employee directory record exists for the user, accessLevel MUST be "admin".
-  // Only if NO employee record exists yet (e.g. initial setup workspace owner) do we fall back to member.role.
+  // isAdmin resolution — employee.accessLevel has absolute priority.
+  // Falls back to member.role ONLY when there is no employee record AND employees have loaded.
+  // Never grants admin during the loading window (employees === null) to prevent
+  // race conditions where newly registered employees briefly see admin UI.
   const isAdmin = employee
     ? employee.accessLevel === "admin"
-    : member?.role === "owner" ||
-      member?.role === "admin" ||
-      (user !== null && employees !== null && employees.length === 0);
+    : employees !== null && employees.length === 0 && (
+        member?.role === "owner" || member?.role === "admin"
+      );
 
   // Resolve the app role once the directory is available.
   const role: AppRole | null =

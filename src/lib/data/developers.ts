@@ -102,7 +102,11 @@ export async function updateDeveloper(
   id: string,
   patch: Partial<Omit<Developer, "id" | "createdAt">>,
 ): Promise<void> {
-  await updateDoc(doc(db, COLLECTION, id), patch);
+  // Firestore rejects `undefined` values — replace them with null.
+  const sanitized = Object.fromEntries(
+    Object.entries(patch).map(([k, v]) => [k, v === undefined ? null : v]),
+  );
+  await updateDoc(doc(db, COLLECTION, id), sanitized);
   const updates = Object.keys(patch).join(", ");
   await logAdminAction("Updated Employee", `Updated employee (ID: ${id}) fields: ${updates}`);
 }
