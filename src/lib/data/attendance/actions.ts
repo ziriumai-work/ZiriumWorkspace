@@ -71,7 +71,7 @@ export async function clockIn(
 ): Promise<{ status: "success" | "warning"; message: string }> {
   const now = new Date();
   const date = now.toISOString().slice(0, 10);
-  const uid = employee.uid!;
+  const uid = employee.uid || employee.id;
   const id = recordId(uid, date);
   const checkInIso = now.toISOString();
 
@@ -440,9 +440,9 @@ export async function autoFillMissingAttendance(
   employee: Developer,
   settings: OfficeSettings,
 ): Promise<void> {
-  if (!employee.startDate || !employee.uid) return;
+  const uid = employee.uid || employee.id;
+  if (!employee.startDate || !uid) return;
 
-  const uid = employee.uid;
   const q = query(collection(db, COL), where("uid", "==", uid));
   const snap = await getDocs(q);
 

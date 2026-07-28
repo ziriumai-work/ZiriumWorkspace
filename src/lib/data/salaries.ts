@@ -79,7 +79,7 @@ export async function generateSalariesForMonth(month: string): Promise<void> {
     const dailyRate = dailySalary(base, y, m);
 
     // Filter attendance
-    const myAtt = allAttendance.filter(a => a.uid === emp.uid && a.date.startsWith(month));
+    const myAtt = allAttendance.filter(a => (a.uid === emp.uid || a.uid === emp.id) && a.date.startsWith(month));
     // Filter tasks
     const myTasks = allTasks.filter(t => t.assigneeId === emp.id && t.date.startsWith(month) && t.isOvertime && t.overtimeCost);
 

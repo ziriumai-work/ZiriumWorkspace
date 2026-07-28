@@ -26,19 +26,6 @@ service cloud.firestore {
       return isMember() && myRole() in ['owner', 'admin'];
     }
 
-    function isMyDeveloperDoc(devId) {
-      return isSignedIn()
-        && devId != null
-        && devId != ""
-        && (
-          devId == request.auth.uid ||
-          (
-            exists(/databases/$(database)/documents/developers/$(devId)) &&
-            get(/databases/$(database)/documents/developers/$(devId)).data.uid == request.auth.uid
-          )
-        );
-    }
-
     // User profiles (display name, photo, email).
     match /users/{uid} {
       allow read: if isMember();
@@ -99,8 +86,8 @@ service cloud.firestore {
     // Only admins can add, edit, or remove employees from the roster.
     // -----------------------------------------------------------------------
     match /developers/{devId} {
-      allow read: if isMember();
-      allow create, update, delete: if isAdmin();
+      allow read, update: if isMember();
+      allow create, delete: if isAdmin();
     }
 
     // -----------------------------------------------------------------------
@@ -108,17 +95,11 @@ service cloud.firestore {
     //
     // Read: any member (so dashboards/reports work).
     // Create/Delete: admin only (admins assign and remove tasks).
-    // Update: admin can update any task; the assigned employee can update
-    //         only their own tasks (for submitting reports/status).
+    // Update: any member can update tasks (for submitting reports/status).
     // -----------------------------------------------------------------------
     match /tasks/{taskId} {
-      allow read: if isMember();
+      allow read, update: if isMember();
       allow create, delete: if isAdmin();
-      allow update: if isAdmin()
-        || (isMember() && (
-             resource.data.assigneeId == request.auth.uid ||
-             isMyDeveloperDoc(resource.data.assigneeId)
-           ));
     }
 
     // -----------------------------------------------------------------------
@@ -135,23 +116,10 @@ service cloud.firestore {
     //
     // Access control:
     //  - Admin (owner/admin): read + write ALL records.
-    //  - Employee/Intern: read + write only their OWN records.
+    //  - Employee/Intern: read + create + update records.
     // -----------------------------------------------------------------------
     match /attendance/{recordId} {
-      // Read: admin can read everything; others only their own.
-      allow read: if isAdmin()
-        || (isMember() && (resource == null || resource.data.uid == request.auth.uid || isMyDeveloperDoc(resource.data.uid)));
-
-      // Create: admin can create for anyone; others only for themselves.
-      allow create: if isAdmin()
-        || (isMember() && (request.resource.data.uid == request.auth.uid || isMyDeveloperDoc(request.resource.data.uid)));
-
-      // Update: admin can update any record; others only their own.
-      allow update: if isAdmin()
-        || (isMember() && (resource.data.uid == request.auth.uid || isMyDeveloperDoc(resource.data.uid))
-            && (request.resource.data.uid == request.auth.uid || isMyDeveloperDoc(request.resource.data.uid)));
-
-      // Delete: admin only.
+      allow read, create, update: if isMember();
       allow delete: if isAdmin();
     }
 
@@ -188,10 +156,8 @@ service cloud.firestore {
 
     // Sick Leave Requests
     match /leaveRequests/{id} {
-      allow read: if isAdmin() || (isMember() && (resource.data.uid == request.auth.uid || isMyDeveloperDoc(resource.data.uid)));
-      allow create: if isMember() && (request.resource.data.uid == request.auth.uid || isMyDeveloperDoc(request.resource.data.uid));
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read, create: if isMember();
+      allow update, delete: if isAdmin();
     }
 
     // Announcements

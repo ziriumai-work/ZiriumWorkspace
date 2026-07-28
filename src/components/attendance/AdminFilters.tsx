@@ -49,13 +49,11 @@ export function AdminFilters({
           sx={{ minWidth: 150, borderRadius: 2, fontSize: 14 }}
         >
           <MenuItem value="all">All Employees</MenuItem>
-          {employees
-            .filter((e) => e.uid)
-            .map((e) => (
-              <MenuItem key={e.id} value={e.uid!}>
-                {e.name}
-              </MenuItem>
-            ))}
+          {employees.map((e) => (
+            <MenuItem key={e.id} value={e.uid || e.id}>
+              {e.name}
+            </MenuItem>
+          ))}
         </Select>
         <Select
           size="small"

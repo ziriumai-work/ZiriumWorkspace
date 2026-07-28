@@ -108,13 +108,13 @@ export function EmployeeAttendanceTable({
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ textTransform: "capitalize", color: "text.secondary" }}>
-                        {employees.find(e => e.uid === r.uid)?.accessLevel ?? "-"}
+                        {employees.find(e => e.uid === r.uid || e.id === r.uid)?.accessLevel ?? "-"}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ textTransform: "uppercase", color: "text.secondary" }}>
                         {(() => {
-                          const emp = employees.find(e => e.uid === r.uid);
+                          const emp = employees.find(e => e.uid === r.uid || e.id === r.uid);
                           if (!emp) return "-";
                           return emp.department === "custom" && emp.customDepartment ? emp.customDepartment : emp.department;
                         })()}
@@ -176,7 +176,7 @@ export function EmployeeAttendanceTable({
                       />
                     )}
                     {(() => {
-                      const empDocId = employees.find(e => e.uid === r.uid)?.id;
+                      const empDocId = employees.find(e => e.uid === r.uid || e.id === r.uid)?.id;
                       const dailyTasksForRecord = monthTasks.filter(t => t.date === r.date && t.assigneeId === empDocId && t.status === "done" && t.isOvertime && t.compensatesWeeklyHours);
                       const taskOvertimeMinutes = dailyTasksForRecord.reduce((acc, t) => acc + (Number(t.assignedHours) || 0) * 60, 0);
                       const totalOtMinutes = (r.isOvertime ? r.overtimeMinutes : 0) + taskOvertimeMinutes;
