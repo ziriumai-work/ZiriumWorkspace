@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { computeMonthlySummary } from "@/lib/data/attendance";
+import { computeMonthlySummary, getDynamicLeaveAllowance } from "@/lib/data/attendance";
 import { type AttendanceRecord, type Employee, type OfficeSettings, type DailyTask } from "@/lib/data/types";
 import { User } from "firebase/auth";
 
@@ -154,7 +154,7 @@ export function useAttendanceStats({
         const empRecords = monthRecords.filter(r => r.uid === uid);
         const empTasks = monthTasks.filter(t => t.assigneeId === emp.id);
         
-        const s = computeMonthlySummary(empRecords, empTasks, settings, emp.accessLevel === "intern", emp);
+        const s = computeMonthlySummary(empRecords, empTasks, settings, emp.accessLevel === "intern", emp, records, summaryMonth);
         
         aggregated.totalPresent += s.totalPresent;
         aggregated.totalLate += s.totalLate;
@@ -178,10 +178,12 @@ export function useAttendanceStats({
         monthTasks,
         settings,
         isTargetIntern,
-        targetEmployee || undefined
+        targetEmployee || undefined,
+        records,
+        summaryMonth
       );
     }
-  }, [monthRecords, monthTasks, settings, isTargetIntern, targetEmployee, isAdmin, filterUid, employees, filterDepartment, filterRole]);
+  }, [monthRecords, monthTasks, settings, isTargetIntern, targetEmployee, isAdmin, filterUid, employees, filterDepartment, filterRole, records, summaryMonth]);
 
   // Non-Admin Statistics
   const myStats = useMemo(() => {
@@ -246,7 +248,21 @@ export function useAttendanceStats({
     });
 
     const latesAllowed = settings.lateThresholdDays;
-    const leavesAllowed = employee.accessLevel === "intern" ? settings.internLeavesPerMonth : settings.employeeLeavesPerMonth;
+    const leaveAllowanceDetails = employee
+      ? getDynamicLeaveAllowance({
+          employee,
+          settings,
+          targetMonthStr: summaryMonth,
+          allAttendanceRecords: records,
+        })
+      : {
+          baseAllowance: settings.employeeLeavesPerMonth,
+          rolloverLeaves: 0,
+          totalAllowedLeaves: settings.employeeLeavesPerMonth,
+          startMonthStr: summaryMonth,
+        };
+    const leavesAllowed = leaveAllowanceDetails.totalAllowedLeaves;
+    const rolloverLeaves = leaveAllowanceDetails.rolloverLeaves;
 
     const isPenaltyActive = monthlyLates > latesAllowed && remainingHours > 0 && flexRemaining < 0;
 
@@ -258,12 +274,13 @@ export function useAttendanceStats({
       allowedFlex,
       latesAllowed,
       leavesAllowed,
+      rolloverLeaves,
       monthlyLates,
       monthlyLeaves,
       monthlySickLeaves,
       isPenaltyActive,
     };
-  }, [isAdmin, employee, records, tasks, settings, user]);
+  }, [isAdmin, employee, records, tasks, settings, user, summaryMonth]);
 
   return { displayed, monthRecords, monthTasks, summary, myStats, targetEmployee, isTargetIntern };
 }

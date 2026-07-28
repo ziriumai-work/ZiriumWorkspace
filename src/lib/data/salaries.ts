@@ -89,7 +89,7 @@ export async function generateSalariesForMonth(month: string): Promise<void> {
     let overtimeTotal = 0;
 
     const isIntern = emp.accessLevel === "intern";
-    const summary = computeMonthlySummary(myAtt, allTasks.filter(t => t.assigneeId === emp.id && t.date.startsWith(month)), settings, isIntern, emp);
+    const summary = computeMonthlySummary(myAtt, allTasks.filter(t => t.assigneeId === emp.id && t.date.startsWith(month)), settings, isIntern, emp, allAttendance, month);
 
     if (summary.deductionDays > 0) {
       const penalty = Math.round(summary.deductionDays * dailyRate);

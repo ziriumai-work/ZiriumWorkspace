@@ -40,6 +40,12 @@ export const onTaskCompletionSlackAlert = onDocumentUpdated(
       const taskName = after.title || "Unknown Task";
       const projectName = project.name || "Unknown Project";
 
+      const settingsSnap = await getFirestore().collection("office_settings").doc("default").get();
+      let baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || settingsSnap.data()?.appUrl || "https://zirium.vercel.app";
+      if (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(0, -1);
+      if (!baseUrl.startsWith("http")) baseUrl = `https://${baseUrl}`;
+      const projectUrl = `${baseUrl}/projects/${projectId}`;
+
       try {
         await web.chat.postMessage({
           channel: project.slackChannelId,
@@ -49,7 +55,7 @@ export const onTaskCompletionSlackAlert = onDocumentUpdated(
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `✅ *Task Completed*\n*Task:* ${taskName}\n*Project:* ${projectName}\n*By:* ${assigneeName}`
+                text: `✅ *Task Completed*\n*Task:* ${taskName}\n*Project:* <${projectUrl}|${projectName}>\n*By:* ${assigneeName}`
               }
             },
             {
@@ -117,7 +123,10 @@ export const onProjectTableUpdateSlackAlert = onDocumentUpdated(
           }
 
           const projectName = after.title || after.name || "Project";
-          const baseUrl = process.env.APP_URL || "http://localhost:3000";
+          const settingsSnap = await getFirestore().collection("office_settings").doc("default").get();
+          let baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || settingsSnap.data()?.appUrl || "https://zirium.vercel.app";
+          if (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(0, -1);
+          if (!baseUrl.startsWith("http")) baseUrl = `https://${baseUrl}`;
           const projectUrl = `${baseUrl}/projects/${event.params.projectId}`;
 
           const updaterName = after.lastUpdatedBy?.name || "A team member";

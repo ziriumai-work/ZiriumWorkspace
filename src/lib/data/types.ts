@@ -346,6 +346,7 @@ export interface OfficeSettings {
   lateThresholdDays: number; // e.g. 3 — after this many late days, deduction kicks in
   employeeLeavesPerMonth: number; // e.g. 2
   internLeavesPerMonth: number; // e.g. 1
+  appUrl?: string; // Live domain / base URL (e.g. https://zirium.vercel.app)
 }
 
 export const DEFAULT_OFFICE_SETTINGS: OfficeSettings = {
@@ -357,6 +358,7 @@ export const DEFAULT_OFFICE_SETTINGS: OfficeSettings = {
   lateThresholdDays: 3,
   employeeLeavesPerMonth: 2,
   internLeavesPerMonth: 1,
+  appUrl: process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "https://zirium.vercel.app",
 };
 
 // ---------------------------------------------------------------------------

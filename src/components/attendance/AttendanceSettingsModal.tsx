@@ -137,6 +137,26 @@ export function AttendanceSettingsModal({
             fullWidth
           />
         </Box>
+
+        <Divider />
+
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+          Integrations & Notifications
+        </Typography>
+        <TextField
+          label="Live App Domain / Base URL"
+          type="url"
+          value={editSettings.appUrl || ""}
+          onChange={(e) =>
+            setEditSettings((s) => ({
+              ...s,
+              appUrl: e.target.value,
+            }))
+          }
+          fullWidth
+          placeholder="https://zirium.vercel.app"
+          helperText="Used in Slack & notification links in place of localhost."
+        />
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose}>Cancel</Button>

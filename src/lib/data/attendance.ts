@@ -23,6 +23,7 @@ import {
   type AttendanceStatus,
   type OfficeSettings,
   type Developer,
+  type Employee,
   type DailyTask,
 } from "@/lib/data/types";
 import { logAdminAction } from "./logs";
@@ -448,6 +449,107 @@ export async function autoClockOutAllUnclosedShifts(
   }
 }
 
+export interface DynamicLeaveAllowance {
+  baseAllowance: number;
+  rolloverLeaves: number;
+  totalAllowedLeaves: number;
+  startMonthStr: string;
+}
+
+export function getEmployeeStartYearMonth(employee: Developer | Employee | any): string {
+  if (employee?.startDate && typeof employee.startDate === "string" && employee.startDate.length >= 7) {
+    return employee.startDate.slice(0, 7);
+  }
+  if (employee?.createdAt) {
+    const dt = typeof employee.createdAt.toDate === "function"
+      ? employee.createdAt.toDate()
+      : new Date(employee.createdAt);
+    if (!isNaN(dt.getTime())) {
+      const yr = dt.getFullYear();
+      const mo = String(dt.getMonth() + 1).padStart(2, "0");
+      return `${yr}-${mo}`;
+    }
+  }
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function getDynamicLeaveAllowance({
+  employee,
+  settings,
+  targetMonthStr,
+  allAttendanceRecords,
+}: {
+  employee: Developer | Employee | any;
+  settings: OfficeSettings;
+  targetMonthStr: string; // "YYYY-MM"
+  allAttendanceRecords?: AttendanceRecord[];
+}): DynamicLeaveAllowance {
+  const baseAllowance =
+    employee?.accessLevel === "intern"
+      ? settings.internLeavesPerMonth
+      : settings.employeeLeavesPerMonth;
+
+  const startMonthStr = getEmployeeStartYearMonth(employee);
+
+  if (!targetMonthStr || !allAttendanceRecords || targetMonthStr <= startMonthStr) {
+    return {
+      baseAllowance,
+      rolloverLeaves: 0,
+      totalAllowedLeaves: baseAllowance,
+      startMonthStr,
+    };
+  }
+
+  let currentRollover = 0;
+  const curr = new Date(`${startMonthStr}-01T00:00:00`);
+  const end = new Date(`${targetMonthStr}-01T00:00:00`);
+
+  while (curr < end) {
+    const yr = curr.getFullYear();
+    const mo = String(curr.getMonth() + 1).padStart(2, "0");
+    const monthPrefix = `${yr}-${mo}`;
+
+    const monthAllowed = baseAllowance + currentRollover;
+
+    let usedLeaves = 0;
+    allAttendanceRecords.forEach((r) => {
+      if (r.uid === employee.uid && r.date.startsWith(monthPrefix) && r.status === "on_leave") {
+        usedLeaves++;
+      }
+    });
+
+    currentRollover = Math.max(0, monthAllowed - usedLeaves);
+    curr.setMonth(curr.getMonth() + 1);
+  }
+
+  return {
+    baseAllowance,
+    rolloverLeaves: currentRollover,
+    totalAllowedLeaves: baseAllowance + currentRollover,
+    startMonthStr,
+  };
+}
+
+export function calculateDynamicAllowedLeaves({
+  employee,
+  settings,
+  targetMonthStr,
+  allAttendanceRecords,
+}: {
+  employee: Developer | Employee | any;
+  settings: OfficeSettings;
+  targetMonthStr: string; // "YYYY-MM"
+  allAttendanceRecords?: AttendanceRecord[];
+}): number {
+  return getDynamicLeaveAllowance({
+    employee,
+    settings,
+    targetMonthStr,
+    allAttendanceRecords,
+  }).totalAllowedLeaves;
+}
+
 /** 
  * Auto-fills missing working days as on_leave or absent.
  * Skips weekends (Saturday, Sunday) and skips today.
@@ -498,7 +600,13 @@ export async function autoFillMissingAttendance(
         }
       }
 
-      const status: AttendanceStatus = leavesThisMonth < allowedLeaves ? "on_leave" : "absent";
+      const dynamicAllowedLeaves = calculateDynamicAllowedLeaves({
+        employee,
+        settings,
+        targetMonthStr: monthPrefix,
+        allAttendanceRecords: Array.from(existingRecords.values()),
+      });
+      const status: AttendanceStatus = leavesThisMonth < dynamicAllowedLeaves ? "on_leave" : "absent";
       
       const id = recordId(uid, dateStr);
       const newRec: Partial<AttendanceRecord> = {
@@ -566,9 +674,6 @@ export async function markAttendance(
     const employee = devSnap.empty ? null : devSnap.docs[0].data() as any;
     
     if (employee) {
-      const isIntern = employee.accessLevel === "intern";
-      const allowedLeaves = isIntern ? settings.internLeavesPerMonth : settings.employeeLeavesPerMonth;
-      
       const monthPrefix = date.slice(0, 7);
       const start = `${monthPrefix}-01`;
       const end = `${monthPrefix}-31`;
@@ -579,12 +684,20 @@ export async function markAttendance(
       );
       
       const snap = await getDocs(attQuery);
+      const allRecords: AttendanceRecord[] = [];
       let totalLeavesThisMonth = 0;
       snap.forEach(d => {
         const r = d.data() as AttendanceRecord;
+        allRecords.push(r);
         if (r.date >= start && r.date <= end && r.date !== date && r.status === "on_leave") {
           totalLeavesThisMonth++;
         }
+      });
+      const allowedLeaves = calculateDynamicAllowedLeaves({
+        employee,
+        settings,
+        targetMonthStr: monthPrefix,
+        allAttendanceRecords: allRecords,
       });
       
       if (finalStatus === "absent") {
@@ -661,7 +774,9 @@ export function computeMonthlySummary(
   tasks: DailyTask[],
   settings: OfficeSettings,
   isIntern: boolean,
-  employee?: Pick<Developer, "officeHours">
+  employee?: any,
+  allAttendanceRecords?: AttendanceRecord[],
+  targetMonthStr?: string
 ): MonthlySummary {
   let totalPresent = 0;
   let totalLate = 0;
@@ -713,9 +828,17 @@ export function computeMonthlySummary(
     }
   }
 
-  const allowedLeaves = isIntern
-    ? settings.internLeavesPerMonth
-    : settings.employeeLeavesPerMonth;
+  const allowedLeaves =
+    employee && allAttendanceRecords && targetMonthStr
+      ? calculateDynamicAllowedLeaves({
+          employee,
+          settings,
+          targetMonthStr,
+          allAttendanceRecords,
+        })
+      : isIntern
+      ? settings.internLeavesPerMonth
+      : settings.employeeLeavesPerMonth;
 
   const excessLeaves = Math.max(0, totalLeaves - allowedLeaves);
   const excessLeavesToPenalize = Math.max(0, excessLeaves - totalAdminApprovedLeaves);

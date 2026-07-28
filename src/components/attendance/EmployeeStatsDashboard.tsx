@@ -16,6 +16,7 @@ interface EmployeeStatsDashboardProps {
     allowedFlex: number;
     latesAllowed: number;
     leavesAllowed: number;
+    rolloverLeaves?: number;
     monthlyLates: number;
     monthlyLeaves: number;
     monthlySickLeaves: number;
@@ -32,21 +33,16 @@ export function EmployeeStatsDashboard({ myStats, employee }: EmployeeStatsDashb
       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
         My Statistics
       </Typography>
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "repeat(1, 1fr)",
-            sm: "repeat(3, 1fr)",
-            md: "repeat(5, 1fr)",
-          },
-          gap: 2,
-        }}
-      >
+      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 2, mt: 2 }}>
+        <StatCard 
+          label="Total Weekly Hours" 
+          value={formatHoursMinutes(myStats.totalWeeklyHours)} 
+          color="#3b82f6" 
+        />
         <StatCard 
           label="Weekly Hours Remaining" 
-          value={formatHoursMinutes(myStats.remainingHours)} 
-          color={myStats.remainingHours > 0 ? "#f59e0b" : "#22c55e"} 
+          value={formatHoursMinutes(Math.max(0, myStats.remainingHours))} 
+          color={myStats.remainingHours > 0 ? "#f97316" : "#22c55e"} 
         />
         <StatCard 
           label="Flexibility Remaining" 
@@ -59,7 +55,7 @@ export function EmployeeStatsDashboard({ myStats, employee }: EmployeeStatsDashb
           color={myStats.monthlyLates > myStats.latesAllowed ? "#ef4444" : "#22c55e"} 
         />
         <StatCard 
-          label={`Leaves (Max: ${myStats.leavesAllowed})`} 
+          label={`Leaves (Max: ${myStats.leavesAllowed}${myStats.rolloverLeaves ? ` • +${myStats.rolloverLeaves} roll` : ""})`} 
           value={myStats.monthlyLeaves} 
           color={myStats.monthlyLeaves > myStats.leavesAllowed ? "#ef4444" : "#22c55e"} 
         />
@@ -73,13 +69,20 @@ export function EmployeeStatsDashboard({ myStats, employee }: EmployeeStatsDashb
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3, alignItems: "center" }}>
         <Typography variant="body2" color="text.secondary">
           Total Weekly Hours Required: <strong>{myStats.requiredHours}h</strong>
-          {myStats.requiredHours < (employee?.officeHours || 0) && (
-            <span style={{ fontStyle: "italic", opacity: 0.8 }}> (reduced due to leaves)</span>
-          )}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Total Flexibility Allowed: <strong>{formatHoursMinutes(myStats.allowedFlex / 60)}</strong>
+          Allowed Flexibility: <strong>{formatHoursMinutes(myStats.allowedFlex / 60)}</strong>
         </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Monthly Lates Threshold: <strong>{myStats.latesAllowed} days</strong>
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Leaves Threshold: <strong>{myStats.leavesAllowed} days{myStats.rolloverLeaves ? ` (+${myStats.rolloverLeaves} roll)` : ""}</strong>
+        </Typography>
+      </Box>
+
+      {/* Warning chips if penalty conditions active */}
+      <Box sx={{ display: "flex", gap: 1, mt: 2, flexWrap: "wrap" }}>
         {myStats.isPenaltyActive && (
           <Chip
             size="small"
