@@ -3,6 +3,7 @@
 // Zirium AI executive assistant chat interface.
 
 import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -334,8 +335,8 @@ export default function ZiriumPage() {
             </Box>
           )}
 
-          {messages.map((m) => (
-            <Message key={m.id} msg={m} streaming={streaming} />
+          {messages.map((m, idx) => (
+            <Message key={m.id} msg={m} streaming={streaming && idx === messages.length - 1} />
           ))}
           {error && (
             <Alert severity="error" sx={{ mt: 1 }}>
@@ -522,8 +523,22 @@ function Message({ msg, streaming }: { msg: ChatMsg; streaming: boolean }) {
             </Collapse>
           </Paper>
         )}
-        <Box sx={{ whiteSpace: "pre-wrap", fontSize: 15, lineHeight: 1.65, color: "text.primary", mt: 0.5 }}>
-          {msg.content || (
+        <Box
+          sx={{
+            fontSize: 15,
+            lineHeight: 1.65,
+            color: "text.primary",
+            mt: 0.5,
+            "& p": { my: 1, "&:first-of-type": { mt: 0 }, "&:last-of-type": { mb: 0 } },
+            "& ul, & ol": { pl: 2.5, my: 1 },
+            "& code": { bgcolor: "action.hover", px: 0.75, py: 0.25, borderRadius: 1, fontFamily: "var(--font-geist-mono), monospace", fontSize: "0.9em" },
+            "& pre": { bgcolor: "surface", p: 1.5, borderRadius: 2, overflowX: "auto", border: "1px solid", borderColor: "divider", my: 1 },
+            "& h1, & h2, & h3, & h4": { fontWeight: 700, mt: 2, mb: 1 },
+          }}
+        >
+          {msg.content ? (
+            <Markdown>{msg.content}</Markdown>
+          ) : (
             <Typography component="span" variant="body1" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor", animation: "pulse 1s infinite" }} />
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor", animation: "pulse 1s infinite 0.2s" }} />

@@ -15,6 +15,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import Markdown from "react-markdown";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -406,8 +407,19 @@ function AiPanel({
         {output ? (
           <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
             <img src="/logo.png" alt="Zirium AI" style={{ width: 24, height: 24, borderRadius: 6, marginTop: 2, flexShrink: 0 }} />
-            <Box sx={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.65, flex: 1 }}>
-              {output}
+            <Box
+              sx={{
+                fontSize: 14,
+                lineHeight: 1.65,
+                flex: 1,
+                "& p": { my: 1, "&:first-of-type": { mt: 0 }, "&:last-of-type": { mb: 0 } },
+                "& ul, & ol": { pl: 2.5, my: 1 },
+                "& code": { bgcolor: "action.hover", px: 0.75, py: 0.25, borderRadius: 1, fontFamily: "var(--font-geist-mono), monospace", fontSize: "0.9em" },
+                "& pre": { bgcolor: "surface", p: 1.5, borderRadius: 2, overflowX: "auto", border: "1px solid", borderColor: "divider", my: 1 },
+                "& h1, & h2, & h3, & h4": { fontWeight: 700, mt: 2, mb: 1 },
+              }}
+            >
+              <Markdown>{output}</Markdown>
               {streaming && (
                 <Box
                   component="span"
