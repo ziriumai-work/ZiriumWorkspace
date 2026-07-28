@@ -37,30 +37,27 @@ function recordId(uid: string, date: string): string {
 async function fetchSubscribedAdminEmails(): Promise<string[]> {
   const emailsSet = new Set<string>();
   try {
-    const devQuery = query(
-      collection(db, "developers"),
-      where("accessLevel", "==", "admin"),
-      where("subscribeToEmails", "==", true),
-    );
-    const devSnap = await getDocs(devQuery);
-    devSnap.forEach((docSnap) => {
-      const em = docSnap.data().email as string;
-      if (em) emailsSet.add(em);
-    });
-
-    const memQuery = query(
-      collection(db, "members"),
-      where("subscribeToEmails", "==", true),
-    );
-    const memSnap = await getDocs(memQuery);
+    const memSnap = await getDocs(collection(db, "members"));
     memSnap.forEach((docSnap) => {
       const data = docSnap.data();
-      if ((data.role === "owner" || data.role === "admin") && data.email) {
+      if ((data.role === "owner" || data.role === "admin") && data.subscribeToEmails === true && data.email) {
         emailsSet.add(data.email as string);
       }
     });
   } catch (err) {
-    console.error("Error fetching subscribed admin emails from client:", err);
+    console.warn("Could not fetch members email list:", err);
+  }
+
+  try {
+    const devSnap = await getDocs(collection(db, "developers"));
+    devSnap.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data.accessLevel === "admin" && data.subscribeToEmails === true && data.email) {
+        emailsSet.add(data.email as string);
+      }
+    });
+  } catch {
+    // Non-admins cannot read developers collection, ignore silently
   }
   return Array.from(emailsSet);
 }
@@ -221,6 +218,11 @@ export async function clockIn(
         }),
       })
         .then(async (res) => {
+          if (!res.ok) {
+            const text = await res.text();
+            console.warn("Admin notify email response error (Clock In):", res.status, text);
+            return;
+          }
           const data = await res.json();
           console.log("Admin notify email response (Clock In):", data);
         })
@@ -313,6 +315,11 @@ export async function clockOut(
         }),
       })
         .then(async (res) => {
+          if (!res.ok) {
+            const text = await res.text();
+            console.warn("Admin notify email response error (Clock Out):", res.status, text);
+            return;
+          }
           const data = await res.json();
           console.log("Admin notify email response (Clock Out):", data);
         })

@@ -90,39 +90,17 @@ export async function POST(request: Request) {
         if (em && typeof em === "string") adminEmailsSet.add(em);
       });
     } else {
-      const db = getAdminDb();
-      // Query all admins who opted into email notifications in developers collection
-      const adminsSnap = await db
-        .collection("developers")
-        .where("accessLevel", "==", "admin")
-        .where("subscribeToEmails", "==", true)
-        .get();
-      adminsSnap.docs.forEach((docSnap) => {
-        const em = docSnap.data().email as string;
-        if (em) adminEmailsSet.add(em);
-      });
-
-      // Also query members collection for any admins/owners who opted in
-      const membersSnap = await db
-        .collection("members")
-        .where("subscribeToEmails", "==", true)
-        .get();
-      for (const memberDoc of membersSnap.docs) {
-        const data = memberDoc.data();
-        if (data.role === "owner" || data.role === "admin") {
-          if (data.email) {
+      try {
+        const db = getAdminDb();
+        const membersSnap = await db.collection("members").get();
+        for (const memberDoc of membersSnap.docs) {
+          const data = memberDoc.data();
+          if ((data.role === "owner" || data.role === "admin") && data.subscribeToEmails === true && data.email) {
             adminEmailsSet.add(data.email as string);
-          } else {
-            try {
-              const userSnap = await db.collection("users").doc(memberDoc.id).get();
-              if (userSnap.exists && userSnap.data()?.email) {
-                adminEmailsSet.add(userSnap.data()!.email as string);
-              }
-            } catch (e) {
-              console.error("Error fetching user email fallback:", e);
-            }
           }
         }
+      } catch (err) {
+        console.warn("Server-side fallback email query failed:", err);
       }
     }
 
