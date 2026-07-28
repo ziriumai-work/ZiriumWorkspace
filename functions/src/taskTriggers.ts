@@ -58,7 +58,7 @@ export const onTaskCompletionSlackAlert = onDocumentUpdated(
       const taskName = after.title || "Unknown Task";
       const projectName = project.name || "Unknown Project";
 
-      const settingsSnap = await getFirestore().collection("office_settings").doc("default").get();
+      const settingsSnap = await getFirestore().collection("settings").doc("office").get();
       const baseUrl = getLiveBaseUrl(settingsSnap.data()?.appUrl);
       const projectUrl = `${baseUrl}/projects/${projectId}`;
 
@@ -139,7 +139,7 @@ export const onProjectTableUpdateSlackAlert = onDocumentUpdated(
           }
 
           const projectName = after.title || after.name || "Project";
-          const settingsSnap = await getFirestore().collection("office_settings").doc("default").get();
+          const settingsSnap = await getFirestore().collection("settings").doc("office").get();
           const baseUrl = getLiveBaseUrl(settingsSnap.data()?.appUrl);
           const projectUrl = `${baseUrl}/projects/${event.params.projectId}`;
 
