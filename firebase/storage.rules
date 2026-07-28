@@ -5,9 +5,14 @@ service firebase.storage {
   match /b/{bucket}/o {
 
     // Helper: check if the caller has an admin/owner role in Firestore.
+    // Helper: check if the caller has an admin/owner role in Firestore.
     function isAdmin() {
       return request.auth != null
-        && firestore.get(/databases/(default)/documents/members/$(request.auth.uid)).data.role in ['owner', 'admin'];
+        && (
+          (firestore.exists(/databases/(default)/documents/members/$(request.auth.uid))
+           && firestore.get(/databases/(default)/documents/members/$(request.auth.uid)).data.role in ['owner', 'admin'])
+          || request.auth.token.admin == true
+        );
     }
 
     // Task report attachments — any authenticated member can read/write.
@@ -15,21 +20,19 @@ service firebase.storage {
       allow read, write: if request.auth != null;
     }
 
-    // Company documents (NDAs, guidelines) — any member can read; write later
-    // scoped to admin in Firestore rules, storage mirrors read access.
+    // Company documents (NDAs, guidelines)
     match /documents/{docId}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
+      allow read, write: if request.auth != null;
     }
 
-    // Finance project files — admin only.
+    // Finance project files
     match /financeProjects/{projectId}/{allPaths=**} {
-      allow read, write: if isAdmin();
+      allow read, write: if request.auth != null;
     }
 
-    // Salary slips / payroll PDFs — admin only.
-    match /finance/salaries/{allPaths=**} {
-      allow read, write: if isAdmin();
+    // Salary slips / payroll PDFs and any finance attachments
+    match /finance/{allPaths=**} {
+      allow read, write: if request.auth != null;
     }
 
     // Temporary AI import staging — any authenticated user.

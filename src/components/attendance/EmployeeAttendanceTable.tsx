@@ -176,8 +176,8 @@ export function EmployeeAttendanceTable({
                       />
                     )}
                     {(() => {
-                      const empDocId = employees.find(e => e.uid === r.uid || e.id === r.uid)?.id;
-                      const dailyTasksForRecord = monthTasks.filter(t => t.date === r.date && t.assigneeId === empDocId && t.status === "done" && t.isOvertime && t.compensatesWeeklyHours);
+                      const emp = employees.find(e => e.uid === r.uid || e.id === r.uid);
+                      const dailyTasksForRecord = monthTasks.filter(t => t.date === r.date && (t.assigneeId === emp?.id || t.assigneeId === emp?.uid || t.assigneeId === r.uid) && t.status === "done" && (t.isOvertime || t.compensatesWeeklyHours));
                       const taskOvertimeMinutes = dailyTasksForRecord.reduce((acc, t) => acc + (Number(t.assignedHours) || 0) * 60, 0);
                       const totalOtMinutes = (r.isOvertime ? r.overtimeMinutes : 0) + taskOvertimeMinutes;
                       

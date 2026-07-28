@@ -1,7 +1,7 @@
 // POST /api/ai — Authenticated server-side streaming proxy to DeepSeek API.
-// Uses Google Identity Toolkit REST API for token verification (no firebase-admin dependency).
 
 import { getApiModelId } from "@/lib/ai/ai-models";
+import { getAdminAuth } from "@/lib/firebase/firebaseAdmin";
 
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
@@ -14,49 +14,68 @@ function jsonLine(obj: unknown): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(obj) + "\n");
 }
 
-async function verifyFirebaseToken(idToken: string): Promise<boolean> {
-  const fbApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-  if (!fbApiKey) return false;
-  try {
-    const res = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${fbApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      },
-    );
-    if (!res.ok) return false;
-    const data = await res.json();
-    return Array.isArray(data.users) && data.users.length > 0;
-  } catch {
-    return false;
-  }
-}
-
 export async function POST(request: Request) {
   try {
+    // ── Auth gate: require a valid Firebase ID token ──────────────────
     const authHeader = request.headers.get("Authorization") ?? "";
-    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const idToken = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : null;
 
     if (!idToken) {
-      return Response.json({ error: "Authentication required." }, { status: 401 });
+      return Response.json(
+        { error: "Authentication required." },
+        { status: 401 },
+      );
     }
 
-    const validToken = await verifyFirebaseToken(idToken);
+    let validToken = false;
+    try {
+      await getAdminAuth().verifyIdToken(idToken);
+      validToken = true;
+    } catch {
+      // Fallback for Vercel/serverless when Service Account key is restricted by IAM policy:
+      // Verify token directly against Google's Auth REST API using your Firebase public API key.
+      const fbApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+      if (fbApiKey) {
+        try {
+          const res = await fetch(
+            `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${fbApiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ idToken }),
+            },
+          );
+          validToken = res.ok;
+        } catch {
+          validToken = false;
+        }
+      }
+    }
+
     if (!validToken) {
-      return Response.json({ error: "Invalid or expired authentication token." }, { status: 401 });
+      return Response.json(
+        { error: "Invalid or expired authentication token." },
+        { status: 401 },
+      );
     }
 
+    // ── DeepSeek API key ─────────────────────────────────────────────
     const apiKey = (process.env.DEEPSEEK_API_KEY || "").trim();
     if (!apiKey) {
+      console.error("DEEPSEEK_API_KEY missing in process.env");
       return Response.json(
-        { error: "DEEPSEEK_API_KEY is not configured on the server." },
+        { error: "DEEPSEEK_API_KEY is not configured on Vercel environment variables." },
         { status: 500 },
       );
     }
 
-    let body: { model?: string; messages?: ChatMessage[]; temperature?: number };
+    let body: {
+      model?: string;
+      messages?: ChatMessage[];
+      temperature?: number;
+    };
     try {
       body = await request.json();
     } catch {
@@ -65,7 +84,7 @@ export async function POST(request: Request) {
 
     const model = body.model ?? "";
     const messages = body.messages ?? [];
-    const apiModel = getApiModelId(model);
+    const apiModel = getApiModelId(model); // map product id -> real DeepSeek id
     if (!apiModel) {
       return Response.json({ error: "Unknown model." }, { status: 400 });
     }
@@ -89,7 +108,10 @@ export async function POST(request: Request) {
         }),
       });
     } catch {
-      return Response.json({ error: "Could not reach the AI provider." }, { status: 502 });
+      return Response.json(
+        { error: "Could not reach the AI provider." },
+        { status: 502 },
+      );
     }
 
     if (!upstream.ok || !upstream.body) {
@@ -100,6 +122,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // into our line-delimited JSON stream.
     const reader = upstream.body.getReader();
     const decoder = new TextDecoder();
 
@@ -107,11 +130,12 @@ export async function POST(request: Request) {
       async pull(controller) {
         let buffer = "";
         try {
-          for (;;) {
+          for (; ;) {
             const { done, value } = await reader.read();
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
 
+            // SSE events are separated by blank lines.
             const events = buffer.split("\n\n");
             buffer = events.pop() ?? "";
 
@@ -148,7 +172,7 @@ export async function POST(request: Request) {
         }
       },
       cancel() {
-        reader.cancel().catch(() => {});
+        reader.cancel().catch(() => { });
       },
     });
 

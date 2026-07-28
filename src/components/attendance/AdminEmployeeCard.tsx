@@ -138,7 +138,7 @@ export function AdminEmployeeCard({
                       <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
                         {r.isLate && <Chip size="small" label="Late" sx={{ height: 20, fontSize: 10, bgcolor: "#f59e0b22", color: "#f59e0b", fontWeight: 600 }} />}
                         {(() => {
-                          const dailyTasksForRecord = monthTasks.filter(t => t.date === r.date && t.assigneeId === employee.id && t.status === "done" && t.isOvertime && t.compensatesWeeklyHours);
+                          const dailyTasksForRecord = monthTasks.filter(t => t.date === r.date && (t.assigneeId === employee.id || t.assigneeId === employee.uid || t.assigneeId === r.uid) && t.status === "done" && (t.isOvertime || t.compensatesWeeklyHours));
                           const taskOvertimeMinutes = dailyTasksForRecord.reduce((acc, t) => acc + (Number(t.assignedHours) || 0) * 60, 0);
                           const totalOtMinutes = (r.isOvertime ? r.overtimeMinutes : 0) + taskOvertimeMinutes;
                           

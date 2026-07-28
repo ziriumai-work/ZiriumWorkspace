@@ -223,7 +223,7 @@ export function computeMonthlySummary(
   }
 
   for (const t of tasks) {
-    if (t.status === "done" && t.isOvertime && t.compensatesWeeklyHours) {
+    if (t.status === "done" && (t.isOvertime || t.compensatesWeeklyHours)) {
       totalHoursWorked += Number(t.assignedHours) || 0;
       totalOvertimeMinutes += (Number(t.assignedHours) || 0) * 60;
     }
