@@ -1,6 +1,5 @@
-// Server-only Firebase Admin SDK initializer.
-// Used by API routes (e.g. /api/ai) to verify Firebase ID tokens.
-// This file must NEVER be imported from client-side code.
+// Server-only Firebase Admin SDK — used by API routes to verify ID tokens.
+// Gracefully handles missing FIREBASE_PRIVATE_KEY so the module never crashes on import.
 
 import { initializeApp, getApps, cert, type App } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
@@ -22,6 +21,12 @@ function getAdminApp(): App {
     "ziriumai-workspace-5c840";
 
   const keyJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  // Vercel stores multiline values with literal \n — unescape them back to real newlines.
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY
+    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
+    : undefined;
+
   if (keyJson) {
     try {
       const serviceAccount = JSON.parse(keyJson);
@@ -29,13 +34,27 @@ function getAdminApp(): App {
         credential: cert(serviceAccount),
         projectId: serviceAccount.project_id || projectId,
       });
+      return adminApp;
     } catch {
-      // If parsing fails, fall back to ADC.
-      adminApp = initializeApp({ projectId });
+      // JSON parsing failed — fall through to individual key approach.
     }
-  } else {
-    adminApp = initializeApp({ projectId });
   }
+
+  if (clientEmail && privateKey) {
+    try {
+      adminApp = initializeApp({
+        credential: cert({ projectId, clientEmail, privateKey }),
+        projectId,
+      });
+      return adminApp;
+    } catch {
+      // Credential init failed — fall back to project-ID-only (token verification will use REST fallback).
+    }
+  }
+
+  // No credentials available — initialize with projectId only.
+  // Token verification in API routes will fall back to the Google Identity Toolkit REST API.
+  adminApp = initializeApp({ projectId });
   return adminApp;
 }
 
