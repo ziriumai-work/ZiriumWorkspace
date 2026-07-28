@@ -4,6 +4,7 @@
 
 import { initializeApp, getApps, cert, type App } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
 let adminApp: App | undefined;
 
@@ -15,20 +16,25 @@ function getAdminApp(): App {
     return adminApp;
   }
 
-  // If a service account key JSON string is provided, use it.
-  // Otherwise fall back to Application Default Credentials (works on
-  // Cloud Run, App Hosting, and local emulators with GOOGLE_APPLICATION_CREDENTIALS).
+  const projectId =
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+    process.env.GCLOUD_PROJECT ||
+    "ziriumai-workspace-5c840";
+
   const keyJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (keyJson) {
     try {
       const serviceAccount = JSON.parse(keyJson);
-      adminApp = initializeApp({ credential: cert(serviceAccount) });
+      adminApp = initializeApp({
+        credential: cert(serviceAccount),
+        projectId: serviceAccount.project_id || projectId,
+      });
     } catch {
       // If parsing fails, fall back to ADC.
-      adminApp = initializeApp();
+      adminApp = initializeApp({ projectId });
     }
   } else {
-    adminApp = initializeApp();
+    adminApp = initializeApp({ projectId });
   }
   return adminApp;
 }
@@ -36,4 +42,9 @@ function getAdminApp(): App {
 /** Lazily initialised Firebase Admin Auth instance. */
 export function getAdminAuth(): Auth {
   return getAuth(getAdminApp());
+}
+
+/** Lazily initialised Firebase Admin Firestore instance. */
+export function getAdminDb(): Firestore {
+  return getFirestore(getAdminApp());
 }

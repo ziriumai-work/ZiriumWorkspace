@@ -140,23 +140,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [employee, user]);
 
-  // Automatically sync employee.accessLevel with members.role whenever an admin/owner is logged in!
+  // Automatically sync employee.accessLevel with members.role
   const syncedRolesRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!user || !member || !employees) return;
-    const isPrivileged = member.role === "owner" || member.role === "admin";
-    if (!isPrivileged) return;
 
-    employees.forEach((emp) => {
-      if (!emp.uid) return;
-      const targetRole = emp.accessLevel === "admin" ? "owner" : "member";
-      const cacheKey = `${emp.uid}_${targetRole}`;
-      if (!syncedRolesRef.current.has(cacheKey)) {
+    // Always sync current logged in user's member role to match their employee.accessLevel
+    if (employee && user.uid) {
+      const targetRole = employee.accessLevel === "admin" ? "owner" : "member";
+      const cacheKey = `${user.uid}_${targetRole}`;
+      if (!syncedRolesRef.current.has(cacheKey) && member.role !== targetRole) {
         syncedRolesRef.current.add(cacheKey);
-        updateMemberRole(emp.uid, targetRole).catch(() => {});
+        updateMemberRole(user.uid, targetRole).catch(() => {});
       }
-    });
-  }, [user, member, employees]);
+    }
+
+    const isPrivileged = member.role === "owner" || member.role === "admin";
+    if (isPrivileged) {
+      employees.forEach((emp) => {
+        if (!emp.uid) return;
+        const targetRole = emp.accessLevel === "admin" ? "owner" : "member";
+        const cacheKey = `${emp.uid}_${targetRole}`;
+        if (!syncedRolesRef.current.has(cacheKey)) {
+          syncedRolesRef.current.add(cacheKey);
+          updateMemberRole(emp.uid, targetRole).catch(() => {});
+        }
+      });
+    }
+  }, [user, member, employee, employees]);
 
   const [accessBlocked, setAccessBlocked] = useState<string | null>(null);
 
@@ -178,21 +189,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [loading, user, employee, employees, member]);
 
-  // Admin if EITHER:
-  //  - a privileged member role, OR
-  //  - listed in the employee directory with accessLevel "admin", OR
-  //  - signed in but NOT yet in the employee directory at all (the owner / setup
-  //    accounts). Only people explicitly added as employees get the restricted
-  //    view — this prevents locking the owner out of their own workspace.
-  const isAdmin =
-    member?.role === "owner" ||
-    member?.role === "admin" ||
-    employee?.accessLevel === "admin" ||
-    (user !== null && employees !== null && employees.length === 0 && employee === null);
+  // Admin determination:
+  // If an employee directory record exists for the user, accessLevel MUST be "admin".
+  // Only if NO employee record exists yet (e.g. initial setup workspace owner) do we fall back to member.role.
+  const isAdmin = employee
+    ? employee.accessLevel === "admin"
+    : member?.role === "owner" ||
+      member?.role === "admin" ||
+      (user !== null && employees !== null && employees.length === 0);
 
-  // Resolve the app role once the directory is available. Interns are marked
-  // by their employee record's accessLevel; everyone else in the directory is
-  // an employee unless one of the admin conditions above applies.
+  // Resolve the app role once the directory is available.
   const role: AppRole | null =
     !user || employees === null
       ? null

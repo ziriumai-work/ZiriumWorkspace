@@ -152,6 +152,37 @@ export function subscribeToMyAttendance(
 // Write helpers
 // ---------------------------------------------------------------------------
 
+async function fetchSubscribedAdminEmails(): Promise<string[]> {
+  const emailsSet = new Set<string>();
+  try {
+    const devQuery = query(
+      collection(db, "developers"),
+      where("accessLevel", "==", "admin"),
+      where("subscribeToEmails", "==", true)
+    );
+    const devSnap = await getDocs(devQuery);
+    devSnap.forEach((docSnap) => {
+      const em = docSnap.data().email as string;
+      if (em) emailsSet.add(em);
+    });
+
+    const memQuery = query(
+      collection(db, "members"),
+      where("subscribeToEmails", "==", true)
+    );
+    const memSnap = await getDocs(memQuery);
+    memSnap.forEach((docSnap) => {
+      const data = docSnap.data();
+      if ((data.role === "owner" || data.role === "admin") && data.email) {
+        emailsSet.add(data.email as string);
+      }
+    });
+  } catch (err) {
+    console.error("Error fetching subscribed admin emails from client:", err);
+  }
+  return Array.from(emailsSet);
+}
+
 /** Clock in for the current user. Auto-detects if late. */
 export async function clockIn(
   employee: Developer,
@@ -277,13 +308,38 @@ export async function clockIn(
     updatedAt: serverTimestamp(),
   });
 
+  if (employee.accessLevel !== "admin") {
+    const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    console.log("Triggering admin email notification for Clock In:", employee.name);
+    fetchSubscribedAdminEmails().then((adminEmails) => {
+      fetch("/api/attendance/notify-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userName: employee.name,
+          userEmail: employee.email,
+          userAvatar: employee.photoURL,
+          action: "Clock In",
+          exactTime: timeStr,
+          adminEmails,
+        }),
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          console.log("Admin notify email response (Clock In):", data);
+        })
+        .catch((err) => console.error("Admin notify error:", err));
+    });
+  }
+
   return returnResult;
 }
 
 /** Clock out — sets checkOut, calculates hoursWorked and overtime. */
 export async function clockOut(
   uid: string,
-  settings: OfficeSettings
+  settings: OfficeSettings,
+  employee?: Developer,
 ): Promise<{ status: "success" | "warning" | "error"; message: string }> {
   const now = new Date();
   const date = now.toISOString().slice(0, 10);
@@ -319,6 +375,42 @@ export async function clockOut(
     updatedAt: serverTimestamp(),
   });
   
+  let emp = employee;
+  if (!emp) {
+    try {
+      const devSnap = await getDoc(doc(db, "developers", uid));
+      if (devSnap.exists()) {
+        emp = { id: devSnap.id, ...devSnap.data() } as Developer;
+      }
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  if (emp && emp.accessLevel !== "admin") {
+    const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    console.log("Triggering admin email notification for Clock Out:", emp?.name || uid);
+    fetchSubscribedAdminEmails().then((adminEmails) => {
+      fetch("/api/attendance/notify-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userName: emp?.name || "Employee",
+          userEmail: emp?.email || "",
+          userAvatar: emp?.photoURL || "",
+          action: "Clock Out",
+          exactTime: timeStr,
+          adminEmails,
+        }),
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          console.log("Admin notify email response (Clock Out):", data);
+        })
+        .catch((err) => console.error("Admin notify error:", err));
+    });
+  }
+
   return { status: "success", message: "Clocked out successfully." };
 }
 

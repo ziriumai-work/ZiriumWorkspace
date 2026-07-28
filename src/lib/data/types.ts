@@ -19,6 +19,8 @@ export interface Member {
   role: Role;
   teamIds: string[];
   hasSeenWelcome?: boolean;
+  subscribeToEmails?: boolean;
+  email?: string;
   createdAt: Timestamp | null;
 }
 
@@ -154,6 +156,7 @@ export interface Developer {
   monthlySalary?: number; // base monthly salary
   officeHours?: number; // expected weekly office hours
   flexibilityHours?: number; // weekly flexibility time allowed
+  subscribeToEmails?: boolean; // whether an admin subscribes to clock-in/out email alerts
   createdAt: Timestamp | null;
 }
 

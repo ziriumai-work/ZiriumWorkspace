@@ -125,7 +125,7 @@ export default function AttendancePage() {
     setBusy(true);
     setError(null);
     try {
-      const res = await clockOut(user.uid, settings);
+      const res = await clockOut(user.uid, settings, employee || undefined);
       setToastMsg({ message: res.message, type: res.status });
     } catch (err) {
       console.error(err);

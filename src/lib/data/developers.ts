@@ -43,6 +43,7 @@ function toDeveloper(id: string, data: Record<string, unknown>): Developer {
     officeHours: data.officeHours as number | undefined,
     flexibilityHours: data.flexibilityHours as number | undefined,
     photoURL: (data.photoURL as string) ?? undefined,
+    subscribeToEmails: (data.subscribeToEmails as boolean) ?? false,
     createdAt: (data.createdAt as Timestamp | null) ?? null,
   };
 }

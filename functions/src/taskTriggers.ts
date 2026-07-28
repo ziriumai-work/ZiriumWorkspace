@@ -3,6 +3,24 @@ import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { getFirestore } from "firebase-admin/firestore";
 import { WebClient } from "@slack/web-api";
 
+function getLiveBaseUrl(appUrlFromDb?: string): string {
+  const candidates = [
+    process.env.APP_URL,
+    appUrlFromDb,
+    process.env.NEXT_PUBLIC_APP_URL,
+    "https://zirium.vercel.app",
+  ];
+  for (const c of candidates) {
+    if (c && typeof c === "string" && c.trim() !== "" && !c.toLowerCase().includes("localhost")) {
+      let url = c.trim();
+      if (url.endsWith("/")) url = url.slice(0, -1);
+      if (!url.startsWith("http")) url = `https://${url}`;
+      return url;
+    }
+  }
+  return "https://zirium.vercel.app";
+}
+
 export const onTaskCompletionSlackAlert = onDocumentUpdated(
   "tasks/{taskId}",
   async (event) => {
@@ -41,9 +59,7 @@ export const onTaskCompletionSlackAlert = onDocumentUpdated(
       const projectName = project.name || "Unknown Project";
 
       const settingsSnap = await getFirestore().collection("office_settings").doc("default").get();
-      let baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || settingsSnap.data()?.appUrl || "https://zirium.vercel.app";
-      if (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(0, -1);
-      if (!baseUrl.startsWith("http")) baseUrl = `https://${baseUrl}`;
+      const baseUrl = getLiveBaseUrl(settingsSnap.data()?.appUrl);
       const projectUrl = `${baseUrl}/projects/${projectId}`;
 
       try {
@@ -124,9 +140,7 @@ export const onProjectTableUpdateSlackAlert = onDocumentUpdated(
 
           const projectName = after.title || after.name || "Project";
           const settingsSnap = await getFirestore().collection("office_settings").doc("default").get();
-          let baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || settingsSnap.data()?.appUrl || "https://zirium.vercel.app";
-          if (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(0, -1);
-          if (!baseUrl.startsWith("http")) baseUrl = `https://${baseUrl}`;
+          const baseUrl = getLiveBaseUrl(settingsSnap.data()?.appUrl);
           const projectUrl = `${baseUrl}/projects/${event.params.projectId}`;
 
           const updaterName = after.lastUpdatedBy?.name || "A team member";

@@ -4,6 +4,25 @@ exports.onProjectTableUpdateSlackAlert = exports.onTaskCompletionSlackAlert = vo
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
 const web_api_1 = require("@slack/web-api");
+function getLiveBaseUrl(appUrlFromDb) {
+    const candidates = [
+        process.env.APP_URL,
+        appUrlFromDb,
+        process.env.NEXT_PUBLIC_APP_URL,
+        "https://zirium.vercel.app",
+    ];
+    for (const c of candidates) {
+        if (c && typeof c === "string" && c.trim() !== "" && !c.toLowerCase().includes("localhost")) {
+            let url = c.trim();
+            if (url.endsWith("/"))
+                url = url.slice(0, -1);
+            if (!url.startsWith("http"))
+                url = `https://${url}`;
+            return url;
+        }
+    }
+    return "https://zirium.vercel.app";
+}
 exports.onTaskCompletionSlackAlert = (0, firestore_1.onDocumentUpdated)("tasks/{taskId}", async (event) => {
     var _a, _b, _c, _d;
     const before = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before.data();
@@ -37,11 +56,7 @@ exports.onTaskCompletionSlackAlert = (0, firestore_1.onDocumentUpdated)("tasks/{
         const taskName = after.title || "Unknown Task";
         const projectName = project.name || "Unknown Project";
         const settingsSnap = await (0, firestore_2.getFirestore)().collection("office_settings").doc("default").get();
-        let baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ((_d = settingsSnap.data()) === null || _d === void 0 ? void 0 : _d.appUrl) || "https://zirium.vercel.app";
-        if (baseUrl.endsWith("/"))
-            baseUrl = baseUrl.slice(0, -1);
-        if (!baseUrl.startsWith("http"))
-            baseUrl = `https://${baseUrl}`;
+        const baseUrl = getLiveBaseUrl((_d = settingsSnap.data()) === null || _d === void 0 ? void 0 : _d.appUrl);
         const projectUrl = `${baseUrl}/projects/${projectId}`;
         try {
             await web.chat.postMessage({
@@ -115,11 +130,7 @@ exports.onProjectTableUpdateSlackAlert = (0, firestore_1.onDocumentUpdated)("pro
                 }
                 const projectName = after.title || after.name || "Project";
                 const settingsSnap = await (0, firestore_2.getFirestore)().collection("office_settings").doc("default").get();
-                let baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ((_f = settingsSnap.data()) === null || _f === void 0 ? void 0 : _f.appUrl) || "https://zirium.vercel.app";
-                if (baseUrl.endsWith("/"))
-                    baseUrl = baseUrl.slice(0, -1);
-                if (!baseUrl.startsWith("http"))
-                    baseUrl = `https://${baseUrl}`;
+                const baseUrl = getLiveBaseUrl((_f = settingsSnap.data()) === null || _f === void 0 ? void 0 : _f.appUrl);
                 const projectUrl = `${baseUrl}/projects/${event.params.projectId}`;
                 const updaterName = ((_g = after.lastUpdatedBy) === null || _g === void 0 ? void 0 : _g.name) || "A team member";
                 const updaterAvatar = (_h = after.lastUpdatedBy) === null || _h === void 0 ? void 0 : _h.avatar;

@@ -23,6 +23,7 @@ import { PROJECT_STATUSES, type Project, type DailyTask, type AttendanceRecord }
 import { STATUS_META, chipSx, TASK_STATUS_COLORS } from "@/components/projectMeta";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { PersonalDashboard } from "@/components/dashboard/PersonalDashboard";
+import { AdminEmailSubscriptionToggle } from "@/components/dashboard/AdminEmailSubscriptionToggle";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 export default function DashboardPage() {
@@ -104,12 +105,15 @@ export default function DashboardPage() {
 
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: { xs: 2, sm: 4, md: 6 }, py: 5 }}>
-      <Box component="header" sx={{ mb: 4 }}>
-        <Typography variant="h1">Welcome back, {firstName}</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {active} active {active === 1 ? "project" : "projects"} across the
-          workspace.
-        </Typography>
+      <Box component="header" sx={{ mb: 4, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+        <Box>
+          <Typography variant="h1">Welcome back, {firstName}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {active} active {active === 1 ? "project" : "projects"} across the
+            workspace.
+          </Typography>
+        </Box>
+        <AdminEmailSubscriptionToggle />
       </Box>
 
       {/* Global Summaries (Admin Only) */}
