@@ -154,6 +154,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cacheKey = `${user.uid}_${targetRole}`;
       if (!syncedRolesRef.current.has(cacheKey) && member.role !== targetRole) {
         syncedRolesRef.current.add(cacheKey);
+        // Immediately update local state so UI reflects the correct role
+        // without waiting for the Firestore round-trip + page refresh.
+        setMember((prev) => prev ? { ...prev, role: targetRole } : prev);
         updateMemberRole(user.uid, targetRole).catch(() => {});
       }
     }
