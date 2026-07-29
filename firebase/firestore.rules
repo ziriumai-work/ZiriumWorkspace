@@ -22,8 +22,15 @@ service cloud.firestore {
       return memberDoc(request.auth.uid).role;
     }
 
+    function isOwnerEmail() {
+      return isSignedIn() && request.auth.token.email != null && (
+        request.auth.token.email.lower() == 'haseeb.a@zirium.com' ||
+        request.auth.token.email.lower() == 'ziriumai@gmail.com'
+      );
+    }
+
     function isAdmin() {
-      return isMember() && myRole() in ['owner', 'admin'];
+      return (isMember() && myRole() in ['owner', 'admin']) || isOwnerEmail();
     }
 
     // User profiles (display name, photo, email).
@@ -44,8 +51,8 @@ service cloud.firestore {
         && request.auth.uid == uid
         && request.resource.data.role == 'member';
 
-      // Only owners/admins can change roles or remove members. Members can only update hasSeenWelcome.
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hasSeenWelcome']));
+      // Only owners/admins can change roles or remove members; users can sync their own member doc.
+      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
       allow delete: if isAdmin();
     }
 

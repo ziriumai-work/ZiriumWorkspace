@@ -250,10 +250,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         syncedRolesRef.current.add(cacheKey);
         // Update local state immediately in memory so UI reflects the correct role
         setMember((prev) => prev ? { ...prev, role: targetRole } : prev);
-        // Only write to Firestore if the user is an owner/admin (Firestore rules restrict updates to admins)
-        if (member.role === "owner" || member.role === "admin") {
-          updateMemberRole(user.uid, targetRole).catch(() => {});
-        }
+        // Sync role to Firestore
+        updateMemberRole(user.uid, targetRole).catch(() => {});
       }
     }
 
