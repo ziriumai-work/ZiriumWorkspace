@@ -9,7 +9,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import type { Member, UserProfile } from "@/lib/data/types";
+import type { Member, Role, UserProfile } from "@/lib/data/types";
 
 // rules. Returns an unsubscribe fn.
 export function subscribeToMembers(
@@ -60,7 +60,7 @@ export async function markWelcomeSeen(uid: string): Promise<void> {
 
 export async function updateMemberRole(
   uid: string,
-  role: "member" | "admin" | "owner",
+  role: Role,
 ): Promise<void> {
   await setDoc(doc(db, "members", uid), { role }, { merge: true });
 }

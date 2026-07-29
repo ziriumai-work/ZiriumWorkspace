@@ -1,7 +1,7 @@
 
 import type { Timestamp } from "firebase/firestore";
 
-export type Role = "owner" | "admin" | "member";
+export type Role = "owner" | "admin" | "member" | "employee" | "intern";
 
 // users/{uid} — public-ish profile shown across the app.
 export interface UserProfile {

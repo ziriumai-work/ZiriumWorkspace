@@ -129,13 +129,14 @@ export async function POST(request: Request) {
     }
 
     const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
+      service: "gmail",
       auth: {
         user: cleanUser,
         pass: cleanPass,
       },
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
     });
 
     const isClockIn = action === "Clock In";

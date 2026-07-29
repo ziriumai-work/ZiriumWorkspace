@@ -151,7 +151,8 @@ service cloud.firestore {
     // Now locked to owner/admin roles.
     // -----------------------------------------------------------------------
     match /salaries/{id} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() || isMember();
+      allow write: if isAdmin();
     }
 
     // Sick Leave Requests

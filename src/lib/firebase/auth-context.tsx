@@ -147,7 +147,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Always sync current logged in user's member role to match their employee.accessLevel
     if (employee && user.uid) {
-      const targetRole = employee.accessLevel === "admin" ? "owner" : "member";
+      const targetRole =
+        employee.accessLevel === "admin"
+          ? (member.role === "owner" ? "owner" : "admin")
+          : employee.accessLevel;
       const cacheKey = `${user.uid}_${targetRole}`;
       if (!syncedRolesRef.current.has(cacheKey) && member.role !== targetRole) {
         syncedRolesRef.current.add(cacheKey);
@@ -159,7 +162,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isPrivileged) {
       employees.forEach((emp) => {
         if (!emp.uid) return;
-        const targetRole = emp.accessLevel === "admin" ? "owner" : "member";
+        const targetRole =
+          emp.accessLevel === "admin" ? "admin" : emp.accessLevel;
         const cacheKey = `${emp.uid}_${targetRole}`;
         if (!syncedRolesRef.current.has(cacheKey)) {
           syncedRolesRef.current.add(cacheKey);
@@ -189,13 +193,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [loading, user, employee, employees, member]);
 
-  // isAdmin resolution — employee.accessLevel has absolute priority.
-  // Falls back to member.role ONLY when there is no employee record AND employees have loaded.
-  // Never grants admin during the loading window (employees === null) to prevent
-  // race conditions where newly registered employees briefly see admin UI.
+  // isAdmin resolution — checks employee.accessLevel and member.role.
   const isAdmin = employee
-    ? employee.accessLevel === "admin"
-    : employees !== null && employees.length === 0 && (
+    ? employee.accessLevel === "admin" || member?.role === "owner"
+    : employees !== null && (
         member?.role === "owner" || member?.role === "admin"
       );
 
@@ -205,7 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ? null
       : isAdmin
         ? "admin"
-        : employee?.accessLevel === "intern"
+        : employee?.accessLevel === "intern" || member?.role === "intern"
           ? "intern"
           : "employee";
 
