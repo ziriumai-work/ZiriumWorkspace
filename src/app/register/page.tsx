@@ -174,7 +174,7 @@ export default function RegisterPage() {
               fullWidth
               sx={{ py: 1.25, mt: 1, fontSize: 14 }}
             >
-              Set Password
+              {busy || loading ? "Setting up workspace..." : "Set Password"}
             </Button>
           </Box>
         </Paper>

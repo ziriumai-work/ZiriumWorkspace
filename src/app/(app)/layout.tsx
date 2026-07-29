@@ -50,13 +50,13 @@ function allowedPath(role: AppRole, pathname: string): boolean {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, accessBlocked } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [user, loading, router]);
+    if (!loading && !user && !accessBlocked) router.replace("/login");
+  }, [user, loading, accessBlocked, router]);
 
   // Keep each role on its permitted routes once the role is known.
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [role, pathname, router]);
 
-  if (loading || !user || (role && !allowedPath(role, pathname))) {
+  if (loading || !user || !role || !!accessBlocked || !allowedPath(role, pathname)) {
     return (
       <Box
         component="main"

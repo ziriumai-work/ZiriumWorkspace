@@ -39,6 +39,7 @@ interface AuthState {
   isAdmin: boolean;
   role: AppRole | null;
   loading: boolean; // true until auth + member + employees are ALL resolved
+  accessBlocked: string | null;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (
@@ -70,25 +71,37 @@ function syncUserProfile(user: User): void {
 // Membership: read immediately (served instantly from local cache if available).
 async function fetchOrCreateMember(user: User): Promise<Member> {
   const memberRef = doc(db, "members", user.uid);
-  const snap = await getDoc(memberRef);
-  if (!snap.exists()) {
-    const newMember = {
+  try {
+    const snap = await getDoc(memberRef);
+    if (!snap.exists()) {
+      const newMember = {
+        uid: user.uid,
+        role: "member" as const,
+        teamIds: [] as string[],
+        createdAt: serverTimestamp(),
+      };
+      await setDoc(memberRef, newMember).catch((err) =>
+        console.warn("Could not create member doc in Firestore:", err)
+      );
+      return { ...newMember, createdAt: null };
+    }
+    return snap.data() as Member;
+  } catch (err) {
+    console.warn("Fallback to in-memory member:", err);
+    return {
       uid: user.uid,
-      role: "member" as const,
-      teamIds: [] as string[],
-      createdAt: serverTimestamp(),
+      role: "member",
+      teamIds: [],
+      createdAt: null,
     };
-    await setDoc(memberRef, newMember);
-    return { ...newMember, createdAt: null };
   }
-  return snap.data() as Member;
 }
 
 // ─── Setup screen messages ────────────────────────────────────────────────────
 const SETUP_MESSAGES = [
-  "Setting up your account…",
-  "Please wait a few moments…",
-  "One-time setup, almost done…",
+  "Loading your workspace…",
+  "Syncing your permissions…",
+  "Preparing your dashboard…",
 ];
 
 function SetupScreen() {
@@ -188,21 +201,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── 2. Employee directory subscription ────────────────────────────────────
   useEffect(() => {
-    if (!user) return;
+    if (!user || !memberLoaded || !member) return;
     // Reset sync state on new user login
     setRoleSynced(false);
-    const unsub = subscribeToDevelopers(setEmployees, () => setEmployees([]));
+    const unsub = subscribeToDevelopers(
+      (devs) => setEmployees(devs),
+      (err) => console.warn("subscribeToDevelopers warning:", err),
+    );
     return () => {
       unsub();
       setEmployees(null);
     };
-  }, [user]);
+  }, [user, memberLoaded, member]);
 
   // ── 3. Match current user to their employee record ────────────────────────
   const employee =
     user?.email && employees
       ? (employees.find(
-          (e) => e.email.toLowerCase() === user.email!.toLowerCase(),
+          (e) => e.email.trim().toLowerCase() === user.email!.trim().toLowerCase(),
         ) ?? null)
       : null;
 
@@ -214,32 +230,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [employee, user]);
 
   // ── 5. Sync member.role ↔ employee.accessLevel ────────────────────────────
-  // This is the critical step: on first login the member has role="member" which
-  // is wrong. We must update it to match the employee's accessLevel BEFORE the
-  // app renders, and set roleSynced=true only after this is done.
   const syncedRolesRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!user || !member || employees === null) return;
 
     // Current user's role sync
     if (employee && user.uid) {
+      const isEmpIntern =
+        employee.accessLevel === "intern" || employee.employmentType === "intern";
       const targetRole =
         employee.accessLevel === "admin"
           ? (member.role === "owner" ? "owner" : "admin")
-          : employee.accessLevel;
+          : isEmpIntern
+            ? "intern"
+            : "employee";
+
       const cacheKey = `${user.uid}_${targetRole}`;
       if (!syncedRolesRef.current.has(cacheKey) && member.role !== targetRole) {
         syncedRolesRef.current.add(cacheKey);
-        // Update local state immediately — don't wait for Firestore round-trip.
+        // Update local state immediately in memory so UI reflects the correct role
         setMember((prev) => prev ? { ...prev, role: targetRole } : prev);
-        updateMemberRole(user.uid, targetRole).catch(() => {});
+        // Only write to Firestore if the user is an owner/admin (Firestore rules restrict updates to admins)
+        if (member.role === "owner" || member.role === "admin") {
+          updateMemberRole(user.uid, targetRole).catch(() => {});
+        }
       }
     }
 
     // Mark role as synced — this unblocks the loading gate.
     setRoleSynced(true);
 
-    // Admin: batch-sync all employees' member roles
+    // Admin: batch-sync all employees' member roles in Firestore
     const isPrivileged = member.role === "owner" || member.role === "admin";
     if (isPrivileged) {
       employees.forEach((emp) => {
@@ -261,37 +282,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loading = !authResolved || (!!user && (!memberLoaded || employees === null || !roleSynced));
 
   // ── 7. Access check (offboarded / terminated / unregistered) ──────────────
-  const [accessBlocked, setAccessBlocked] = useState<string | null>(null);
-  useEffect(() => {
-    // Only run when everything is fully loaded
-    if (loading || !user || !employees || !member) {
-      // Clear any stale access block when user signs out or data resets
-      if (!user && accessBlocked) setAccessBlocked(null);
-      return;
-    }
-
-    const isPrivileged = member.role === "owner" || member.role === "admin";
-
-    if (employee) {
-      if (employee.status === "terminated" || employee.status === "offboarded") {
-        setAccessBlocked(
-          "Your account access has been revoked. If you believe this is an error, please contact your administrator."
-        );
-        firebaseSignOut(auth).catch(() => {});
-        return;
-      }
-      // Employee is active and found — clear any stale block
-      if (accessBlocked) setAccessBlocked(null);
-    } else if (employees.length > 0 && !isPrivileged) {
-      setAccessBlocked(
-        "Your email is not registered in the system. Please contact your administrator to be added before logging in or registering."
-      );
-      firebaseSignOut(auth).catch(() => {});
-    } else {
-      // Clear block (e.g., admin without employee record)
-      if (accessBlocked) setAccessBlocked(null);
-    }
-  }, [loading, user, employee, employees, member, accessBlocked]);
+  const isPrivileged = member?.role === "owner" || member?.role === "admin";
+  const accessBlocked: string | null =
+    !user || loading || employees === null || !member
+      ? null
+      : employee
+        ? employee.status === "terminated" || employee.status === "offboarded"
+          ? "Your account access has been revoked. If you believe this is an error, please contact your administrator."
+          : null
+        : !isPrivileged
+          ? "Your email is not registered in the system. Please contact your administrator to be added before logging in or registering."
+          : null;
 
   // ── 8. Role resolution ────────────────────────────────────────────────────
   const isAdmin = employee
@@ -300,28 +301,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         member?.role === "owner" || member?.role === "admin"
       );
 
+  const isIntern =
+    employee?.accessLevel === "intern" ||
+    employee?.employmentType === "intern" ||
+    member?.role === "intern";
+
   const role: AppRole | null =
     !user || employees === null
       ? null
       : isAdmin
         ? "admin"
-        : employee?.accessLevel === "intern" || member?.role === "intern"
-          ? "intern"
-          : "employee";
+        : employee
+          ? isIntern
+            ? "intern"
+            : "employee"
+          : null;
 
   // ── Auth actions ──────────────────────────────────────────────────────────
   async function signInWithGoogle() {
-    setAccessBlocked(null); // clear stale blocks before new login
     await signInWithPopup(auth, googleProvider);
   }
 
   async function signInWithEmail(email: string, password: string) {
-    setAccessBlocked(null);
     await signInWithEmailAndPassword(auth, email, password);
   }
 
   async function signUpWithEmail(name: string, email: string, password: string) {
-    setAccessBlocked(null);
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     const displayName = name.trim();
     if (displayName) {
@@ -334,7 +339,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
-    setAccessBlocked(null);
     await firebaseSignOut(auth);
   }
 
@@ -348,7 +352,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 400, mb: 4 }}>{accessBlocked}</Typography>
         <Button 
           variant="contained" 
-          onClick={() => { setAccessBlocked(null); window.location.href = '/login'; }}
+          onClick={async () => { 
+            await firebaseSignOut(auth).catch(() => {});
+            window.location.href = '/login'; 
+          }}
           sx={{ borderRadius: 2 }}
         >
           Return to Login
@@ -357,8 +364,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  // First-time setup screen: shown when user is signed in but data is still loading
-  if (user && loading && authResolved && memberLoaded) {
+  // First-time setup screen: shown ONLY when a user is signing in for the very first time
+  // (i.e. their employee profile has not yet been bound to their auth UID: !employee.uid).
+  // Established users whose accounts are already bound never see this screen on future logins.
+  if (user && loading && authResolved && memberLoaded && (!employee || !employee.uid)) {
     return <SetupScreen />;
   }
 
@@ -371,6 +380,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin,
         role,
         loading,
+        accessBlocked,
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,
