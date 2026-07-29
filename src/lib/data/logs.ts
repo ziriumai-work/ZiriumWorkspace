@@ -15,6 +15,26 @@ import type { AdminLog } from "./types";
 export async function logAdminAction(action: string, details: string) {
   if (!auth.currentUser) return; // Silent return if no authenticated user
   const uid = auth.currentUser.uid;
+  const email = (auth.currentUser.email || "").toLowerCase();
+  const isOwnerOrAdminEmail =
+    email === "haseeb.a@ziriumai.com" ||
+    email === "haseeb.a@zirium.com" ||
+    email === "ziriumai@gmail.com";
+
+  try {
+    const memberSnap = await getDoc(doc(db, "members", uid));
+    if (memberSnap.exists()) {
+      const role = memberSnap.data()?.role;
+      if (role !== "owner" && role !== "admin" && !isOwnerOrAdminEmail) {
+        // Silent return: Do not record employee/intern actions in admin logs
+        return;
+      }
+    } else if (!isOwnerOrAdminEmail) {
+      return;
+    }
+  } catch (err) {
+    if (!isOwnerOrAdminEmail) return;
+  }
   
   let adminName = auth.currentUser.displayName || auth.currentUser.email || "System Admin";
   let adminPhotoUrl = auth.currentUser.photoURL || null;

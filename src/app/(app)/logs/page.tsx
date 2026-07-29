@@ -8,6 +8,8 @@ import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { subscribeToLogs } from "@/lib/data/logs";
+import { subscribeToMembers } from "@/lib/data/members";
+import { subscribeToDevelopers } from "@/lib/data/developers";
 import type { AdminLog } from "@/lib/data/types";
 import { LogsFilters } from "@/components/logs/LogsFilters";
 import { LogsTable } from "@/components/logs/LogsTable";
@@ -16,6 +18,8 @@ export default function AdminLogsPage() {
   const { user, role, isAdmin, loading: authLoading } = useAuth();
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [membersMap, setMembersMap] = useState<Record<string, string>>({});
+  const [nonAdminNames, setNonAdminNames] = useState<Set<string>>(new Set());
   
   const canAccess =
     isAdmin ||
@@ -35,17 +39,55 @@ export default function AdminLogsPage() {
       return;
     }
 
-    const unsub = subscribeToLogs((fetchedLogs) => {
+    const unsubLogs = subscribeToLogs((fetchedLogs) => {
       setLogs(fetchedLogs);
       setLoading(false);
     }, 500); // Fetch latest 500 logs for client-side filtering
 
-    return () => unsub();
+    const unsubMembers = subscribeToMembers((members) => {
+      const map: Record<string, string> = {};
+      members.forEach((m) => {
+        map[m.uid] = m.role;
+      });
+      setMembersMap(map);
+    });
+
+    const unsubDevs = subscribeToDevelopers((devs) => {
+      const namesSet = new Set<string>();
+      devs.forEach((d) => {
+        if (d.role === "employee" || d.role === "intern") {
+          if (d.name) namesSet.add(d.name.trim().toLowerCase());
+          if (d.email) namesSet.add(d.email.trim().toLowerCase());
+          if (d.uid) namesSet.add(d.uid);
+        }
+      });
+      setNonAdminNames(namesSet);
+    });
+
+    return () => {
+      unsubLogs();
+      unsubMembers();
+      unsubDevs();
+    };
   }, [canAccess]);
 
   // Client-side filtering
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
+      // 0. Only show admin / owner actions (filter out intern, employee, member roles)
+      if (log.adminId && membersMap[log.adminId]) {
+        const r = membersMap[log.adminId];
+        if (r === "employee" || r === "intern" || r === "member") {
+          return false;
+        }
+      }
+      if (log.adminId && nonAdminNames.has(log.adminId)) {
+        return false;
+      }
+      if (log.adminName && nonAdminNames.has(log.adminName.trim().toLowerCase())) {
+        return false;
+      }
+
       // 1. Date filter
       if (dateFilter) {
         if (!log.timestamp) return false;
@@ -76,7 +118,7 @@ export default function AdminLogsPage() {
 
       return true;
     });
-  }, [logs, searchQuery, dateFilter]);
+  }, [logs, searchQuery, dateFilter, membersMap]);
 
   if (authLoading || loading) {
     return (
