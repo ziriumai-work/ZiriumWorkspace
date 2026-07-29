@@ -31,8 +31,21 @@ export function WelcomeScreen() {
   const [closedOptimistically, setClosedOptimistically] = useState(false);
   const [toastError, setToastError] = useState<string | null>(null);
 
+  // Check localStorage so that even during navigation or tab switching, it never re-appears
+  const isSeenInStorage =
+    typeof window !== "undefined" &&
+    !!user &&
+    localStorage.getItem(`welcome_seen_${user.uid}`) === "true";
+
   // Determine if we should show the modal
-  const shouldShow = !!user && !!member && !member.hasSeenWelcome && !isAdmin && role !== null && !closedOptimistically;
+  const shouldShow =
+    !!user &&
+    !!member &&
+    !member.hasSeenWelcome &&
+    !isSeenInStorage &&
+    !isAdmin &&
+    role !== null &&
+    !closedOptimistically;
 
   useEffect(() => {
     if (!shouldShow) return;
@@ -57,11 +70,14 @@ export function WelcomeScreen() {
     if (!user) return;
     setSaving(true);
     try {
-      await markWelcomeSeen(user.uid);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`welcome_seen_${user.uid}`, "true");
+      }
       setClosedOptimistically(true);
+      await markWelcomeSeen(user.uid);
     } catch (err: any) {
       console.error("Failed to mark welcome seen:", err);
-      setToastError(err.message || "Failed to save. Please try again.");
+      setToastError(err.message || "Failed to save to cloud. Stored locally.");
       setSaving(false);
     }
   };

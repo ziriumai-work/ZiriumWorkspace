@@ -26,7 +26,7 @@ import {
   sendPasswordResetEmail,
   type User,
 } from "firebase/auth";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "@/lib/firebase/client";
 import { subscribeToDevelopers, updateDeveloper } from "@/lib/data/developers";
 import { updateMemberRole } from "@/lib/data/members";
@@ -176,8 +176,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── 1. Auth state listener ────────────────────────────────────────────────
   useEffect(() => {
+    let memberUnsub: (() => void) | undefined;
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
       setUser(nextUser);
+      if (memberUnsub) {
+        memberUnsub();
+        memberUnsub = undefined;
+      }
       if (nextUser) {
         syncUserProfile(nextUser);
         try {
@@ -188,6 +193,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setMember(null);
         }
         setMemberLoaded(true);
+
+        memberUnsub = onSnapshot(doc(db, "members", nextUser.uid), (snap) => {
+          if (snap.exists()) {
+            setMember(snap.data() as Member);
+          }
+        });
       } else {
         setMember(null);
         setMemberLoaded(true);
@@ -196,7 +207,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setAuthResolved(true);
     });
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      if (memberUnsub) memberUnsub();
+    };
   }, []);
 
   // ── 2. Employee directory subscription ────────────────────────────────────

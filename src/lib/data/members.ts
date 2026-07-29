@@ -52,10 +52,8 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export async function markWelcomeSeen(uid: string): Promise<void> {
-  // Update only the hasSeenWelcome field (allowed by security rules for the member themselves)
-  await updateDoc(doc(db, "members", uid), {
-    hasSeenWelcome: true,
-  });
+  // Update hasSeenWelcome field reliably using setDoc merge
+  await setDoc(doc(db, "members", uid), { hasSeenWelcome: true }, { merge: true });
 }
 
 export async function updateMemberRole(
