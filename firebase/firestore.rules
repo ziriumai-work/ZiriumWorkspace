@@ -152,7 +152,8 @@ service cloud.firestore {
     // -----------------------------------------------------------------------
     match /salaries/{id} {
       allow read: if isAdmin() || isMember();
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || isMember();
     }
 
     // Sick Leave Requests

@@ -30,6 +30,9 @@ function getAdminApp(): App {
   if (keyJson) {
     try {
       const serviceAccount = JSON.parse(keyJson);
+      if (typeof serviceAccount.private_key === "string") {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+      }
       adminApp = initializeApp({
         credential: cert(serviceAccount),
         projectId: serviceAccount.project_id || projectId,
