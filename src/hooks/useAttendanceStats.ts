@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { computeMonthlySummary, getDynamicLeaveAllowance } from "@/lib/data/attendance";
+import { getWorkingDaysInWeekFromStart } from "@/components/attendance/attendance-utils";
 import { type AttendanceRecord, type Employee, type OfficeSettings, type DailyTask } from "@/lib/data/types";
 import { User } from "firebase/auth";
 
@@ -218,8 +219,10 @@ export function useAttendanceStats({
 
     const totalWeeklyHours = weeklyHoursWorked + weeklyCompensatedHours;
     const defaultWeeklyHours = employee.accessLevel === "intern" ? 30 : 40;
-    const baseRequiredHours = employee.officeHours || defaultWeeklyHours;
-    const dailyHours = baseRequiredHours / 5;
+    const fullWeekHours = employee.officeHours || defaultWeeklyHours;
+    const dailyHours = fullWeekHours / 5;
+    const workingDaysThisWeek = getWorkingDaysInWeekFromStart(weekStartIso, employee.startDate);
+    const baseRequiredHours = workingDaysThisWeek * dailyHours;
     const requiredHours = Math.max(0, baseRequiredHours - (daysOnLeaveThisWeek * dailyHours));
     const remainingHours = Math.max(0, requiredHours - totalWeeklyHours);
 

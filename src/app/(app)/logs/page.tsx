@@ -41,9 +41,14 @@ export default function AdminLogsPage() {
       // 1. Date filter
       if (dateFilter) {
         if (!log.timestamp) return false;
-        // log.timestamp is a Firestore Timestamp. Convert to YYYY-MM-DD
-        const dateObj = log.timestamp.toDate();
-        // Shift to local date string matching YYYY-MM-DD
+        let dateObj: Date | null = null;
+        if (typeof (log.timestamp as any).toDate === "function") {
+          dateObj = (log.timestamp as any).toDate();
+        } else if (log.timestamp instanceof Date) {
+          dateObj = log.timestamp;
+        }
+        if (!dateObj || isNaN(dateObj.getTime())) return false;
+
         const y = dateObj.getFullYear();
         const m = String(dateObj.getMonth() + 1).padStart(2, "0");
         const d = String(dateObj.getDate()).padStart(2, "0");
@@ -55,9 +60,9 @@ export default function AdminLogsPage() {
       // 2. Search query filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const matchAdmin = log.adminName.toLowerCase().includes(query);
-        const matchAction = log.action.toLowerCase().includes(query);
-        const matchDetails = log.details.toLowerCase().includes(query);
+        const matchAdmin = (log.adminName || "").toLowerCase().includes(query);
+        const matchAction = (log.action || "").toLowerCase().includes(query);
+        const matchDetails = (log.details || "").toLowerCase().includes(query);
         if (!matchAdmin && !matchAction && !matchDetails) return false;
       }
 

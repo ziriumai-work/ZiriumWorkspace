@@ -41,3 +41,25 @@ export function calcHours(checkIn: string | null, checkOut: string | null): stri
 export function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
+
+export function isFutureStartDate(startDate?: string | null): boolean {
+  if (!startDate) return false;
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  return startDate > todayStr;
+}
+
+export function getWorkingDaysInWeekFromStart(weekStartIso: string, startDate?: string | null): number {
+  if (!startDate) return 5;
+  const monday = new Date(weekStartIso + "T00:00:00");
+  let workingDays = 0;
+  for (let i = 0; i < 5; i++) {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + i);
+    const dayIso = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
+    if (dayIso >= startDate) {
+      workingDays++;
+    }
+  }
+  return workingDays;
+}

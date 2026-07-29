@@ -35,7 +35,7 @@ export function EmployeeStatsDashboard({ myStats, employee }: EmployeeStatsDashb
       </Typography>
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 2, mt: 2 }}>
         <StatCard 
-          label="Total Weekly Hours" 
+          label={`Total Weekly Hours (Target: ${formatHoursMinutes(myStats.requiredHours)})`} 
           value={formatHoursMinutes(myStats.totalWeeklyHours)} 
           color="#3b82f6" 
         />

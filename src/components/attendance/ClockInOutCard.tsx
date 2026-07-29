@@ -3,8 +3,9 @@ import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import { alpha } from "@mui/material/styles";
 import { type AttendanceRecord } from "@/lib/data/types";
-import { calcHours, fmtTime } from "./attendance-utils";
+import { calcHours, fmtTime, isFutureStartDate } from "./attendance-utils";
 
 interface ClockInOutCardProps {
   myTodayRecord: AttendanceRecord | null;
@@ -12,6 +13,7 @@ interface ClockInOutCardProps {
   busy: boolean;
   handleClockIn: () => void;
   handleClockOut: () => void;
+  futureStartDate?: string | null;
 }
 
 export function ClockInOutCard({
@@ -20,7 +22,38 @@ export function ClockInOutCard({
   busy,
   handleClockIn,
   handleClockOut,
+  futureStartDate,
 }: ClockInOutCardProps) {
+  if (futureStartDate && isFutureStartDate(futureStartDate)) {
+    return (
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 3,
+          mb: 3,
+          borderRadius: 4,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 2,
+          borderColor: "primary.main",
+          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
+        }}
+      >
+        <Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "primary.main" }}>
+            🕒 Employment Starts Soon
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Your scheduled start date is <strong>{futureStartDate}</strong>. Clock-in and daily task tracking will unlock on your first day.
+          </Typography>
+        </Box>
+        <Chip label={`Starts ${futureStartDate}`} color="primary" sx={{ fontWeight: 600 }} />
+      </Paper>
+    );
+  }
+
   return (
     <Paper
       variant="outlined"

@@ -78,9 +78,11 @@ export function LogsTable({ logs }: LogsTableProps) {
         </TableHead>
         <TableBody>
           {logs.map((log) => {
-            const dateStr = log.timestamp
-              ? log.timestamp.toDate().toLocaleString()
-              : "Pending...";
+            const dateStr = log.timestamp && typeof (log.timestamp as any).toDate === "function"
+              ? (log.timestamp as any).toDate().toLocaleString()
+              : log.timestamp instanceof Date
+                ? log.timestamp.toLocaleString()
+                : "Pending...";
 
             return (
               <TableRow

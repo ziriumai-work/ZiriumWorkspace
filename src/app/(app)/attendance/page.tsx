@@ -256,6 +256,7 @@ export default function AttendancePage() {
             busy={busy}
             handleClockIn={handleClockIn}
             handleClockOut={handleClockOut}
+            futureStartDate={employee?.startDate}
           />
         </ScrollReveal>
       )}
