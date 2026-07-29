@@ -109,13 +109,13 @@ export function LogsTable({ logs }: LogsTableProps) {
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                     <Avatar
                       src={log.adminPhotoUrl || undefined}
-                      alt={log.adminName}
+                      alt={log.adminName || "Admin"}
                       sx={{ width: 28, height: 28, fontSize: 12, bgcolor: "primary.main" }}
                     >
-                      {log.adminName.charAt(0).toUpperCase()}
+                      {(log.adminName || "A").charAt(0).toUpperCase()}
                     </Avatar>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {log.adminName}
+                      {log.adminName || "System Admin"}
                     </Typography>
                   </Box>
                 </TableCell>

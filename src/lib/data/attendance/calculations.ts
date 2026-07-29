@@ -37,6 +37,23 @@ export function getLocalISODate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+export function getWorkingDaysInWeekFromStart(weekStartIso: string, startDate?: string | null): number {
+  if (!startDate) return 5;
+  const parts = weekStartIso.split("-").map(Number);
+  const year = parts[0];
+  const month = parts[1];
+  const day = parts[2];
+  let workingDays = 0;
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(year, month - 1, day + i);
+    const dayIso = getLocalISODate(d);
+    if (dayIso >= startDate) {
+      workingDays++;
+    }
+  }
+  return workingDays;
+}
+
 export function getEmployeeStartYearMonth(
   employee: Developer | Employee | any,
 ): string {

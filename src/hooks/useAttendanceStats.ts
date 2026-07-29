@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { computeMonthlySummary, getDynamicLeaveAllowance } from "@/lib/data/attendance";
-import { getWorkingDaysInWeekFromStart } from "@/components/attendance/attendance-utils";
+import { getWorkingDaysInWeekFromStart, getLocalISODate } from "@/lib/data/attendance/calculations";
 import { type AttendanceRecord, type Employee, type OfficeSettings, type DailyTask } from "@/lib/data/types";
 import { User } from "firebase/auth";
 
@@ -190,13 +190,13 @@ export function useAttendanceStats({
     if (isAdmin || !employee) return null;
 
     const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
+    const todayStr = getLocalISODate(now);
     const weekStart = new Date(now);
     const day = weekStart.getDay();
     const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
     weekStart.setDate(diff);
-    weekStart.setHours(0, 0, 0, 0);
-    const weekStartIso = weekStart.toISOString().slice(0, 10);
+    weekStart.setHours(12, 0, 0, 0); // avoid UTC midnight timezone rollback!
+    const weekStartIso = getLocalISODate(weekStart);
 
     const monthPrefix = todayStr.slice(0, 7); // "YYYY-MM"
 

@@ -49,17 +49,5 @@ export function isFutureStartDate(startDate?: string | null): boolean {
   return startDate > todayStr;
 }
 
-export function getWorkingDaysInWeekFromStart(weekStartIso: string, startDate?: string | null): number {
-  if (!startDate) return 5;
-  const monday = new Date(weekStartIso + "T00:00:00");
-  let workingDays = 0;
-  for (let i = 0; i < 5; i++) {
-    const day = new Date(monday);
-    day.setDate(monday.getDate() + i);
-    const dayIso = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
-    if (dayIso >= startDate) {
-      workingDays++;
-    }
-  }
-  return workingDays;
-}
+import { getWorkingDaysInWeekFromStart as _getWorkingDays } from "@/lib/data/attendance/calculations";
+export const getWorkingDaysInWeekFromStart = _getWorkingDays;

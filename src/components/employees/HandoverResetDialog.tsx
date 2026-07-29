@@ -24,7 +24,7 @@ interface HandoverResetDialogProps {
   onSuccess?: () => void;
 }
 
-const DEFAULT_ADMIN_EMAIL = "haseeb.a@zirium.com";
+const DEFAULT_ADMIN_EMAIL = "haseeb.a@ziriumai.com";
 
 export function HandoverResetDialog({
   open,

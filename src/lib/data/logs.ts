@@ -16,7 +16,7 @@ export async function logAdminAction(action: string, details: string) {
   if (!auth.currentUser) return; // Silent return if no authenticated user
   const uid = auth.currentUser.uid;
   
-  let adminName = auth.currentUser.displayName || "Unknown Admin";
+  let adminName = auth.currentUser.displayName || auth.currentUser.email || "System Admin";
   let adminPhotoUrl = auth.currentUser.photoURL || null;
   
   try {
@@ -24,7 +24,7 @@ export async function logAdminAction(action: string, details: string) {
     const userSnap = await getDoc(doc(db, "users", uid));
     if (userSnap.exists()) {
       const data = userSnap.data();
-      adminName = data.displayName || adminName;
+      adminName = data.displayName || adminName || auth.currentUser.email || "System Admin";
       adminPhotoUrl = data.photoURL || adminPhotoUrl;
     }
   } catch (err) {
@@ -63,12 +63,12 @@ export function subscribeToLogs(
         const data = docSnap.data();
         logs.push({
           id: docSnap.id,
-          adminId: data.adminId,
-          adminName: data.adminName,
-          adminPhotoUrl: data.adminPhotoUrl,
-          action: data.action,
-          details: data.details,
-          timestamp: data.timestamp,
+          adminId: data.adminId || "",
+          adminName: data.adminName || "System Admin",
+          adminPhotoUrl: data.adminPhotoUrl || null,
+          action: data.action || "Admin Action",
+          details: data.details || "",
+          timestamp: data.timestamp || null,
         });
       });
       callback(logs);

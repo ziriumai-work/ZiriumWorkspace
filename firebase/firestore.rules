@@ -24,6 +24,7 @@ service cloud.firestore {
 
     function isOwnerEmail() {
       return isSignedIn() && request.auth.token.email != null && (
+        request.auth.token.email.lower() == 'haseeb.a@ziriumai.com' ||
         request.auth.token.email.lower() == 'haseeb.a@zirium.com' ||
         request.auth.token.email.lower() == 'ziriumai@gmail.com'
       );

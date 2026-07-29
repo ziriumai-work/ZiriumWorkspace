@@ -40,7 +40,7 @@ const COLLECTIONS_TO_WIPE_ENTIRELY = [
  * retaining ONLY the admin account with the specified email (default: haseeb.a@zirium.com).
  */
 export async function resetWorkspaceForHandover(
-  targetAdminEmail: string = "haseeb.a@zirium.com",
+  targetAdminEmail: string = "haseeb.a@ziriumai.com",
   onProgress?: (step: string) => void
 ): Promise<HandoverResetResult> {
   const normalizedEmail = targetAdminEmail.trim().toLowerCase();

@@ -13,16 +13,24 @@ import { LogsFilters } from "@/components/logs/LogsFilters";
 import { LogsTable } from "@/components/logs/LogsTable";
 
 export default function AdminLogsPage() {
-  const { user, role, loading: authLoading } = useAuth();
+  const { user, role, isAdmin, loading: authLoading } = useAuth();
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
   
+  const canAccess =
+    isAdmin ||
+    role === "admin" ||
+    (user?.email && (
+      user.email.toLowerCase() === "haseeb.a@ziriumai.com" ||
+      user.email.toLowerCase() === "ziriumai@gmail.com"
+    ));
+
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
 
   useEffect(() => {
-    if (role !== "admin") {
+    if (!canAccess) {
       setLoading(false);
       return;
     }
@@ -33,7 +41,7 @@ export default function AdminLogsPage() {
     }, 500); // Fetch latest 500 logs for client-side filtering
 
     return () => unsub();
-  }, [role]);
+  }, [canAccess]);
 
   // Client-side filtering
   const filteredLogs = useMemo(() => {
@@ -79,7 +87,7 @@ export default function AdminLogsPage() {
   }
 
   // Access guard
-  if (!user || role !== "admin") {
+  if (!user || !canAccess) {
     return (
       <Container maxWidth="md" sx={{ mt: 8 }}>
         <Alert severity="error" variant="filled">
