@@ -179,12 +179,18 @@ export async function POST(request: Request) {
       </div>
     `;
 
-    await transporter.sendMail({
+    const sendPromise = transporter.sendMail({
       from: `"Zirium Attendance" <${gmailUser}>`,
       to: adminEmails.join(", "),
       subject: `[Zirium Attendance] ${userName} — ${action} at ${exactTime}`,
       html: htmlContent,
     });
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("SMTP connection timed out after 4000ms")), 4000)
+    );
+
+    await Promise.race([sendPromise, timeoutPromise]);
 
     return NextResponse.json({
       success: true,
