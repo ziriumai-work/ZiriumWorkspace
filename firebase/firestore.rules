@@ -30,7 +30,7 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isMember();
       allow create, update: if isSignedIn() && request.auth.uid == uid;
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     // Company membership + role. This is the heart of permissions.
@@ -170,9 +170,9 @@ service cloud.firestore {
 
     // Admin Logs — append-only for members; read by admins only.
     match /admin_logs/{id} {
-      allow read: if isAdmin();
+      allow read, delete: if isAdmin();
       allow create: if isMember();
-      allow update, delete: if false;
+      allow update: if false;
     }
 
     // Integrations (Slack tokens, etc.) — server-only via Cloud Functions.

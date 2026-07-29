@@ -25,6 +25,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import Collapse from "@mui/material/Collapse";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { HandoverResetDialog } from "@/components/employees/HandoverResetDialog";
 
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { AddEmployeeForm } from "@/components/employees/AddEmployeeForm";
@@ -66,6 +67,7 @@ export default function EmployeesPage() {
   const [filterRole, setFilterRole] = useState<"all" | "employee" | "intern">("all");
   const [filterPay, setFilterPay] = useState<"all" | "paid" | "unpaid">("all");
   const [filterDept, setFilterDept] = useState<string>("all");
+  const [handoverOpen, setHandoverOpen] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeToDevelopers(
@@ -103,12 +105,23 @@ export default function EmployeesPage() {
 
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 5 }}>
-      <Box component="header" sx={{ mb: 3 }}>
-        <Typography variant="h1">Employees</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Add your team. Each employee signs in with the Google account matching
-          their email, then sees only their assigned projects and tasks.
-        </Typography>
+      <Box component="header" sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 2 }}>
+        <Box>
+          <Typography variant="h1">Employees</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Add your team. Each employee signs in with the Google account matching
+            their email, then sees only their assigned projects and tasks.
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          color="error"
+          size="small"
+          onClick={() => setHandoverOpen(true)}
+          sx={{ borderRadius: 2, fontWeight: 700, textTransform: "none" }}
+        >
+          🧹 Reset DB (Company Handover)
+        </Button>
       </Box>
 
       {/* Add employee */}
@@ -211,6 +224,11 @@ export default function EmployeesPage() {
           setDeveloperToDelete(null);
         }}
         onCancel={() => setDeveloperToDelete(null)}
+      />
+
+      <HandoverResetDialog
+        open={handoverOpen}
+        onClose={() => setHandoverOpen(false)}
       />
     </Box>
   );
