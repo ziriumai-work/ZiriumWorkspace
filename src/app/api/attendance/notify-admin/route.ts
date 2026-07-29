@@ -1,6 +1,25 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { getAdminAuth, getAdminDb } from "@/lib/firebase/firebaseAdmin";
+
+// Verify Firebase ID token using Google's public REST API — no firebase-admin needed.
+// firebase-admin/auth crashes on Vercel Turbopack due to jose ESM incompatibility.
+async function verifyFirebaseIdToken(idToken: string): Promise<boolean> {
+  const fbApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  if (!fbApiKey) return false;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${fbApiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      }
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +38,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Firebase Session Authentication Gate
+    // 2. Firebase Session Authentication Gate (REST API — Vercel-safe)
     const authHeader = request.headers.get("Authorization") ?? "";
     const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!idToken) {
@@ -29,30 +48,7 @@ export async function POST(request: Request) {
       );
     }
 
-    let validToken = false;
-    try {
-      await getAdminAuth().verifyIdToken(idToken);
-      validToken = true;
-    } catch {
-      // Identity Toolkit REST API Fallback
-      const fbApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-      if (fbApiKey) {
-        try {
-          const res = await fetch(
-            `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${fbApiKey}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ idToken }),
-            }
-          );
-          validToken = res.ok;
-        } catch {
-          validToken = false;
-        }
-      }
-    }
-
+    const validToken = await verifyFirebaseIdToken(idToken);
     if (!validToken) {
       return NextResponse.json(
         { error: "Invalid or expired session token" },
@@ -89,18 +85,13 @@ export async function POST(request: Request) {
       clientAdminEmails.forEach((em: string) => {
         if (em && typeof em === "string") adminEmailsSet.add(em);
       });
-    } else {
-      try {
-        const db = getAdminDb();
-        const membersSnap = await db.collection("members").get();
-        for (const memberDoc of membersSnap.docs) {
-          const data = memberDoc.data();
-          if ((data.role === "owner" || data.role === "admin") && data.subscribeToEmails === true && data.email) {
-            adminEmailsSet.add(data.email as string);
-          }
-        }
-      } catch (err) {
-        console.warn("Server-side fallback email query failed:", err);
+    }
+
+    // If client didn't send emails, use the GMAIL_USER as a fallback recipient
+    if (adminEmailsSet.size === 0) {
+      const defaultAdminEmail = process.env.GMAIL_USER || process.env.SMTP_USER || "ziriumai@gmail.com";
+      if (defaultAdminEmail) {
+        adminEmailsSet.add(defaultAdminEmail);
       }
     }
 

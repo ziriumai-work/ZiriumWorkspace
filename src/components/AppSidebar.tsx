@@ -175,16 +175,21 @@ export function AppSidebar() {
 
   // While the role is still resolving, show the common items only.
   const nav = NAV.filter((item) => {
-    if (item.label === "Finance") {
+    if (item.label === "Finance" || item.label === "Salary") {
       if (isAdmin) return true;
-      if (isPaid) {
-        item.label = "Salary";
-        return true;
-      }
+      if (isPaid) return true;
       return false;
     }
     if (!role) return false;
     return item.roles.includes(role);
+  }).map((item) => {
+    if (item.label === "Finance" || item.label === "Salary") {
+      if (!isAdmin && isPaid) {
+        return { ...item, label: "Salary", href: "/salary" };
+      }
+      return { ...item, label: "Finance", href: "/finance/salaries" };
+    }
+    return item;
   });
 
   return (

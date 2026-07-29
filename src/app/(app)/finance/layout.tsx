@@ -28,26 +28,11 @@ export default function FinanceLayout({
   const pathname = usePathname();
   const { isAdmin } = useAuth();
 
-  const isSalariesPage = pathname.startsWith("/finance/salaries");
-
-  if (!isAdmin && !isSalariesPage) {
-    if (pathname === "/finance") {
-      redirect("/finance/salaries");
-    }
-    return (
-      <Box sx={{ mx: "auto", width: "100%", maxWidth: 720, px: 4, py: 5 }}>
-        <Typography variant="h1">Finance</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          The finance section is restricted to admins.
-        </Typography>
-      </Box>
-    );
+  if (!isAdmin) {
+    redirect("/salary");
   }
 
-  // Filter tabs: non-admins only see the "Monthly Salaries" tab
-  const visibleTabs = isAdmin 
-    ? [...TABS, { href: "/finance/salaries", label: "Monthly Salaries" }]
-    : [{ href: "/finance/salaries", label: "Monthly Salaries" }];
+  const visibleTabs = [...TABS, { href: "/finance/salaries", label: "Monthly Salaries" }];
 
   // Longest-prefix match so /finance/projects highlights Projects, not Dashboard.
   const active =

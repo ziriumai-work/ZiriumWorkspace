@@ -1,7 +1,26 @@
 // POST /api/ai — Authenticated server-side streaming proxy to DeepSeek API.
 
 import { getApiModelId } from "@/lib/ai/ai-models";
-import { getAdminAuth } from "@/lib/firebase/firebaseAdmin";
+
+// Verify Firebase ID token using Google's public REST API — no firebase-admin needed.
+// firebase-admin/auth crashes on Vercel Turbopack due to jose ESM incompatibility.
+async function verifyFirebaseIdToken(idToken: string): Promise<boolean> {
+  const fbApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  if (!fbApiKey) return false;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${fbApiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      }
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
@@ -29,30 +48,7 @@ export async function POST(request: Request) {
       );
     }
 
-    let validToken = false;
-    try {
-      await getAdminAuth().verifyIdToken(idToken);
-      validToken = true;
-    } catch {
-      // Fallback for Vercel/serverless when Service Account key is restricted by IAM policy:
-      // Verify token directly against Google's Auth REST API using your Firebase public API key.
-      const fbApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-      if (fbApiKey) {
-        try {
-          const res = await fetch(
-            `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${fbApiKey}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ idToken }),
-            },
-          );
-          validToken = res.ok;
-        } catch {
-          validToken = false;
-        }
-      }
-    }
+    const validToken = await verifyFirebaseIdToken(idToken);
 
     if (!validToken) {
       return Response.json(

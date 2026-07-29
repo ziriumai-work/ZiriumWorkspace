@@ -36,7 +36,8 @@ const ROUTE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: "/employees", roles: ["admin"] },
   { prefix: "/zirium", roles: ["admin"] },
   { prefix: "/attendance", roles: ["admin", "employee", "intern"] },
-  { prefix: "/finance", roles: ["admin", "employee", "intern"] },
+  { prefix: "/finance", roles: ["admin"] },
+  { prefix: "/salary", roles: ["employee", "intern"] },
   { prefix: "/documents", roles: ["admin", "employee", "intern"] },
   { prefix: "/announcements", roles: ["admin"] },
 ];
