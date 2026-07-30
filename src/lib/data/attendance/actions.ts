@@ -344,8 +344,12 @@ export async function autoClockOutUnclosedShifts(
   const now = new Date();
   const todayStr = getLocalISODate(now);
 
+  const startH = Number(settings.startHour) || 10;
+  const endH = Number(settings.endHour) || 18;
+  const endM = Number(settings.endMinute) || 0;
+
   const todayEnd = new Date(now);
-  todayEnd.setHours(settings.endHour, settings.endMinute, 0, 0);
+  todayEnd.setHours(endH, endM, 0, 0);
 
   const batchUpdates = [];
 
@@ -354,15 +358,26 @@ export async function autoClockOutUnclosedShifts(
     if (!data.checkIn) continue;
 
     let shouldClose = false;
-    if (data.date < todayStr) {
-      shouldClose = true;
-    } else if (data.date === todayStr && now > todayEnd) {
-      shouldClose = true;
+    if (endH < startH) {
+      // Overnight shift (e.g. 10 PM to 6 AM): close shift from previous date once morning closing time passes
+      if (data.date < todayStr && now > todayEnd) {
+        shouldClose = true;
+      }
+    } else {
+      // Regular daytime shift
+      if (data.date < todayStr) {
+        shouldClose = true;
+      } else if (data.date === todayStr && now > todayEnd) {
+        shouldClose = true;
+      }
     }
 
     if (shouldClose) {
       const closingDate = new Date(data.date + "T00:00:00");
-      closingDate.setHours(settings.endHour, settings.endMinute, 0, 0);
+      if (endH < startH) {
+        closingDate.setDate(closingDate.getDate() + 1);
+      }
+      closingDate.setHours(endH, endM, 0, 0);
 
       const checkOutIso = closingDate.toISOString();
       const hoursWorked = Math.max(
@@ -398,8 +413,12 @@ export async function autoClockOutAllUnclosedShifts(
   const now = new Date();
   const todayStr = getLocalISODate(now);
 
+  const startH = Number(settings.startHour) || 10;
+  const endH = Number(settings.endHour) || 18;
+  const endM = Number(settings.endMinute) || 0;
+
   const todayEnd = new Date(now);
-  todayEnd.setHours(settings.endHour, settings.endMinute, 0, 0);
+  todayEnd.setHours(endH, endM, 0, 0);
 
   const batchUpdates = [];
 
@@ -408,15 +427,26 @@ export async function autoClockOutAllUnclosedShifts(
     if (!data.checkIn) continue;
 
     let shouldClose = false;
-    if (data.date < todayStr) {
-      shouldClose = true;
-    } else if (data.date === todayStr && now > todayEnd) {
-      shouldClose = true;
+    if (endH < startH) {
+      // Overnight shift (e.g. 10 PM to 6 AM): close shift from previous date once morning closing time passes
+      if (data.date < todayStr && now > todayEnd) {
+        shouldClose = true;
+      }
+    } else {
+      // Regular daytime shift
+      if (data.date < todayStr) {
+        shouldClose = true;
+      } else if (data.date === todayStr && now > todayEnd) {
+        shouldClose = true;
+      }
     }
 
     if (shouldClose) {
       const closingDate = new Date(data.date + "T00:00:00");
-      closingDate.setHours(settings.endHour, settings.endMinute, 0, 0);
+      if (endH < startH) {
+        closingDate.setDate(closingDate.getDate() + 1);
+      }
+      closingDate.setHours(endH, endM, 0, 0);
 
       const checkOutIso = closingDate.toISOString();
       const hoursWorked = Math.max(

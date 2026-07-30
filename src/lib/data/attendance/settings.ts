@@ -34,10 +34,23 @@ export async function updateOfficeSettings(
 
 export function isWithinOfficeHours(settings: OfficeSettings): boolean {
   const now = new Date();
+
+  const startH = Number(settings.startHour) || 10;
+  const startM = Number(settings.startMinute) || 0;
+  const endH = Number(settings.endHour) || 18;
+  const endM = Number(settings.endMinute) || 0;
+
   const start = new Date(now);
-  start.setHours(settings.startHour, settings.startMinute, 0, 0);
-  // Allow clock-out up to 4 hours after office end (for overtime).
+  start.setHours(startH, startM, 0, 0);
+
   const end = new Date(now);
-  end.setHours(settings.endHour + 4, settings.endMinute, 0, 0);
+  end.setHours(endH, endM, 0, 0);
+
+  // If start is after end (e.g. overnight shift 10 PM to 6 AM -> 22:00 to 06:00),
+  // then we are in office hours if now >= start OR now <= end.
+  if (start > end) {
+    return now >= start || now <= end;
+  }
+
   return now >= start && now <= end;
 }
