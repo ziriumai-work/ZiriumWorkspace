@@ -27,6 +27,7 @@ import {
   getLocalISODate,
   isCheckInLate,
 } from "./calculations";
+import { normalizeOfficeHours } from "./settings";
 
 const COL = "attendance";
 
@@ -344,9 +345,7 @@ export async function autoClockOutUnclosedShifts(
   const now = new Date();
   const todayStr = getLocalISODate(now);
 
-  const startH = Number(settings.startHour) || 10;
-  const endH = Number(settings.endHour) || 18;
-  const endM = Number(settings.endMinute) || 0;
+  const { startH, endH, endM } = normalizeOfficeHours(settings);
 
   const todayEnd = new Date(now);
   todayEnd.setHours(endH, endM, 0, 0);
@@ -413,9 +412,7 @@ export async function autoClockOutAllUnclosedShifts(
   const now = new Date();
   const todayStr = getLocalISODate(now);
 
-  const startH = Number(settings.startHour) || 10;
-  const endH = Number(settings.endHour) || 18;
-  const endM = Number(settings.endMinute) || 0;
+  const { startH, endH, endM } = normalizeOfficeHours(settings);
 
   const todayEnd = new Date(now);
   todayEnd.setHours(endH, endM, 0, 0);

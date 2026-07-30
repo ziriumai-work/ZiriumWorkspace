@@ -100,7 +100,15 @@ export default function AttendancePage() {
     [records, user, todayStr],
   );
 
-  const canClock = isWithinOfficeHours(settings);
+  // Compute canClock only on the client to avoid SSR timezone mismatch
+  // (Vercel SSR uses UTC; the user's browser uses local time).
+  const [canClock, setCanClock] = useState(true);
+  useEffect(() => {
+    const check = () => setCanClock(isWithinOfficeHours(settings));
+    check();
+    const interval = setInterval(check, 30_000); // refresh every 30s
+    return () => clearInterval(interval);
+  }, [settings]);
 
   // Actions
   async function handleClockIn() {
