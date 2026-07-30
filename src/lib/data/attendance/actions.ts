@@ -101,17 +101,15 @@ export async function clockIn(
   const dailyHours = (employee.officeHours || defaultWeeklyHours) / 5;
   const requiredMinutes = dailyHours * 60;
 
-  const officeEnd = new Date(now);
-  officeEnd.setHours(settings.endHour, settings.endMinute, 0, 0);
+  const officeStart = new Date(now);
+  officeStart.setHours(settings.startHour, settings.startMinute, 0, 0);
 
-  const remainingMinutes = Math.max(
-    0,
-    Math.floor((officeEnd.getTime() - now.getTime()) / 60000),
-  );
+  const graceDeadline = new Date(officeStart);
+  graceDeadline.setMinutes(graceDeadline.getMinutes() + (settings.graceMinutes || 0));
 
-  if (remainingMinutes < requiredMinutes) {
+  if (now > graceDeadline) {
     isLate = true;
-    lateMinutes = requiredMinutes - remainingMinutes;
+    lateMinutes = Math.floor((now.getTime() - graceDeadline.getTime()) / 60000);
   }
   let status: AttendanceStatus = isLate ? "late" : "present";
   let flexibilityUsed = 0;
