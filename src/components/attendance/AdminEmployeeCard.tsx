@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -13,10 +13,24 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-import { ATTENDANCE_STATUSES, type AttendanceRecord, type DailyTask, type Employee } from "@/lib/data/types";
+import {
+  ATTENDANCE_STATUSES,
+  DEFAULT_OFFICE_SETTINGS,
+  type AttendanceRecord,
+  type DailyTask,
+  type Employee,
+  type OfficeSettings,
+} from "@/lib/data/types";
+import {
+  getWeeklyOvertimeDueMap,
+  getDailyPenaltyMap,
+  formatODH,
+  type DatePenaltyChip,
+} from "@/lib/data/attendance";
 import { STATUS_COLORS, calcHours, fmtTime } from "./attendance-utils";
 
 export function AdminEmployeeCard({
@@ -25,14 +39,37 @@ export function AdminEmployeeCard({
   monthRecords,
   monthTasks,
   onMarkAttendance,
+  settings,
 }: {
   employee: Employee;
   todayRecord: AttendanceRecord | null;
   monthRecords: AttendanceRecord[];
   monthTasks: DailyTask[];
   onMarkAttendance: (uid: string) => void;
+  settings?: OfficeSettings;
 }) {
   const [expanded, setExpanded] = useState(false);
+
+  const odhMap = useMemo(
+    () =>
+      getWeeklyOvertimeDueMap(
+        monthRecords,
+        employee,
+        settings || DEFAULT_OFFICE_SETTINGS,
+        monthTasks,
+      ),
+    [monthRecords, employee, settings, monthTasks],
+  );
+
+  const penaltyMap: Record<string, DatePenaltyChip[]> = useMemo(
+    () =>
+      getDailyPenaltyMap(
+        monthRecords,
+        employee,
+        settings || DEFAULT_OFFICE_SETTINGS,
+      ),
+    [monthRecords, employee, settings],
+  );
 
   return (
     <Paper 
@@ -138,6 +175,27 @@ export function AdminEmployeeCard({
                       <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
                         {r.isLate && <Chip size="small" label="Late" sx={{ height: 20, fontSize: 10, bgcolor: "#f59e0b22", color: "#f59e0b", fontWeight: 600 }} />}
                         {(() => {
+                          const odhMins = odhMap[r.date] || 0;
+                          if (odhMins > 0) {
+                            return (
+                              <Tooltip title="Overtime Due (Short daily/weekly hours)">
+                                <Chip
+                                  size="small"
+                                  label={formatODH(odhMins)}
+                                  sx={{
+                                    height: 20,
+                                    fontSize: 10,
+                                    bgcolor: "#ef444422",
+                                    color: "#ef4444",
+                                    fontWeight: 600,
+                                  }}
+                                />
+                              </Tooltip>
+                            );
+                          }
+                          return null;
+                        })()}
+                        {(() => {
                           const dailyTasksForRecord = monthTasks.filter(t => t.date === r.date && (t.assigneeId === employee.id || t.assigneeId === employee.uid || t.assigneeId === r.uid) && t.status === "done" && (t.isOvertime || t.compensatesWeeklyHours));
                           const taskOvertimeMinutes = dailyTasksForRecord.reduce((acc, t) => acc + (Number(t.assignedHours) || 0) * 60, 0);
                           const totalOtMinutes = (r.isOvertime ? r.overtimeMinutes : 0) + taskOvertimeMinutes;
@@ -149,6 +207,21 @@ export function AdminEmployeeCard({
                           }
                           return null;
                         })()}
+                        {penaltyMap[r.date]?.map((p, idx) => (
+                          <Tooltip key={idx} title={p.tooltip}>
+                            <Chip
+                              size="small"
+                              label={p.label}
+                              sx={{
+                                height: 20,
+                                fontSize: 10,
+                                bgcolor: p.bgcolor,
+                                color: p.color,
+                                fontWeight: 600,
+                              }}
+                            />
+                          </Tooltip>
+                        ))}
                       </Box>
                     </TableCell>
                   </TableRow>

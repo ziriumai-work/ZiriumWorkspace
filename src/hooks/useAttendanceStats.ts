@@ -31,9 +31,10 @@ export function useAttendanceStats({
   filterRole,
   summaryMonth,
 }: UseAttendanceStatsProps) {
-  // Filtered view.
+  // Filtered view scoped to summaryMonth.
   const displayed = useMemo(() => {
-    let result = records;
+    const target = summaryMonth; // "yyyy-mm"
+    let result = records.filter(r => r.date.startsWith(target));
     if (!isAdmin) {
       if (user) result = result.filter((r) => r.uid === user.uid);
     } else {
@@ -54,7 +55,7 @@ export function useAttendanceStats({
       }
     }
     return result;
-  }, [records, filterUid, filterDepartment, filterRole, isAdmin, user, employees]);
+  }, [records, summaryMonth, filterUid, filterDepartment, filterRole, isAdmin, user, employees]);
 
   const monthRecords = useMemo(() => {
     const target = summaryMonth; // "yyyy-mm"
@@ -206,7 +207,7 @@ export function useAttendanceStats({
     records.forEach(r => {
       if (r.date >= weekStartIso && r.date <= todayStr && r.uid === user?.uid) {
         weeklyHoursWorked += r.hoursWorked;
-        if (r.status === "on_leave" || r.status === "sick_leave") daysOnLeaveThisWeek++;
+        if (r.status === "on_leave" || r.status === "sick_leave" || r.status === "absent") daysOnLeaveThisWeek++;
       }
     });
 

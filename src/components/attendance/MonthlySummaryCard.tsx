@@ -116,7 +116,7 @@ export function MonthlySummaryCard({
             {summary.overtimeDueMinutes !== undefined && summary.overtimeDueMinutes > 0 && (
               <Chip
                 size="small"
-                label={`Intern Overtime Due: ${formatHoursMinutes(summary.overtimeDueMinutes / 60)}`}
+                label={`Overtime Due: ${formatHoursMinutes(summary.overtimeDueMinutes / 60)}`}
                 sx={{ bgcolor: `${red.main}22`, color: red.main, fontWeight: 700, fontSize: 12 }}
               />
             )}
@@ -167,7 +167,14 @@ export function MonthlySummaryCard({
                 sx={{ bgcolor: `${red.main}22`, color: red.main, fontWeight: 700, fontSize: 12 }}
               />
             )}
-            {summary.deductionDays === 0 && summary.totalPresent > 0 && (
+            {summary.overtimeDueMinutes !== undefined && summary.overtimeDueMinutes > 0 && (
+              <Chip
+                size="small"
+                label={`Overtime Due: ${formatHoursMinutes(summary.overtimeDueMinutes / 60)}`}
+                sx={{ bgcolor: `${red.main}22`, color: red.main, fontWeight: 700, fontSize: 12 }}
+              />
+            )}
+            {summary.deductionDays === 0 && (!summary.overtimeDueMinutes || summary.overtimeDueMinutes === 0) && summary.totalPresent > 0 && (
               <Chip
                 size="small"
                 label="No deductions ✓"

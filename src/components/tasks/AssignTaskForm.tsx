@@ -132,11 +132,13 @@ export function AssignTaskForm({
             slotProps={{ select: { displayEmpty: true } }}
           >
             <MenuItem value="">Assign to…</MenuItem>
-            {employees.map((e) => (
-              <MenuItem key={e.id} value={e.id}>
-                {e.name}
-              </MenuItem>
-            ))}
+            {employees
+              .filter((e) => e.accessLevel !== "admin" && e.accessLevel !== "owner")
+              .map((e) => (
+                <MenuItem key={e.id} value={e.id}>
+                  {e.name}
+                </MenuItem>
+              ))}
           </TextField>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>

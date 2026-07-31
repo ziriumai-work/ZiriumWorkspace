@@ -55,7 +55,7 @@ export function EmployeeStatsDashboard({ myStats, employee }: EmployeeStatsDashb
           color={myStats.monthlyLates > myStats.latesAllowed ? "#ef4444" : "#22c55e"} 
         />
         <StatCard 
-          label={`Leaves (Max: ${myStats.leavesAllowed}${myStats.rolloverLeaves ? ` • +${myStats.rolloverLeaves} roll` : ""})`} 
+          label={`Leaves (Max: ${myStats.leavesAllowed})`} 
           value={myStats.monthlyLeaves} 
           color={myStats.monthlyLeaves > myStats.leavesAllowed ? "#ef4444" : "#22c55e"} 
         />

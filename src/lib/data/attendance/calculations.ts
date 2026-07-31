@@ -269,7 +269,19 @@ export function computeMonthlySummary(
     totalLate - settings.lateThresholdDays,
   );
 
-  if (isIntern) {
+  const odhMap = getWeeklyOvertimeDueMap(
+    allAttendanceRecords || records,
+    employee,
+    settings,
+    tasks,
+  );
+  const totalWeeklyODH = Object.entries(odhMap)
+    .filter(([date]) => !targetMonthStr || date.startsWith(targetMonthStr))
+    .reduce((acc, [, m]) => acc + m, 0);
+  const isPaid = Number(employee?.monthlySalary) > 0;
+  const treatAsUnpaidIntern = isIntern && !isPaid;
+
+  if (treatAsUnpaidIntern) {
     const dailyHours = (employee?.officeHours || 30) / 5;
     const dailyMinutes = dailyHours * 60;
 
@@ -283,6 +295,7 @@ export function computeMonthlySummary(
       missingMinutesFromAbsences + missingMinutesFromLates;
 
     const netOvertime = totalOvertimeMinutes - totalPenaltyMinutes;
+    const baseOvertimeDue = netOvertime < 0 ? Math.abs(netOvertime) : 0;
 
     return {
       totalPresent,
@@ -295,7 +308,7 @@ export function computeMonthlySummary(
       lateDaysOverThreshold: 0,
       excessLeaves: 0,
       deductionDays: 0,
-      overtimeDueMinutes: netOvertime < 0 ? Math.abs(netOvertime) : 0,
+      overtimeDueMinutes: baseOvertimeDue + totalWeeklyODH,
     };
   } else {
     const dailyMinutes = ((employee?.officeHours || 40) / 5) * 60;
@@ -322,6 +335,297 @@ export function computeMonthlySummary(
       lateDaysOverThreshold,
       excessLeaves,
       deductionDays,
+      overtimeDueMinutes: totalWeeklyODH,
     };
   }
 }
+
+export function formatODH(minutes: number): string {
+  if (minutes < 60) return `${minutes}m ODH`;
+  const hrs = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hrs}h ${mins}m ODH` : `${hrs}h ODH`;
+}
+
+export function getWeeklyOvertimeDueMap(
+  records: AttendanceRecord[],
+  employee: any,
+  settings: OfficeSettings,
+  tasks: DailyTask[] = [],
+): Record<string, number> {
+  const odhMap: Record<string, number> = {};
+  if (!records || records.length === 0) return odhMap;
+
+  // Group records by Monday of their week
+  const weekGroups: Record<string, AttendanceRecord[]> = {};
+  for (const r of records) {
+    if (!r.date) continue;
+    const d = new Date(r.date + "T12:00:00");
+    const dayOfWeek = d.getDay(); // 0 is Sunday, 1 is Monday...
+    const diffToMonday = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const mon = new Date(d);
+    mon.setDate(diffToMonday);
+    const weekKey = getLocalISODate(mon);
+    if (!weekGroups[weekKey]) weekGroups[weekKey] = [];
+    weekGroups[weekKey].push(r);
+  }
+
+  const todayStr = getLocalISODate(new Date());
+  const now = new Date();
+  const closingTimeToday = new Date(now);
+  closingTimeToday.setHours(settings.endHour || 18, settings.endMinute || 0, 0, 0);
+
+  const defaultWeeklyHours =
+    Number(employee?.officeHours) || (employee?.accessLevel === "intern" ? 30 : 40);
+  const dailyRequiredHours = defaultWeeklyHours / 5;
+  const dailyRequiredMinutes = Math.round(dailyRequiredHours * 60);
+
+  for (const [weekKey, weekRecords] of Object.entries(weekGroups)) {
+    // Determine Friday of this week
+    const mon = new Date(weekKey + "T12:00:00");
+    const fri = new Date(mon);
+    fri.setDate(fri.getDate() + 4);
+    const friStr = getLocalISODate(fri);
+
+    // Check if the week should be evaluated:
+    // 1. Friday is strictly in the past (friStr < todayStr), OR
+    // 2. Today is Friday or later in the week (todayStr >= friStr) AND:
+    //    a) there is a checkOut on Friday, OR
+    //    b) status on Friday is absent/on_leave/sick_leave, OR
+    //    c) today is Friday and now is past office close time, OR
+    //    d) today is Saturday/Sunday (todayStr > friStr)
+    const friRec = weekRecords.find((r) => r.date === friStr);
+    const isFriClosed =
+      friStr < todayStr ||
+      (friRec &&
+        (friRec.checkOut !== null ||
+          friRec.status === "absent" ||
+          friRec.status === "on_leave" ||
+          friRec.status === "sick_leave")) ||
+      (todayStr === friStr && now >= closingTimeToday);
+
+    if (!isFriClosed) {
+      continue;
+    }
+
+    // Calculate required minutes for this week (excluding on_leave / sick_leave days)
+    let leaveDaysCount = 0;
+    for (let i = 0; i < 5; i++) {
+      const dayDate = new Date(mon);
+      dayDate.setDate(dayDate.getDate() + i);
+      const dayStr = getLocalISODate(dayDate);
+      if (employee?.startDate && dayStr < employee.startDate) {
+        leaveDaysCount++;
+        continue;
+      }
+      const rec = weekRecords.find((r) => r.date === dayStr);
+      if (
+        rec &&
+        (rec.status === "on_leave" ||
+          rec.status === "sick_leave" ||
+          rec.status === "absent")
+      ) {
+        leaveDaysCount++;
+      }
+    }
+    const requiredWeekMinutes = Math.max(
+      0,
+      (5 - leaveDaysCount) * dailyRequiredMinutes,
+    );
+
+    // Sum total hours worked across the entire week
+    let totalWeekWorkedMinutes = 0;
+    const dayWorkedMap: Record<string, number> = {};
+
+    for (const r of weekRecords) {
+      let hw = r.hoursWorked || 0;
+      if (hw === 0 && r.checkIn) {
+        const outTime = r.checkOut ? new Date(r.checkOut) : new Date();
+        hw = Math.max(
+          0,
+          (outTime.getTime() - new Date(r.checkIn).getTime()) / 3_600_000,
+        );
+      }
+      const empId = employee?.id || employee?.uid || r.uid;
+      const dayTasks = tasks.filter(
+        (t) =>
+          t.date === r.date &&
+          (t.assigneeId === empId || t.assigneeId === r.uid) &&
+          t.status === "done" &&
+          (t.isOvertime || t.compensatesWeeklyHours),
+      );
+      const taskMins = dayTasks.reduce(
+        (acc, t) => acc + Math.round((Number(t.assignedHours) || 0) * 60),
+        0,
+      );
+
+      const dayMins = Math.round(hw * 60) + taskMins;
+      dayWorkedMap[r.date] = dayMins;
+      totalWeekWorkedMinutes += dayMins;
+    }
+
+    const weeklyOvertimeDueMinutes = Math.max(
+      0,
+      requiredWeekMinutes - totalWeekWorkedMinutes,
+    );
+
+    if (weeklyOvertimeDueMinutes > 0) {
+      const shortDays: { date: string; shortfall: number }[] = [];
+      for (const r of weekRecords) {
+        if (
+          r.status === "on_leave" ||
+          r.status === "sick_leave" ||
+          r.status === "absent"
+        )
+          continue;
+        const worked = dayWorkedMap[r.date] || 0;
+        if (worked < dailyRequiredMinutes) {
+          shortDays.push({
+            date: r.date,
+            shortfall: dailyRequiredMinutes - worked,
+          });
+        }
+      }
+
+      shortDays.sort((a, b) => a.date.localeCompare(b.date));
+
+      let remainingODH = weeklyOvertimeDueMinutes;
+      for (const sd of shortDays) {
+        if (remainingODH <= 0) break;
+        const alloc = Math.min(remainingODH, sd.shortfall);
+        if (alloc > 0) {
+          odhMap[sd.date] = (odhMap[sd.date] || 0) + alloc;
+          remainingODH -= alloc;
+        }
+      }
+    }
+  }
+
+  return odhMap;
+}
+
+export interface DatePenaltyChip {
+  type: string;
+  label: string;
+  tooltip: string;
+  color: string;
+  bgcolor: string;
+}
+
+export function getDailyPenaltyMap(
+  records: AttendanceRecord[],
+  employee: any,
+  settings: OfficeSettings,
+  targetMonthStr?: string,
+): Record<string, DatePenaltyChip[]> {
+  const penaltyMap: Record<string, DatePenaltyChip[]> = {};
+  if (!records || records.length === 0) return penaltyMap;
+
+  // Group records by month YYYY-MM
+  const monthGroups: Record<string, AttendanceRecord[]> = {};
+  for (const r of records) {
+    if (!r.date) continue;
+    const mo = r.date.slice(0, 7);
+    if (targetMonthStr && !r.date.startsWith(targetMonthStr)) continue;
+    if (!monthGroups[mo]) monthGroups[mo] = [];
+    monthGroups[mo].push(r);
+  }
+
+  const isIntern = employee?.accessLevel === "intern";
+  const isPaid = Number(employee?.monthlySalary) > 0;
+  const treatAsUnpaidIntern = isIntern && !isPaid;
+  const dailyHours = (Number(employee?.officeHours) || (isIntern ? 30 : 40)) / 5;
+  const halfDayHours = dailyHours / 2;
+  const lateThreshold = settings?.lateThresholdDays ?? 3;
+
+  for (const [mo, moRecords] of Object.entries(monthGroups)) {
+    // Sort chronologically by date
+    moRecords.sort((a, b) => a.date.localeCompare(b.date));
+
+    let lateCount = 0;
+    let leaveCount = 0;
+
+    const allowedLeaves = calculateDynamicAllowedLeaves({
+      employee,
+      settings,
+      targetMonthStr: mo,
+      allAttendanceRecords: records,
+    });
+
+    for (const r of moRecords) {
+      if (!penaltyMap[r.date]) penaltyMap[r.date] = [];
+
+      // 1. Late Penalty (Exceeding monthly late threshold)
+      if (r.isLate) {
+        lateCount++;
+        if (lateCount > lateThreshold) {
+          if (treatAsUnpaidIntern) {
+            penaltyMap[r.date].push({
+              type: "intern_late_odh",
+              label: `+${halfDayHours}h Late ODH`,
+              tooltip: `Late Penalty Overtime Due (+${halfDayHours}h half-day office hours added for exceeding monthly lates threshold)`,
+              color: "#a855f7",     // Purple
+              bgcolor: "#a855f722",
+            });
+          } else {
+            penaltyMap[r.date].push({
+              type: "employee_late_deduction",
+              label: "-0.5d Salary",
+              tooltip: "Salary Deduction Penalty (0.5 day salary deduction for exceeding monthly lates threshold)",
+              color: "#f43f5e",     // Rose/crimson
+              bgcolor: "#f43f5e22",
+            });
+          }
+        }
+      }
+
+      // 2. Excess Leave Penalty (Exceeding allowed leaves)
+      if (r.status === "on_leave" && !r.isAdminApprovedLeave) {
+        leaveCount++;
+        if (leaveCount > allowedLeaves) {
+          if (treatAsUnpaidIntern) {
+            penaltyMap[r.date].push({
+              type: "intern_leave_odh",
+              label: `+${dailyHours}h Leave ODH`,
+              tooltip: `Leave Penalty Overtime Due (+${dailyHours}h office hours for unapproved excess leave)`,
+              color: "#a855f7",
+              bgcolor: "#a855f722",
+            });
+          } else {
+            penaltyMap[r.date].push({
+              type: "employee_leave_deduction",
+              label: "-1d Salary",
+              tooltip: "Salary Deduction Penalty (1.0 day salary deduction for unapproved excess leave)",
+              color: "#f43f5e",
+              bgcolor: "#f43f5e22",
+            });
+          }
+        }
+      }
+
+      // 3. Unexcused Absence Penalty
+      if (r.status === "absent") {
+        if (treatAsUnpaidIntern) {
+          penaltyMap[r.date].push({
+            type: "intern_absent_odh",
+            label: `+${dailyHours}h Absent ODH`,
+            tooltip: `Absence Penalty Overtime Due (+${dailyHours}h office hours for unexcused absence)`,
+            color: "#a855f7",
+            bgcolor: "#a855f722",
+          });
+        } else {
+          penaltyMap[r.date].push({
+            type: "employee_absent_deduction",
+            label: "-1d Salary",
+            tooltip: "Salary Deduction Penalty (1.0 day salary deduction for unexcused absence)",
+            color: "#f43f5e",
+            bgcolor: "#f43f5e22",
+          });
+        }
+      }
+    }
+  }
+
+  return penaltyMap;
+}
+

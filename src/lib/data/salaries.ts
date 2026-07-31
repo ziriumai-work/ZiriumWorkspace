@@ -44,7 +44,7 @@ export async function generateSalariesForMonth(month: string): Promise<void> {
     const data = d.data() as Developer;
     data.id = d.id; // Important: inject the document ID!
     
-    if (data.monthlySalary && data.uid) {
+    if (data.monthlySalary && (data.uid || data.id || data.email)) {
       // Check start date (YYYY-MM-DD)
       if (data.startDate) {
         const startMonth = data.startDate.substring(0, 7);
@@ -79,16 +79,16 @@ export async function generateSalariesForMonth(month: string): Promise<void> {
     const dailyRate = dailySalary(base, y, m);
 
     // Filter attendance
-    const myAtt = allAttendance.filter(a => (a.uid === emp.uid || a.uid === emp.id) && a.date.startsWith(month));
+    const myAtt = allAttendance.filter(a => (a.uid === emp.uid || a.uid === emp.id || (!!emp.email && a.uid === emp.email)) && a.date.startsWith(month));
     // Filter tasks
-    const myTasks = allTasks.filter(t => t.assigneeId === emp.id && t.date.startsWith(month) && t.isOvertime && t.overtimeCost);
+    const myTasks = allTasks.filter(t => (t.assigneeId === emp.id || t.assigneeId === emp.uid) && t.date.startsWith(month) && t.isOvertime && t.overtimeCost);
 
     const lineItems: SalaryLineItem[] = [];
     let deductionsTotal = 0;
     let overtimeTotal = 0;
 
     const isIntern = emp.accessLevel === "intern";
-    const summary = computeMonthlySummary(myAtt, allTasks.filter(t => t.assigneeId === emp.id && t.date.startsWith(month)), settings, isIntern, emp, allAttendance, month);
+    const summary = computeMonthlySummary(myAtt, allTasks.filter(t => (t.assigneeId === emp.id || t.assigneeId === emp.uid) && t.date.startsWith(month)), settings, isIntern, emp, allAttendance, month);
 
     if (summary.deductionDays > 0) {
       const penalty = Math.round(summary.deductionDays * dailyRate);

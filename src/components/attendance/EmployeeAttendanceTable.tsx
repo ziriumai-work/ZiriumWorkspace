@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
@@ -9,7 +10,21 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import { type AttendanceRecord, type Employee, type DailyTask, ATTENDANCE_STATUSES } from "@/lib/data/types";
+import Tooltip from "@mui/material/Tooltip";
+import {
+  type AttendanceRecord,
+  type Employee,
+  type DailyTask,
+  type OfficeSettings,
+  DEFAULT_OFFICE_SETTINGS,
+  ATTENDANCE_STATUSES,
+} from "@/lib/data/types";
+import {
+  getWeeklyOvertimeDueMap,
+  getDailyPenaltyMap,
+  formatODH,
+  type DatePenaltyChip,
+} from "@/lib/data/attendance";
 import { STATUS_COLORS, calcHours, fmtTime } from "./attendance-utils";
 
 interface EmployeeAttendanceTableProps {
@@ -17,6 +32,7 @@ interface EmployeeAttendanceTableProps {
   displayed: AttendanceRecord[];
   employees: Employee[];
   monthTasks: DailyTask[];
+  settings?: OfficeSettings;
 }
 
 export function EmployeeAttendanceTable({
@@ -24,7 +40,39 @@ export function EmployeeAttendanceTable({
   displayed,
   employees,
   monthTasks,
+  settings,
 }: EmployeeAttendanceTableProps) {
+  const odhMapByUid: Record<string, Record<string, number>> = useMemo(() => {
+    const map: Record<string, Record<string, number>> = {};
+    const uids = Array.from(new Set(displayed.map((r) => r.uid)));
+    for (const uid of uids) {
+      const emp = employees.find((e) => e.uid === uid || e.id === uid);
+      const empRecords = displayed.filter((r) => r.uid === uid);
+      map[uid] = getWeeklyOvertimeDueMap(
+        empRecords,
+        emp,
+        settings || DEFAULT_OFFICE_SETTINGS,
+        monthTasks,
+      );
+    }
+    return map;
+  }, [displayed, employees, monthTasks, settings]);
+
+  const penaltyMapByUid: Record<string, Record<string, DatePenaltyChip[]>> = useMemo(() => {
+    const map: Record<string, Record<string, DatePenaltyChip[]>> = {};
+    const uids = Array.from(new Set(displayed.map((r) => r.uid)));
+    for (const uid of uids) {
+      const emp = employees.find((e) => e.uid === uid || e.id === uid);
+      const empRecords = displayed.filter((r) => r.uid === uid);
+      map[uid] = getDailyPenaltyMap(
+        empRecords,
+        emp,
+        settings || DEFAULT_OFFICE_SETTINGS,
+      );
+    }
+    return map;
+  }, [displayed, employees, settings]);
+
   return (
     <TableContainer
       component={Paper}
@@ -176,6 +224,27 @@ export function EmployeeAttendanceTable({
                       />
                     )}
                     {(() => {
+                      const odhMins = odhMapByUid[r.uid]?.[r.date] || 0;
+                      if (odhMins > 0) {
+                        return (
+                          <Tooltip title="Overtime Due (Short daily/weekly hours)">
+                            <Chip
+                              size="small"
+                              label={formatODH(odhMins)}
+                              sx={{
+                                height: 20,
+                                fontSize: 10,
+                                bgcolor: "#ef444422",
+                                color: "#ef4444",
+                                fontWeight: 600,
+                              }}
+                            />
+                          </Tooltip>
+                        );
+                      }
+                      return null;
+                    })()}
+                    {(() => {
                       const emp = employees.find(e => e.uid === r.uid || e.id === r.uid);
                       const dailyTasksForRecord = monthTasks.filter(t => t.date === r.date && (t.assigneeId === emp?.id || t.assigneeId === emp?.uid || t.assigneeId === r.uid) && t.status === "done" && (t.isOvertime || t.compensatesWeeklyHours));
                       const taskOvertimeMinutes = dailyTasksForRecord.reduce((acc, t) => acc + (Number(t.assignedHours) || 0) * 60, 0);
@@ -198,6 +267,21 @@ export function EmployeeAttendanceTable({
                       }
                       return null;
                     })()}
+                    {penaltyMapByUid[r.uid]?.[r.date]?.map((p, idx) => (
+                      <Tooltip key={idx} title={p.tooltip}>
+                        <Chip
+                          size="small"
+                          label={p.label}
+                          sx={{
+                            height: 20,
+                            fontSize: 10,
+                            bgcolor: p.bgcolor,
+                            color: p.color,
+                            fontWeight: 600,
+                          }}
+                        />
+                      </Tooltip>
+                    ))}
                   </Box>
                 </TableCell>
               </TableRow>

@@ -306,8 +306,8 @@ export default function AttendancePage() {
             .filter(emp => filterDepartment === "all" || emp.department === filterDepartment)
             .filter(emp => filterRole === "all" || emp.accessLevel === filterRole)
             .map(emp => {
-              const todayRecord = displayed.find(r => r.uid === emp.uid && r.date === todayStr) || null;
-              const empMonthRecords = displayed.filter(r => r.uid === emp.uid).sort((a, b) => b.date.localeCompare(a.date));
+              const todayRecord = records.find(r => r.uid === emp.uid && r.date === todayStr) || null;
+              const empMonthRecords = monthRecords.filter(r => r.uid === emp.uid).sort((a, b) => b.date.localeCompare(a.date));
             
               return (
                 <ScrollReveal key={emp.id}>
@@ -316,6 +316,7 @@ export default function AttendancePage() {
                     todayRecord={todayRecord}
                     monthRecords={empMonthRecords}
                     monthTasks={monthTasks}
+                    settings={settings}
                     onMarkAttendance={(uid) => {
                       setMarkOpen(true);
                       setMarkUid(uid);
@@ -333,9 +334,10 @@ export default function AttendancePage() {
         <ScrollReveal>
           <EmployeeAttendanceTable 
             isAdmin={isAdmin}
-            displayed={displayed}
+            displayed={monthRecords}
             employees={employees}
             monthTasks={monthTasks}
+            settings={settings}
           />
         </ScrollReveal>
       )}
