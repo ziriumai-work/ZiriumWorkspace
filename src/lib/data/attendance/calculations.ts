@@ -7,6 +7,7 @@ import type {
   Employee,
   OfficeSettings,
 } from "@/lib/data/types";
+import { resolveODHAndPenalties } from "./odh-clearing";
 
 export function isCheckInLate(
   checkInIso: string,
@@ -181,7 +182,8 @@ export interface MonthlySummary {
   lateDaysOverThreshold: number; // late days beyond allowed threshold
   excessLeaves: number; // leaves beyond allowed quota
   deductionDays: number; // total deduction days (half-day for late + full-day for excess leave)
-  overtimeDueMinutes?: number; // only applicable for interns
+  overtimeDueMinutes?: number; // total ODH shortfall including weekly hours
+  penaltyODHMinutes?: number; // penalty ODH from late/absences only for interns and unpaid members
 }
 
 export function computeMonthlySummary(
@@ -239,10 +241,17 @@ export function computeMonthlySummary(
     totalOvertimeMinutes += ot;
   }
 
+  const empId = employee?.id || employee?.uid || (records[0] ? records[0].uid : undefined);
   for (const t of tasks) {
-    if (t.status === "done" && (t.isOvertime || t.compensatesWeeklyHours)) {
-      totalHoursWorked += Number(t.assignedHours) || 0;
-      totalOvertimeMinutes += (Number(t.assignedHours) || 0) * 60;
+    const isForEmployee = !empId || t.assigneeId === empId || t.assigneeId === employee?.id || t.assigneeId === employee?.uid;
+    const isForMonth = !targetMonthStr || t.date.startsWith(targetMonthStr);
+    if (isForEmployee && isForMonth && t.status === "done") {
+      if (t.isOvertime || t.compensatesWeeklyHours) {
+        totalHoursWorked += Number(t.assignedHours) || 0;
+      }
+      if (t.isOvertime && !t.resolvesODH && !t.compensatesWeeklyHours) {
+        totalOvertimeMinutes += (Number(t.assignedHours) || 0) * 60;
+      }
     }
   }
 
@@ -269,73 +278,126 @@ export function computeMonthlySummary(
     totalLate - settings.lateThresholdDays,
   );
 
-  const odhMap = getWeeklyOvertimeDueMap(
+  const rawOdhMap = getWeeklyOvertimeDueMap(
     allAttendanceRecords || records,
     employee,
     settings,
-    tasks,
+    [],
   );
-  const totalWeeklyODH = Object.entries(odhMap)
+  const initialPenaltyMap = getDailyPenaltyMap(
+    allAttendanceRecords || records,
+    employee,
+    settings,
+    targetMonthStr,
+  );
+  const clearingResult = resolveODHAndPenalties(
+    allAttendanceRecords || records,
+    tasks,
+    employee,
+    settings,
+    rawOdhMap,
+    initialPenaltyMap,
+    targetMonthStr,
+  );
+  const totalWeeklyODH = Object.entries(clearingResult.odhMap)
     .filter(([date]) => !targetMonthStr || date.startsWith(targetMonthStr))
     .reduce((acc, [, m]) => acc + m, 0);
   const isPaid = Number(employee?.monthlySalary) > 0;
   const treatAsUnpaidIntern = isIntern && !isPaid;
 
+  let unclearedLateCount = 0;
+  let unclearedLeaveCount = 0;
+  let unclearedAbsentCount = 0;
+
+  Object.entries(clearingResult.penaltyMap)
+    .filter(([date]) => !targetMonthStr || date.startsWith(targetMonthStr))
+    .forEach(([, chips]) => {
+      chips.forEach((chip) => {
+        if (chip.isClearingChip) return;
+        const isCleared = chips.some(
+          (c) => c.isClearingChip && c.clearedPenaltyType === chip.type
+        );
+        if (isCleared) return;
+
+        if (
+          chip.type === "late" ||
+          chip.type === "half_day" ||
+          chip.type === "employee_late_deduction" ||
+          chip.type === "intern_late_odh"
+        ) {
+          unclearedLateCount++;
+        } else if (
+          chip.type === "leave" ||
+          chip.type === "employee_leave_deduction" ||
+          chip.type === "intern_leave_odh"
+        ) {
+          unclearedLeaveCount++;
+        } else if (
+          chip.type === "absent" ||
+          chip.type === "employee_absent_deduction" ||
+          chip.type === "intern_absent_odh"
+        ) {
+          unclearedAbsentCount++;
+        }
+      });
+    });
+
+  const unclearedInternPenaltyMinutes = Object.entries(clearingResult.penaltyMap)
+    .filter(([date]) => !targetMonthStr || date.startsWith(targetMonthStr))
+    .reduce((acc, [, chips]) => {
+      return (
+        acc +
+        chips
+          .filter((c) => {
+            if (c.isClearingChip || !c.minutes) return false;
+            const isCleared = chips.some(
+              (cl) => cl.isClearingChip && cl.clearedPenaltyType === c.type
+            );
+            return !isCleared;
+          })
+          .reduce((s, c) => s + (c.minutes || 0), 0)
+      );
+    }, 0);
+
   if (treatAsUnpaidIntern) {
-    const dailyHours = (employee?.officeHours || 30) / 5;
-    const dailyMinutes = dailyHours * 60;
-
-    // Total missing minutes from absentees and excess leaves
-    const missingMinutesFromAbsences =
-      (totalAbsent + excessLeavesToPenalize) * dailyMinutes;
-    // Missing minutes from late days over threshold
-    const missingMinutesFromLates = grossLatePenalties * (dailyMinutes / 2);
-
-    const totalPenaltyMinutes =
-      missingMinutesFromAbsences + missingMinutesFromLates;
-
-    const netOvertime = totalOvertimeMinutes - totalPenaltyMinutes;
-    const baseOvertimeDue = netOvertime < 0 ? Math.abs(netOvertime) : 0;
-
     return {
       totalPresent,
       totalLate,
       totalLeaves,
       totalSickLeaves,
-      totalAbsent,
+      totalAbsent: unclearedAbsentCount,
       totalHoursWorked: Math.round(totalHoursWorked * 100) / 100,
-      totalOvertimeMinutes: Math.max(0, netOvertime),
+      totalOvertimeMinutes: totalOvertimeMinutes,
       lateDaysOverThreshold: 0,
       excessLeaves: 0,
       deductionDays: 0,
-      overtimeDueMinutes: baseOvertimeDue + totalWeeklyODH,
+      overtimeDueMinutes: totalWeeklyODH + unclearedInternPenaltyMinutes,
+      penaltyODHMinutes: unclearedInternPenaltyMinutes,
     };
   } else {
-    const dailyMinutes = ((employee?.officeHours || 40) / 5) * 60;
-    const overtimeOffsetDays = Math.floor(
-      totalOvertimeMinutes / dailyMinutes,
-    );
-    const lateDaysOverThreshold = Math.max(
-      0,
-      grossLatePenalties - overtimeOffsetDays,
-    );
+    const lateDaysOverThreshold = grossLatePenalties;
 
     // Each excess late day = 0.5 day deduction; each excess leave = 1 day deduction. Each absent day = 1 day deduction.
-    const deductionDays =
+    const rawDeductionDays =
       lateDaysOverThreshold * 0.5 + excessLeavesToPenalize + totalAbsent;
+    const deductionDays = Math.max(
+      0,
+      rawDeductionDays - clearingResult.clearedDeductionDays,
+    );
 
     return {
       totalPresent,
       totalLate,
       totalLeaves,
       totalSickLeaves,
-      totalAbsent,
+      totalAbsent: unclearedAbsentCount,
       totalHoursWorked: Math.round(totalHoursWorked * 100) / 100,
-      totalOvertimeMinutes,
-      lateDaysOverThreshold,
-      excessLeaves,
+      totalOvertimeMinutes: totalOvertimeMinutes,
+      lateDaysOverThreshold: unclearedLateCount,
+      excessLeaves: unclearedLeaveCount,
       deductionDays,
       overtimeDueMinutes: totalWeeklyODH,
+      penaltyODHMinutes: unclearedInternPenaltyMinutes,
     };
   }
 }
@@ -356,9 +418,14 @@ export function getWeeklyOvertimeDueMap(
   const odhMap: Record<string, number> = {};
   if (!records || records.length === 0) return odhMap;
 
+  const empId = employee?.id || employee?.uid;
+  const filteredRecords = empId
+    ? records.filter((r) => r.uid === empId || r.uid === employee?.uid || r.uid === employee?.id)
+    : records;
+
   // Group records by Monday of their week
   const weekGroups: Record<string, AttendanceRecord[]> = {};
-  for (const r of records) {
+  for (const r of filteredRecords) {
     if (!r.date) continue;
     const d = new Date(r.date + "T12:00:00");
     const dayOfWeek = d.getDay(); // 0 is Sunday, 1 is Monday...
@@ -464,11 +531,32 @@ export function getWeeklyOvertimeDueMap(
       totalWeekWorkedMinutes += dayMins;
     }
 
-    const weeklyOvertimeDueMinutes = Math.max(
+    let weeklyOvertimeDueMinutes = Math.max(
       0,
       requiredWeekMinutes - totalWeekWorkedMinutes,
     );
 
+    // 1. Check flexibility: if employee has flexibilityHours allowed, deduct unused weekly flexibility from ODH first!
+    const allowedFlexMinutes = (Number(employee?.flexibilityHours) || 0) * 60;
+    if (weeklyOvertimeDueMinutes > 0 && allowedFlexMinutes > 0) {
+      const usedFlexMinutesInWeek = weekRecords.reduce(
+        (acc, r) => acc + (Number(r.flexibilityUsed) || 0),
+        0,
+      );
+      const remainingFlexMinutes = Math.max(
+        0,
+        allowedFlexMinutes - usedFlexMinutesInWeek,
+      );
+      if (remainingFlexMinutes > 0) {
+        const flexCovered = Math.min(
+          weeklyOvertimeDueMinutes,
+          remainingFlexMinutes,
+        );
+        weeklyOvertimeDueMinutes -= flexCovered;
+      }
+    }
+
+    // 2. Distribute any remaining ODH across short days
     if (weeklyOvertimeDueMinutes > 0) {
       const shortDays: { date: string; shortfall: number }[] = [];
       for (const r of weekRecords) {
@@ -510,6 +598,9 @@ export interface DatePenaltyChip {
   tooltip: string;
   color: string;
   bgcolor: string;
+  isClearingChip?: boolean;
+  clearedPenaltyType?: string;
+  minutes?: number;
 }
 
 export function getDailyPenaltyMap(
@@ -517,13 +608,19 @@ export function getDailyPenaltyMap(
   employee: any,
   settings: OfficeSettings,
   targetMonthStr?: string,
+  tasks?: DailyTask[],
 ): Record<string, DatePenaltyChip[]> {
   const penaltyMap: Record<string, DatePenaltyChip[]> = {};
   if (!records || records.length === 0) return penaltyMap;
 
+  const empId = employee?.id || employee?.uid;
+  const filteredRecords = empId
+    ? records.filter((r) => r.uid === empId || r.uid === employee?.uid || r.uid === employee?.id)
+    : records;
+
   // Group records by month YYYY-MM
   const monthGroups: Record<string, AttendanceRecord[]> = {};
-  for (const r of records) {
+  for (const r of filteredRecords) {
     if (!r.date) continue;
     const mo = r.date.slice(0, 7);
     if (targetMonthStr && !r.date.startsWith(targetMonthStr)) continue;
@@ -566,6 +663,7 @@ export function getDailyPenaltyMap(
               tooltip: `Late Penalty Overtime Due (+${halfDayHours}h half-day office hours added for exceeding monthly lates threshold)`,
               color: "#a855f7",     // Purple
               bgcolor: "#a855f722",
+              minutes: Math.round(halfDayHours * 60),
             });
           } else {
             penaltyMap[r.date].push({
@@ -580,7 +678,7 @@ export function getDailyPenaltyMap(
       }
 
       // 2. Excess Leave Penalty (Exceeding allowed leaves)
-      if (r.status === "on_leave" && !r.isAdminApprovedLeave) {
+      if (r.status === "on_leave" && !r.adminApprovedLeave) {
         leaveCount++;
         if (leaveCount > allowedLeaves) {
           if (treatAsUnpaidIntern) {
@@ -590,6 +688,7 @@ export function getDailyPenaltyMap(
               tooltip: `Leave Penalty Overtime Due (+${dailyHours}h office hours for unapproved excess leave)`,
               color: "#a855f7",
               bgcolor: "#a855f722",
+              minutes: Math.round(dailyHours * 60),
             });
           } else {
             penaltyMap[r.date].push({
@@ -612,6 +711,7 @@ export function getDailyPenaltyMap(
             tooltip: `Absence Penalty Overtime Due (+${dailyHours}h office hours for unexcused absence)`,
             color: "#a855f7",
             bgcolor: "#a855f722",
+            minutes: Math.round(dailyHours * 60),
           });
         } else {
           penaltyMap[r.date].push({
@@ -624,6 +724,20 @@ export function getDailyPenaltyMap(
         }
       }
     }
+  }
+
+  if (tasks && tasks.length > 0) {
+    const initialOdhMap = getWeeklyOvertimeDueMap(records, employee, settings, []);
+    const res = resolveODHAndPenalties(
+      records,
+      tasks,
+      employee,
+      settings,
+      initialOdhMap,
+      penaltyMap,
+      targetMonthStr,
+    );
+    return res.penaltyMap;
   }
 
   return penaltyMap;

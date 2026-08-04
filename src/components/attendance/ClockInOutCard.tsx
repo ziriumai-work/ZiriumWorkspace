@@ -54,6 +54,9 @@ export function ClockInOutCard({
     );
   }
 
+  const day = new Date().getDay();
+  const isWeekend = day === 0 || day === 6;
+
   return (
     <Paper
       variant="outlined"
@@ -92,6 +95,10 @@ export function ClockInOutCard({
               <Chip size="small" label={`+${myTodayRecord.overtimeMinutes}min OT`} sx={{ bgcolor: "#3b82f622", color: "#3b82f6", fontWeight: 600, fontSize: 10, height: 20 }} />
             )}
           </Box>
+        ) : isWeekend ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Office is closed on weekends. Clock-in is not required today.
+          </Typography>
         ) : (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             You have not clocked in yet.
@@ -99,7 +106,12 @@ export function ClockInOutCard({
         )}
       </Box>
       <Box sx={{ display: "flex", gap: 1 }}>
-        {!myTodayRecord ? (
+        {isWeekend ? (
+          <Chip
+            label="🌴 Office Closed (Weekend)"
+            sx={{ bgcolor: "#a855f722", color: "#a855f7", fontWeight: 600 }}
+          />
+        ) : !myTodayRecord ? (
           <Button
             variant="contained"
             onClick={handleClockIn}

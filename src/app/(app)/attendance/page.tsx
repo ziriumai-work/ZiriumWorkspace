@@ -33,6 +33,7 @@ import { pad } from "@/components/attendance/attendance-utils";
 import { AdminEmployeeCard } from "@/components/attendance/AdminEmployeeCard";
 import { MarkAttendanceModal } from "@/components/attendance/MarkAttendanceModal";
 import { AttendanceSettingsModal } from "@/components/attendance/AttendanceSettingsModal";
+import { ExportAttendanceModal } from "@/components/attendance/ExportAttendanceModal";
 import { OfficeHoursBanner } from "@/components/attendance/OfficeHoursBanner";
 import { EmployeeStatsDashboard } from "@/components/attendance/EmployeeStatsDashboard";
 import { ClockInOutCard } from "@/components/attendance/ClockInOutCard";
@@ -67,6 +68,7 @@ export default function AttendancePage() {
   // Admin modala
   const todayStr = now.toISOString().slice(0, 10);
   const [markOpen, setMarkOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [markUid, setMarkUid] = useState("");
   const [markDate, setMarkDate] = useState(todayStr);
   const [markStatus, setMarkStatus] = useState<AttendanceStatus>("present");
@@ -149,6 +151,24 @@ export default function AttendancePage() {
     try {
       const emp = employees.find((e) => e.uid === markUid);
       const name = emp?.name ?? "Unknown";
+      if (markStatus === "clock_out") {
+        if (markDate !== new Date().toISOString().slice(0, 10)) {
+          setError("You can only clock out an employee for today's date.");
+          setBusy(false);
+          return;
+        }
+        const res = await clockOut(markUid, settings, emp);
+        if (res.status !== "success") {
+          setError(res.message);
+          setBusy(false);
+          return;
+        }
+        setMarkOpen(false);
+        setSuccess("Employee clocked out successfully!");
+        setTimeout(() => setSuccess(null), 3000);
+        setBusy(false);
+        return;
+      }
       await markAttendance(
         markUid,
         name,
@@ -286,6 +306,7 @@ export default function AttendancePage() {
             setMarkCheckIn("");
             setMarkCheckOut("");
           }}
+          onOpenExportAttendance={() => setExportOpen(true)}
         />
       )}
 
@@ -363,6 +384,15 @@ export default function AttendancePage() {
         setEditSettings={setEditSettings}
         handleSaveSettings={handleSaveSettings}
         busy={busy}
+      />
+
+      <ExportAttendanceModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        employees={employees}
+        allRecords={records}
+        allTasks={tasks}
+        settings={settings || DEFAULT_OFFICE_SETTINGS}
       />
     </Box>
   );

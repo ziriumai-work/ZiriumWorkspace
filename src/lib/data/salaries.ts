@@ -81,7 +81,7 @@ export async function generateSalariesForMonth(month: string): Promise<void> {
     // Filter attendance
     const myAtt = allAttendance.filter(a => (a.uid === emp.uid || a.uid === emp.id || (!!emp.email && a.uid === emp.email)) && a.date.startsWith(month));
     // Filter tasks
-    const myTasks = allTasks.filter(t => (t.assigneeId === emp.id || t.assigneeId === emp.uid) && t.date.startsWith(month) && t.isOvertime && t.overtimeCost);
+    const myTasks = allTasks.filter(t => (t.assigneeId === emp.id || t.assigneeId === emp.uid) && t.date.startsWith(month) && t.isOvertime && !t.resolvesODH && !t.compensatesWeeklyHours && t.overtimeCost);
 
     const lineItems: SalaryLineItem[] = [];
     let deductionsTotal = 0;

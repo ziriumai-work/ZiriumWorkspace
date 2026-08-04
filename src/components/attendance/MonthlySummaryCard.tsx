@@ -106,6 +106,13 @@ export function MonthlySummaryCard({
                 sx={{ bgcolor: `${amber.main}22`, color: amber.main, fontWeight: 600, fontSize: 11 }}
               />
             )}
+            {summary.totalAbsent > 0 && (
+              <Chip
+                size="small"
+                label={`${summary.totalAbsent} absent day${summary.totalAbsent > 1 ? "s" : ""} → 100% deduction each`}
+                sx={{ bgcolor: `${red.main}22`, color: red.main, fontWeight: 600, fontSize: 11 }}
+              />
+            )}
             {summary.deductionDays > 0 && (
               <Chip
                 size="small"
@@ -158,6 +165,13 @@ export function MonthlySummaryCard({
                 size="small"
                 label={`${summary.excessLeaves} excess leave${summary.excessLeaves > 1 ? "s" : ""}`}
                 sx={{ bgcolor: `${amber.main}22`, color: amber.main, fontWeight: 600, fontSize: 11 }}
+              />
+            )}
+            {summary.totalAbsent > 0 && (
+              <Chip
+                size="small"
+                label={`${summary.totalAbsent} absent day${summary.totalAbsent > 1 ? "s" : ""} → 100% deduction each`}
+                sx={{ bgcolor: `${red.main}22`, color: red.main, fontWeight: 600, fontSize: 11 }}
               />
             )}
             {summary.deductionDays > 0 && (

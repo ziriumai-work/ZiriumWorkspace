@@ -178,7 +178,15 @@ export function TaskCard({
             )}
             {task.isOvertime && (
               <Chip
-                label={task.compensatesWeeklyHours ? "Compensatory Task" : `Overtime (${formatCurrency(task.overtimeCost || 0)})`}
+                label={
+                  task.resolvesODH && task.compensatesWeeklyHours
+                    ? "ODH + Compensatory Task"
+                    : task.resolvesODH
+                    ? "ODH Overtime"
+                    : task.compensatesWeeklyHours
+                    ? "Compensatory Task"
+                    : `Overtime (${formatCurrency(task.overtimeCost || 0)})`
+                }
                 size="small"
                 sx={{ bgcolor: "#ef444415", color: "#ef4444", fontWeight: 600, fontSize: 11, height: 22, border: "1px solid #ef444433" }}
               />

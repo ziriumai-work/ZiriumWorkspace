@@ -3,6 +3,7 @@ import Button from "@mui/material/Button";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Typography from "@mui/material/Typography";
+import DownloadIcon from "@mui/icons-material/Download";
 import { type Employee } from "@/lib/data/types";
 
 interface AdminFiltersProps {
@@ -14,6 +15,7 @@ interface AdminFiltersProps {
   filterRole: string;
   setFilterRole: (val: string) => void;
   onOpenMarkAttendance: () => void;
+  onOpenExportAttendance?: () => void;
 }
 
 export function AdminFilters({
@@ -25,6 +27,7 @@ export function AdminFilters({
   filterRole,
   setFilterRole,
   onOpenMarkAttendance,
+  onOpenExportAttendance,
 }: AdminFiltersProps) {
   return (
     <Box
@@ -49,9 +52,9 @@ export function AdminFilters({
           sx={{ minWidth: 150, borderRadius: 2, fontSize: 14 }}
         >
           <MenuItem value="all">All Employees</MenuItem>
-          {employees.map((e) => (
-            <MenuItem key={e.id} value={e.uid || e.id}>
-              {e.name}
+          {employees.map((emp) => (
+            <MenuItem key={emp.uid || emp.id} value={emp.uid || emp.id}>
+              {emp.name}
             </MenuItem>
           ))}
         </Select>
@@ -59,7 +62,7 @@ export function AdminFilters({
           size="small"
           value={filterDepartment}
           onChange={(e) => setFilterDepartment(e.target.value)}
-          sx={{ minWidth: 120, borderRadius: 2, fontSize: 14 }}
+          sx={{ minWidth: 130, borderRadius: 2, fontSize: 14 }}
         >
           <MenuItem value="all">All Depts</MenuItem>
           <MenuItem value="web">Web</MenuItem>
@@ -78,13 +81,35 @@ export function AdminFilters({
           <MenuItem value="intern">Intern</MenuItem>
         </Select>
       </Box>
-      <Button
-        variant="contained"
-        onClick={onOpenMarkAttendance}
-        sx={{ borderRadius: 3, px: 3 }}
+      <Box
+        sx={{
+          display: "flex",
+          gap: 1.5,
+          flexWrap: "wrap",
+          width: { xs: "100%", md: "auto" },
+          "& .MuiButton-root": {
+            flex: { xs: "1 1 100%", sm: "0 0 auto" },
+          },
+        }}
       >
-        Mark Attendance
-      </Button>
+        {onOpenExportAttendance && (
+          <Button
+            variant="outlined"
+            onClick={onOpenExportAttendance}
+            sx={{ borderRadius: 3, px: 3 }}
+          >
+            <DownloadIcon sx={{ mr: 0.8, fontSize: 18 }} />
+            Export Attendance
+          </Button>
+        )}
+        <Button
+          variant="contained"
+          onClick={onOpenMarkAttendance}
+          sx={{ borderRadius: 3, px: 3 }}
+        >
+          Mark Attendance
+        </Button>
+      </Box>
     </Box>
   );
 }

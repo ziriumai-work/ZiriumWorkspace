@@ -99,7 +99,7 @@ export default function TasksPage() {
     if (!tasks.length || !isAdmin) return;
     const fixTasks = async () => {
       for (const t of tasks) {
-        if (t.isOvertime && t.compensatesWeeklyHours && t.overtimeCost && t.overtimeCost > 0) {
+        if (t.isOvertime && (t.compensatesWeeklyHours || t.resolvesODH) && t.overtimeCost && t.overtimeCost > 0) {
           try {
             await updateDoc(doc(db, "tasks", t.id), {
               overtimeCost: 0
@@ -237,7 +237,7 @@ export default function TasksPage() {
 
       {isAdmin && (
         <AssignTaskForm
-          employees={employees}
+          employees={employees.filter((e) => e.accessLevel !== "admin" && (e.accessLevel as string) !== "owner")}
           projects={projects}
           onAssign={(input) => createTask(input, user?.uid ?? "")}
         />
@@ -304,7 +304,7 @@ export default function TasksPage() {
               >
                 <MenuItem value="all">All Members</MenuItem>
                 {employees
-                  .filter((e) => e.accessLevel !== "admin" && e.accessLevel !== "owner")
+                  .filter((e) => e.accessLevel !== "admin" && (e.accessLevel as string) !== "owner")
                   .map(e => (
                     <MenuItem key={e.id} value={e.id}>{e.name}</MenuItem>
                   ))}

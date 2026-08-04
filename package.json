@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node test/run-all-tests.mjs"
+    "test": "node test/run-all-tests.mjs",
+    "emulators": "firebase emulators:start --only auth,firestore,storage --import=./emulator-data --export-on-exit=./emulator-data",
+    "emulators:export": "firebase emulators:export ./emulator-data"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

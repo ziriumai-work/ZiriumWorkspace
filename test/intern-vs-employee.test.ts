@@ -78,6 +78,28 @@ describe("Intern vs Employee Monthly Summary & Penalty Math", () => {
     expect(empSummary.overtimeDueMinutes).toBe(180);
   });
 
+  it("should check flexibility first on Friday end of week, deduct unused flexibility from ODH, and distribute only the remainder", () => {
+    // Week Monday 2026-07-20 to Friday 2026-07-24
+    // Employee required = 40h/week (8h/day). flexibilityHours = 2 (120 minutes allowed).
+    // Mon: 6 hours (2h short), Tue: 8h, Wed: 7h (1h short), Thu: 8h, Fri: 8h -> Total shortfall = 3 hours (180 mins).
+    // Flexibility allowed = 120 mins -> 180 - 120 = 60 mins remaining ODH distributed.
+    const mockRecords = [
+      { id: "1", uid: "emp1", date: "2026-07-20", status: "present", hoursWorked: 6 },
+      { id: "2", uid: "emp1", date: "2026-07-21", status: "present", hoursWorked: 8 },
+      { id: "3", uid: "emp1", date: "2026-07-22", status: "present", hoursWorked: 7 },
+      { id: "4", uid: "emp1", date: "2026-07-23", status: "present", hoursWorked: 8 },
+      { id: "5", uid: "emp1", date: "2026-07-24", status: "present", hoursWorked: 8 },
+    ] as unknown as AttendanceRecord[];
+
+    const empSummary = computeMonthlySummary(mockRecords, [], settings, false, {
+      accessLevel: "member",
+      officeHours: 40,
+      flexibilityHours: 2,
+    });
+
+    expect(empSummary.overtimeDueMinutes).toBe(60);
+  });
+
   it("should generate date-specific Late ODH chips for Interns and Salary Deduction chips for Employees when exceeding late threshold", () => {
     const mockRecords = [
       { id: "1", uid: "u1", date: "2026-07-01", status: "present", isLate: true },
@@ -135,7 +157,8 @@ describe("Intern vs Employee Monthly Summary & Penalty Math", () => {
       date: "2026-07-05",
       status: "done",
       isOvertime: true,
-      assignedHours: 6,
+      compensatesWeeklyHours: true,
+      assignedHours: 3,
     }] as unknown as any[];
 
     const paidWithCompSummary = computeMonthlySummary(mockRecords, mockCompTask, settings, true, {

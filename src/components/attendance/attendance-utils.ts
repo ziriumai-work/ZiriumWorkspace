@@ -7,17 +7,38 @@ export const STATUS_COLORS: Record<AttendanceStatus, string> = {
   absent: "#ef4444",
   on_leave: "#a855f7",
   sick_leave: "#ec4899", // pink for sick leave
+  clock_out: "#3b82f6", // blue for clock out
 };
 
 export function fmtTime(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso || iso.trim() === "") return "—";
   try {
-    return new Date(iso).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const timeMatch = iso.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?(\s*[AaPp][Mm])?$/);
+    if (timeMatch) {
+      if (timeMatch[4]) {
+        return iso;
+      }
+      let hours = parseInt(timeMatch[1], 10);
+      const minutes = timeMatch[2];
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return `${hours}:${minutes} ${ampm}`;
+    }
+
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) {
+      let hours = d.getHours();
+      const minutes = d.getMinutes().toString().padStart(2, "0");
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return `${hours}:${minutes} ${ampm}`;
+    }
+
+    return iso;
   } catch {
-    return "—";
+    return iso || "—";
   }
 }
 

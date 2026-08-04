@@ -22,6 +22,7 @@ import {
 import {
   getWeeklyOvertimeDueMap,
   getDailyPenaltyMap,
+  resolveODHAndPenalties,
   formatODH,
   type DatePenaltyChip,
 } from "@/lib/data/attendance";
@@ -42,36 +43,39 @@ export function EmployeeAttendanceTable({
   monthTasks,
   settings,
 }: EmployeeAttendanceTableProps) {
-  const odhMapByUid: Record<string, Record<string, number>> = useMemo(() => {
-    const map: Record<string, Record<string, number>> = {};
+  const { odhMapByUid, penaltyMapByUid } = useMemo(() => {
+    const odh: Record<string, Record<string, number>> = {};
+    const pen: Record<string, Record<string, DatePenaltyChip[]>> = {};
     const uids = Array.from(new Set(displayed.map((r) => r.uid)));
     for (const uid of uids) {
       const emp = employees.find((e) => e.uid === uid || e.id === uid);
       const empRecords = displayed.filter((r) => r.uid === uid);
-      map[uid] = getWeeklyOvertimeDueMap(
+      const rawOdhMap = getWeeklyOvertimeDueMap(
         empRecords,
         emp,
         settings || DEFAULT_OFFICE_SETTINGS,
+        [],
+      );
+      const rawPenaltyMap = getDailyPenaltyMap(
+        empRecords,
+        emp,
+        settings || DEFAULT_OFFICE_SETTINGS,
+        undefined,
         monthTasks,
       );
-    }
-    return map;
-  }, [displayed, employees, monthTasks, settings]);
-
-  const penaltyMapByUid: Record<string, Record<string, DatePenaltyChip[]>> = useMemo(() => {
-    const map: Record<string, Record<string, DatePenaltyChip[]>> = {};
-    const uids = Array.from(new Set(displayed.map((r) => r.uid)));
-    for (const uid of uids) {
-      const emp = employees.find((e) => e.uid === uid || e.id === uid);
-      const empRecords = displayed.filter((r) => r.uid === uid);
-      map[uid] = getDailyPenaltyMap(
+      const cleared = resolveODHAndPenalties(
         empRecords,
+        monthTasks,
         emp,
         settings || DEFAULT_OFFICE_SETTINGS,
+        rawOdhMap,
+        rawPenaltyMap,
       );
+      odh[uid] = cleared.originalOdhMap || rawOdhMap;
+      pen[uid] = cleared.penaltyMap;
     }
-    return map;
-  }, [displayed, employees, settings]);
+    return { odhMapByUid: odh, penaltyMapByUid: pen };
+  }, [displayed, employees, settings, monthTasks]);
 
   return (
     <TableContainer
@@ -208,18 +212,20 @@ export function EmployeeAttendanceTable({
                     {calcHours(r.checkIn, r.checkOut)}
                   </Typography>
                 </TableCell>
-                <TableCell sx={{ pr: 3 }}>
-                  <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                <TableCell sx={{ pr: 3, minWidth: 360 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap", py: 0.5 }}>
                     {r.isLate && (
                       <Chip
                         size="small"
                         label="Late"
                         sx={{
-                          height: 20,
-                          fontSize: 10,
+                          height: 22,
+                          fontSize: 11,
                           bgcolor: "#f59e0b22",
                           color: "#f59e0b",
                           fontWeight: 600,
+                          borderRadius: "6px",
+                          border: "1px solid #f59e0b33",
                         }}
                       />
                     )}
@@ -232,11 +238,13 @@ export function EmployeeAttendanceTable({
                               size="small"
                               label={formatODH(odhMins)}
                               sx={{
-                                height: 20,
-                                fontSize: 10,
+                                height: 22,
+                                fontSize: 11,
                                 bgcolor: "#ef444422",
                                 color: "#ef4444",
                                 fontWeight: 600,
+                                borderRadius: "6px",
+                                border: "1px solid #ef444433",
                               }}
                             />
                           </Tooltip>
@@ -256,32 +264,48 @@ export function EmployeeAttendanceTable({
                             size="small"
                             label={`+${totalOtMinutes < 60 ? `${totalOtMinutes}m` : `${Math.floor(totalOtMinutes / 60)}h ${totalOtMinutes % 60}m`} OT`}
                             sx={{
-                              height: 20,
-                              fontSize: 10,
+                              height: 22,
+                              fontSize: 11,
                               bgcolor: "#3b82f622",
                               color: "#3b82f6",
                               fontWeight: 600,
+                              borderRadius: "6px",
+                              border: "1px solid #3b82f633",
                             }}
                           />
                         );
                       }
                       return null;
                     })()}
-                    {penaltyMapByUid[r.uid]?.[r.date]?.map((p, idx) => (
-                      <Tooltip key={idx} title={p.tooltip}>
-                        <Chip
-                          size="small"
-                          label={p.label}
-                          sx={{
-                            height: 20,
-                            fontSize: 10,
-                            bgcolor: p.bgcolor,
-                            color: p.color,
-                            fontWeight: 600,
-                          }}
-                        />
-                      </Tooltip>
-                    ))}
+                    {(() => {
+                      const chips = penaltyMapByUid[r.uid]?.[r.date] || [];
+                      const seen = new Set<string>();
+                      return chips
+                        .filter((p) => {
+                          const key = `${p.type}-${p.label}`;
+                          if (seen.has(key)) return false;
+                          seen.add(key);
+                          return true;
+                        })
+                        .map((p, idx) => (
+                          <Tooltip key={idx} title={p.tooltip}>
+                            <Chip
+                              size="small"
+                              label={p.label}
+                              sx={{
+                                height: 22,
+                                fontSize: 11,
+                                bgcolor: p.bgcolor,
+                                color: p.color,
+                                fontWeight: 600,
+                                borderRadius: "6px",
+                                border: "1px solid",
+                                borderColor: `${p.color}44`,
+                              }}
+                            />
+                          </Tooltip>
+                        ));
+                    })()}
                   </Box>
                 </TableCell>
               </TableRow>

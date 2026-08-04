@@ -58,6 +58,11 @@ export function normalizeOfficeHours(settings: OfficeSettings): {
 
 export function isWithinOfficeHours(settings: OfficeSettings, currentTime?: Date): boolean {
   const now = currentTime ? new Date(currentTime) : new Date();
+  const day = now.getDay();
+  if (day === 0 || day === 6) {
+    return false;
+  }
+
   const { startH, startM, endH, endM } = normalizeOfficeHours(settings);
 
   const start = new Date(now);

@@ -219,7 +219,8 @@ export interface DailyTask {
   reports?: TaskReport[]; // ordered history of reports/reviews
   assignedHours?: number; // specific number of hours assigned
   isOvertime?: boolean; // toggle to mark as overtime
-  compensatesWeeklyHours?: boolean; // if true, these hours count towards weekly total instead of extra pay
+  compensatesWeeklyHours?: boolean; // if true, these hours count towards weekly total instead of extra pay (Compensatory Task)
+  resolvesODH?: boolean; // if true, these hours pay down ODH balance (Mark as ODH toggle)
   overtimeCost?: number; // computed overtime cost
   attachments?: TaskFile[]; // admin attached docs
   createdBy: string; // uid of the admin who assigned it
@@ -354,13 +355,13 @@ export const DEFAULT_OFFICE_SETTINGS: OfficeSettings = {
   appUrl: process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "https://zirium.vercel.app",
 };
 
-// Attendance (attendance/{recordId})
 export type AttendanceStatus =
   | "present"
   | "absent"
   | "late"
   | "on_leave"
-  | "sick_leave";
+  | "sick_leave"
+  | "clock_out";
 
 export const ATTENDANCE_STATUSES: { value: AttendanceStatus; label: string }[] =
   [

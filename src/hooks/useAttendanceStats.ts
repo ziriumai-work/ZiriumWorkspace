@@ -86,25 +86,25 @@ export function useAttendanceStats({
     const target = summaryMonth; // "yyyy-mm"
     let result = tasks.filter(t => t.date.startsWith(target));
     if (!isAdmin) {
-      if (employee) result = result.filter((t) => t.assigneeId === employee.id);
+      if (employee) result = result.filter((t) => t.assigneeId === employee.id || t.assigneeId === employee.uid);
     } else {
       if (filterUid !== "all") {
         const selectedEmp = employees.find(e => e.uid === filterUid);
         if (selectedEmp) {
-          result = result.filter((t) => t.assigneeId === selectedEmp.id);
+          result = result.filter((t) => t.assigneeId === selectedEmp.id || t.assigneeId === selectedEmp.uid);
         } else {
           result = []; // fallback if not found
         }
       }
       if (filterDepartment !== "all") {
         result = result.filter((t) => {
-          const emp = employees.find(e => e.id === t.assigneeId);
+          const emp = employees.find(e => e.id === t.assigneeId || e.uid === t.assigneeId);
           return emp?.department === filterDepartment;
         });
       }
       if (filterRole !== "all") {
         result = result.filter((t) => {
-          const emp = employees.find(e => e.id === t.assigneeId);
+          const emp = employees.find(e => e.id === t.assigneeId || e.uid === t.assigneeId);
           return emp?.accessLevel === filterRole;
         });
       }
@@ -153,7 +153,7 @@ export function useAttendanceStats({
         if (!emp) continue;
         
         const empRecords = monthRecords.filter(r => r.uid === uid);
-        const empTasks = monthTasks.filter(t => t.assigneeId === emp.id);
+        const empTasks = monthTasks.filter(t => t.assigneeId === emp.id || t.assigneeId === emp.uid);
         
         const s = computeMonthlySummary(empRecords, empTasks, settings, emp.accessLevel === "intern", emp, records, summaryMonth);
         

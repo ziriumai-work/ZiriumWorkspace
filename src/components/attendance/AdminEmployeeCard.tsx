@@ -28,6 +28,7 @@ import {
 import {
   getWeeklyOvertimeDueMap,
   getDailyPenaltyMap,
+  resolveODHAndPenalties,
   formatODH,
   type DatePenaltyChip,
 } from "@/lib/data/attendance";
@@ -50,26 +51,33 @@ export function AdminEmployeeCard({
 }) {
   const [expanded, setExpanded] = useState(false);
 
-  const odhMap = useMemo(
-    () =>
-      getWeeklyOvertimeDueMap(
-        monthRecords,
-        employee,
-        settings || DEFAULT_OFFICE_SETTINGS,
-        monthTasks,
-      ),
-    [monthRecords, employee, settings, monthTasks],
-  );
-
-  const penaltyMap: Record<string, DatePenaltyChip[]> = useMemo(
-    () =>
-      getDailyPenaltyMap(
-        monthRecords,
-        employee,
-        settings || DEFAULT_OFFICE_SETTINGS,
-      ),
-    [monthRecords, employee, settings],
-  );
+  const { odhMap, penaltyMap } = useMemo(() => {
+    const rawOdhMap = getWeeklyOvertimeDueMap(
+      monthRecords,
+      employee,
+      settings || DEFAULT_OFFICE_SETTINGS,
+      [],
+    );
+    const rawPenaltyMap = getDailyPenaltyMap(
+      monthRecords,
+      employee,
+      settings || DEFAULT_OFFICE_SETTINGS,
+      undefined,
+      monthTasks,
+    );
+    const cleared = resolveODHAndPenalties(
+      monthRecords,
+      monthTasks,
+      employee,
+      settings || DEFAULT_OFFICE_SETTINGS,
+      rawOdhMap,
+      rawPenaltyMap,
+    );
+    return {
+      odhMap: cleared.originalOdhMap || rawOdhMap,
+      penaltyMap: cleared.penaltyMap,
+    };
+  }, [monthRecords, employee, settings, monthTasks]);
 
   return (
     <Paper 
@@ -171,9 +179,23 @@ export function AdminEmployeeCard({
                     <TableCell>{fmtTime(r.checkIn)}</TableCell>
                     <TableCell>{fmtTime(r.checkOut)}</TableCell>
                     <TableCell>{calcHours(r.checkIn, r.checkOut)}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-                        {r.isLate && <Chip size="small" label="Late" sx={{ height: 20, fontSize: 10, bgcolor: "#f59e0b22", color: "#f59e0b", fontWeight: 600 }} />}
+                    <TableCell sx={{ minWidth: 360 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap", py: 0.5 }}>
+                        {r.isLate && (
+                          <Chip
+                            size="small"
+                            label="Late"
+                            sx={{
+                              height: 22,
+                              fontSize: 11,
+                              bgcolor: "#f59e0b22",
+                              color: "#f59e0b",
+                              fontWeight: 600,
+                              borderRadius: "6px",
+                              border: "1px solid #f59e0b33",
+                            }}
+                          />
+                        )}
                         {(() => {
                           const odhMins = odhMap[r.date] || 0;
                           if (odhMins > 0) {
@@ -183,11 +205,13 @@ export function AdminEmployeeCard({
                                   size="small"
                                   label={formatODH(odhMins)}
                                   sx={{
-                                    height: 20,
-                                    fontSize: 10,
+                                    height: 22,
+                                    fontSize: 11,
                                     bgcolor: "#ef444422",
                                     color: "#ef4444",
                                     fontWeight: 600,
+                                    borderRadius: "6px",
+                                    border: "1px solid #ef444433",
                                   }}
                                 />
                               </Tooltip>
@@ -202,26 +226,52 @@ export function AdminEmployeeCard({
                           
                           if (totalOtMinutes > 0) {
                             return (
-                              <Chip size="small" label={`+${totalOtMinutes < 60 ? `${totalOtMinutes}m` : `${Math.floor(totalOtMinutes / 60)}h ${totalOtMinutes % 60}m`} OT`} sx={{ height: 20, fontSize: 10, bgcolor: "#3b82f622", color: "#3b82f6", fontWeight: 600 }} />
+                              <Chip
+                                size="small"
+                                label={`+${totalOtMinutes < 60 ? `${totalOtMinutes}m` : `${Math.floor(totalOtMinutes / 60)}h ${totalOtMinutes % 60}m`} OT`}
+                                sx={{
+                                  height: 22,
+                                  fontSize: 11,
+                                  bgcolor: "#3b82f622",
+                                  color: "#3b82f6",
+                                  fontWeight: 600,
+                                  borderRadius: "6px",
+                                  border: "1px solid #3b82f633",
+                                }}
+                              />
                             );
                           }
                           return null;
                         })()}
-                        {penaltyMap[r.date]?.map((p, idx) => (
-                          <Tooltip key={idx} title={p.tooltip}>
-                            <Chip
-                              size="small"
-                              label={p.label}
-                              sx={{
-                                height: 20,
-                                fontSize: 10,
-                                bgcolor: p.bgcolor,
-                                color: p.color,
-                                fontWeight: 600,
-                              }}
-                            />
-                          </Tooltip>
-                        ))}
+                        {(() => {
+                          const chips = penaltyMap[r.date] || [];
+                          const seen = new Set<string>();
+                          return chips
+                            .filter((p) => {
+                              const key = `${p.type}-${p.label}`;
+                              if (seen.has(key)) return false;
+                              seen.add(key);
+                              return true;
+                            })
+                            .map((p, idx) => (
+                              <Tooltip key={idx} title={p.tooltip}>
+                                <Chip
+                                  size="small"
+                                  label={p.label}
+                                  sx={{
+                                    height: 22,
+                                    fontSize: 11,
+                                    bgcolor: p.bgcolor,
+                                    color: p.color,
+                                    fontWeight: 600,
+                                    borderRadius: "6px",
+                                    border: "1px solid",
+                                    borderColor: `${p.color}44`,
+                                  }}
+                                />
+                              </Tooltip>
+                            ));
+                        })()}
                       </Box>
                     </TableCell>
                   </TableRow>
