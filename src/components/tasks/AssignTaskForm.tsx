@@ -90,8 +90,9 @@ export function AssignTaskForm({
 
     const isIntern = selectedEmp.accessLevel === "intern";
     const isPaid = Number(selectedEmp.monthlySalary) > 0;
+    const treatAsUnpaidIntern = isIntern && !isPaid;
     let penaltyStr = "0";
-    if (isIntern || !isPaid) {
+    if (treatAsUnpaidIntern) {
       const penaltyMins = summary.penaltyODHMinutes || 0;
       penaltyStr = `${penaltyMins > 0 ? formatODH(penaltyMins) : "0h ODH"}`;
     } else {

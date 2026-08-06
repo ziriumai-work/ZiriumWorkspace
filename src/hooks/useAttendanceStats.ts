@@ -234,10 +234,31 @@ export function useAttendanceStats({
         flexibilityUsed += (r.flexibilityUsed || 0);
       }
     });
-    
     const allowedFlex = (employee.flexibilityHours || 0) * 60;
-    const flexRemaining = allowedFlex - flexibilityUsed; 
+    let finalFlexRemaining = allowedFlex - flexibilityUsed; 
 
+    // If the week is closed, unused flexibility is applied to any weekly ODH
+    const fri = new Date(weekStart);
+    fri.setDate(fri.getDate() + 4);
+    const friStr = getLocalISODate(fri);
+    const friRec = records.find((r) => r.date === friStr && r.uid === user?.uid);
+    const closingTimeToday = new Date(now);
+    closingTimeToday.setHours(settings?.endHour || 18, settings?.endMinute || 0, 0, 0);
+
+    const isFriClosed =
+      friStr < todayStr ||
+      (friRec &&
+        (friRec.checkOut !== null ||
+          friRec.status === "absent" ||
+          friRec.status === "on_leave" ||
+          friRec.status === "sick_leave")) ||
+      (todayStr === friStr && now >= closingTimeToday);
+
+    if (isFriClosed && remainingHours > 0 && finalFlexRemaining > 0) {
+      const remainingODHMins = remainingHours * 60;
+      const flexCovered = Math.min(remainingODHMins, finalFlexRemaining);
+      finalFlexRemaining -= flexCovered;
+    }
     // 3. Lates & Leaves (Month)
     let monthlyLates = 0;
     let monthlyLeaves = 0;
@@ -267,13 +288,13 @@ export function useAttendanceStats({
     const leavesAllowed = leaveAllowanceDetails.totalAllowedLeaves;
     const rolloverLeaves = leaveAllowanceDetails.rolloverLeaves;
 
-    const isPenaltyActive = monthlyLates > latesAllowed && remainingHours > 0 && flexRemaining < 0;
+    const isPenaltyActive = monthlyLates > latesAllowed && remainingHours > 0 && finalFlexRemaining < 0;
 
     return {
       totalWeeklyHours,
       requiredHours,
       remainingHours,
-      flexRemaining,
+      flexRemaining: finalFlexRemaining,
       allowedFlex,
       latesAllowed,
       leavesAllowed,

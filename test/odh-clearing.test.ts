@@ -418,21 +418,40 @@ describe("ODH + Compensatory Toggles and Penalty-Clearing Rules", () => {
       "2026-08",
     );
 
-    // 1) 2026-08-26 late day should be CLEARED (cost 180 mins = 3 hours)
+    // 1) 2026-08-26 late day should be FULLY CLEARED (cost 180 mins = 3 hours)
     expect(resIntern.penaltyMap["2026-08-26"].length).toBe(2);
     expect(resIntern.penaltyMap["2026-08-26"][1].label).toBe("ODH Resolved (Task Cleared)");
 
-    // 2) 2026-08-25 late day should NOT be cleared (only 60 mins left, 180 mins required)
-    expect(resIntern.penaltyMap["2026-08-25"].length).toBe(1);
+    // 2) 2026-08-25 late day should absorb remaining 1h (60 mins) and have 2h (120 mins) ODH left!
+    expect(resIntern.odhMap["2026-08-25"]).toBe(120); // 180 - 60 = 120
+    expect(resIntern.penaltyMap["2026-08-25"].length).toBe(2);
+    expect(resIntern.penaltyMap["2026-08-25"][1].label).toBe("+1h 0m OT (2026-08-26 Task)");
 
-    // 3) Remaining 60 mins (1 hour) should be absorbed into 2026-08-19 (leaving 60 mins ODH remaining)
-    expect(resIntern.odhMap["2026-08-19"]).toBe(60); // 120 - 60 = 60
-    const aug19Chips = resIntern.penaltyMap["2026-08-19"] || [];
-    expect(aug19Chips.length).toBe(1);
-    expect(aug19Chips[0].label).toBe("+1h 0m OT (2026-08-26 Task)");
+    // 3) 2026-08-19 should NOT be touched (since all 4h were absorbed in 2026-08-26 and 2026-08-25)
+    expect(resIntern.odhMap["2026-08-19"]).toBe(120);
 
-    // 4) 2026-08-14 should NOT be touched at all
-    expect(resIntern.odhMap["2026-08-14"]).toBe(180);
-    expect(resIntern.penaltyMap["2026-08-14"]).toBe(undefined);
+    // 4) Now let's assign a second task (2h) and verify it increments/completes 2026-08-25 to ODH Resolved!
+    const intern2hTask: DailyTask = {
+      ...intern4hTask,
+      id: "t-2h-intern",
+      title: "2h OT task",
+      date: "2026-08-27",
+      assignedHours: 2, // 120 mins
+    };
+
+    const resFollowUp = resolveODHAndPenalties(
+      [],
+      [intern2hTask],
+      internUnpaid,
+      mockSettings,
+      resIntern.odhMap,
+      resIntern.penaltyMap,
+      "2026-08",
+    );
+
+    expect(resFollowUp.odhMap["2026-08-25"]).toBe(0); // 120 - 120 = 0
+    expect(resFollowUp.penaltyMap["2026-08-25"].length).toBe(4);
+    expect(resFollowUp.penaltyMap["2026-08-25"][2].label).toBe("ODH Resolved (Task Cleared)");
+    expect(resFollowUp.penaltyMap["2026-08-25"][3].label).toBe("+2h 0m OT (2026-08-27 Task)");
   });
 });

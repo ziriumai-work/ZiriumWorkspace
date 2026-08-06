@@ -7,6 +7,12 @@ import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
 let adminApp: App | undefined;
 
+// Force Admin SDK to use the emulator if the flag is set
+if (process.env.NEXT_PUBLIC_FIREBASE_USE_EMULATOR === "true") {
+  process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9099";
+}
+
 function getAdminApp(): App {
   if (adminApp) return adminApp;
   const existing = getApps();

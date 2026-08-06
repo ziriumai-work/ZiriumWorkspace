@@ -41,12 +41,12 @@ export function EmployeeStatsDashboard({ myStats, employee }: EmployeeStatsDashb
         />
         <StatCard 
           label="Weekly Hours Remaining" 
-          value={formatHoursMinutes(Math.max(0, myStats.remainingHours))} 
+          value={myStats.remainingHours <= 0 ? "0h 0m" : formatHoursMinutes(myStats.remainingHours)} 
           color={myStats.remainingHours > 0 ? "#f97316" : "#22c55e"} 
         />
         <StatCard 
           label="Flexibility Remaining" 
-          value={formatHoursMinutes(Math.max(0, myStats.flexRemaining) / 60)} 
+          value={myStats.flexRemaining <= 0 ? "0h 0m" : formatHoursMinutes(myStats.flexRemaining / 60)} 
           color={myStats.flexRemaining >= 0 ? "#3b82f6" : "#ef4444"} 
         />
         <StatCard 

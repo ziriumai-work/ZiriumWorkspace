@@ -68,32 +68,19 @@ function syncUserProfile(user: User): void {
   ).catch((err) => console.error("Profile sync failed:", err));
 }
 
-// Membership: read immediately (served instantly from local cache if available).
-async function fetchOrCreateMember(user: User): Promise<Member> {
+// Membership: read the member doc — NEVER auto-create it.
+// If the doc doesn't exist (unregistered user) we return null so that
+// accessBlocked can correctly display an error and the user is never
+// silently persisted in /members.
+async function fetchMember(user: User): Promise<Member | null> {
   const memberRef = doc(db, "members", user.uid);
   try {
     const snap = await getDoc(memberRef);
-    if (!snap.exists()) {
-      const newMember = {
-        uid: user.uid,
-        role: "member" as const,
-        teamIds: [] as string[],
-        createdAt: serverTimestamp(),
-      };
-      await setDoc(memberRef, newMember).catch((err) =>
-        console.warn("Could not create member doc in Firestore:", err)
-      );
-      return { ...newMember, createdAt: null };
-    }
+    if (!snap.exists()) return null;
     return snap.data() as Member;
   } catch (err) {
-    console.warn("Fallback to in-memory member:", err);
-    return {
-      uid: user.uid,
-      role: "member",
-      teamIds: [],
-      createdAt: null,
-    };
+    console.warn("Could not load member doc:", err);
+    return null;
   }
 }
 
@@ -186,7 +173,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (nextUser) {
         syncUserProfile(nextUser);
         try {
-          const m = await fetchOrCreateMember(nextUser);
+          let m = await fetchMember(nextUser);
+          // If the owner email has no member doc (e.g. after emulator reset), recreate it
+          // so that Firestore security rules (isMember()) work on subsequent reads.
+          if (!m && nextUser.email) {
+            const ownerEmails = ["haseeb.a@ziriumai.com", "haseeb.a@zirium.com", "ziriumai@gmail.com"];
+            if (ownerEmails.includes(nextUser.email.trim().toLowerCase())) {
+              const memberRef = doc(db, "members", nextUser.uid);
+              await setDoc(memberRef, {
+                uid: nextUser.uid,
+                role: "owner" as const,
+                teamIds: [] as string[],
+                createdAt: serverTimestamp(),
+              }, { merge: true }).catch(() => {});
+              m = { uid: nextUser.uid, role: "owner", teamIds: [], createdAt: null };
+            }
+          }
           setMember(m);
         } catch (err) {
           console.error("Failed to load membership", err);
@@ -215,7 +217,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── 2. Employee directory subscription ────────────────────────────────────
   useEffect(() => {
-    if (!user || !memberLoaded || !member) return;
+    if (!user || !memberLoaded) return;
+    const userIsOwnerEmail =
+      user.email != null &&
+      ["haseeb.a@ziriumai.com", "haseeb.a@zirium.com", "ziriumai@gmail.com"].includes(
+        user.email.trim().toLowerCase(),
+      );
+    // Subscribe for members with a member doc, OR for the hard-coded owner email
+    // (in case their member doc was wiped by an emulator restart / data reset).
+    if (!member && !userIsOwnerEmail) return;
     // Reset sync state on new user login
     setRoleSynced(false);
     const unsub = subscribeToDevelopers(
@@ -289,22 +299,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, member, employee, employees]);
 
   // ── 6. Compute loading ────────────────────────────────────────────────────
-  // loading stays true until auth is resolved, member is loaded, employees
-  // have loaded, AND the initial role sync has completed.
-  const loading = !authResolved || (!!user && (!memberLoaded || employees === null || !roleSynced));
+  // loading stays true until auth is resolved AND member doc has been checked.
+  // If member is null (unregistered user), we don't try to load employees at all —
+  // accessBlocked will fire immediately so the user sees an error without hanging.
+  const loading =
+    !authResolved ||
+    (!!user && !memberLoaded) ||
+    // If member doc exists, also wait for employees and role sync.
+    (!!user && !!member && (employees === null || !roleSynced));
 
   // ── 7. Access check (offboarded / terminated / unregistered) ──────────────
-  const isPrivileged = member?.role === "owner" || member?.role === "admin";
+  const isOwnerByEmail =
+    user?.email != null &&
+    ["haseeb.a@ziriumai.com", "haseeb.a@zirium.com", "ziriumai@gmail.com"].includes(
+      user.email.trim().toLowerCase(),
+    );
+
+  const isPrivileged = member?.role === "owner" || member?.role === "admin" || isOwnerByEmail;
   const accessBlocked: string | null =
-    !user || loading || employees === null || !member
+    !user || loading
       ? null
-      : employee
-        ? employee.status === "terminated" || employee.status === "offboarded"
-          ? "Your account access has been revoked. If you believe this is an error, please contact your administrator."
-          : null
-        : !isPrivileged
-          ? "Your email is not registered in the system. Please contact your administrator to be added before logging in or registering."
-          : null;
+      // Unregistered user (no member doc) who is not the owner email
+      : !member && !isOwnerByEmail
+        ? "Your email is not registered in the system. Please contact your administrator to be added before logging in or registering."
+        : employees === null
+          ? null
+          : employee
+            ? employee.status === "terminated" || employee.status === "offboarded"
+              ? "Your account access has been revoked. If you believe this is an error, please contact your administrator."
+              : null
+            : !isPrivileged
+              ? "Your email is not registered in the system. Please contact your administrator to be added before logging in or registering."
+              : null;
 
   // ── 8. Role resolution ────────────────────────────────────────────────────
   const isAdmin = employee
@@ -339,10 +365,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signUpWithEmail(name: string, email: string, password: string) {
+    // ── Pre-flight: verify the email exists in /developers before creating
+    // any Firebase Auth account. If not found, throw immediately so nothing
+    // is written to Auth or Firestore.
+    const res = await fetch("/api/auth/check-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+    const resData = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(
+        resData?.message ||
+          "Your email is not registered in the system. Please contact your administrator.",
+      );
+    }
+
+    // Email is registered — safe to create the Auth account.
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    const displayName = name.trim();
+    const displayName = (name || resData.name || "").trim();
     if (displayName) {
       await updateProfile(cred.user, { displayName });
+    }
+
+    if (resData.isFirstUser) {
+      await fetch("/api/auth/setup-first-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: cred.user.uid, email, name: displayName }),
+      }).catch((err) => console.warn("Could not setup first user:", err));
+    } else {
+      // Create the /members doc now that we know the user is legitimate.
+      await setDoc(
+        doc(db, "members", cred.user.uid),
+        {
+          uid: cred.user.uid,
+          role: "member" as const,
+          teamIds: [] as string[],
+          createdAt: serverTimestamp(),
+        },
+        { merge: true },
+      ).catch((err) => console.warn("Could not create member doc:", err));
     }
   }
 

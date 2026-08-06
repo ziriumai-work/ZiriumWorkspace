@@ -108,9 +108,20 @@ export async function clockIn(
   const graceDeadline = new Date(officeStart);
   graceDeadline.setMinutes(graceDeadline.getMinutes() + (settings.graceMinutes || 0));
 
-  if (now > graceDeadline) {
+  const officeEnd = new Date(now);
+  officeEnd.setHours(settings.endHour, settings.endMinute, 0, 0);
+
+  const remainingOfficeMinutes = Math.floor((officeEnd.getTime() - now.getTime()) / 60000);
+  const shortBy = requiredMinutes - remainingOfficeMinutes;
+  const grace = settings.graceMinutes || 0;
+
+  lateMinutes = 0;
+  if (shortBy > grace) {
     isLate = true;
-    lateMinutes = Math.floor((now.getTime() - graceDeadline.getTime()) / 60000);
+    lateMinutes = shortBy - grace;
+  } else {
+    isLate = false;
+    lateMinutes = 0;
   }
   let status: AttendanceStatus = isLate ? "late" : "present";
   let flexibilityUsed = 0;
@@ -559,10 +570,70 @@ export async function markAttendance(
   let overtime = 0;
   let isLate = false;
   let isOvertime = false;
+  let flexibilityUsed = 0;
 
-  if (checkIn) {
+  // 1. Fetch employee early to check required hours and flexibility
+  const devQuery = query(collection(db, "developers"), where("uid", "==", uid));
+  const devSnap = await getDocs(devQuery);
+  const employee = devSnap.empty ? null : (devSnap.docs[0].data() as any);
+
+  // 2. Compute isLate exactly as clockIn does
+  if (checkIn && employee) {
+    const now = new Date(checkIn);
+    const officeStart = new Date(now);
+    officeStart.setHours(settings.startHour, settings.startMinute, 0, 0);
+    const graceDeadline = new Date(officeStart);
+    graceDeadline.setMinutes(graceDeadline.getMinutes() + (settings.graceMinutes || 0));
+
+    const officeEnd = new Date(now);
+    officeEnd.setHours(settings.endHour, settings.endMinute, 0, 0);
+
+    const defaultWeeklyHours = employee.accessLevel === "intern" ? 30 : 40;
+    const dailyHours = (employee.officeHours || defaultWeeklyHours) / 5;
+    const requiredMinutes = dailyHours * 60;
+
+    const remainingOfficeMinutes = Math.floor((officeEnd.getTime() - now.getTime()) / 60000);
+    const shortBy = requiredMinutes - remainingOfficeMinutes;
+    const grace = settings.graceMinutes || 0;
+
+    let lateMinutes = 0;
+    if (shortBy > grace) {
+      isLate = true;
+      lateMinutes = shortBy - grace;
+    }
+
+    if (isLate && employee.flexibilityHours) {
+      const weekStart = new Date(now);
+      const day = weekStart.getDay();
+      const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+      weekStart.setDate(diff);
+      weekStart.setHours(0, 0, 0, 0);
+      const weekStartIso = weekStart.toISOString().slice(0, 10);
+
+      const q = query(collection(db, COL), where("uid", "==", uid));
+      const snap = await getDocs(q);
+      let usedFlex = 0;
+      snap.forEach((d) => {
+        const rec = d.data() as AttendanceRecord;
+        if (rec.date >= weekStartIso && rec.date <= date) {
+          if (rec.flexibilityUsed) usedFlex += rec.flexibilityUsed;
+        }
+      });
+
+      const allowedFlexMinutes = employee.flexibilityHours * 60;
+      const remainingFlex = allowedFlexMinutes - usedFlex;
+
+      if (remainingFlex >= lateMinutes) {
+        isLate = false;
+        flexibilityUsed = lateMinutes;
+      } else {
+        flexibilityUsed = Math.max(0, remainingFlex);
+      }
+    }
+  } else if (checkIn) {
     isLate = isCheckInLate(checkIn, settings);
   }
+
   if (checkIn && checkOut) {
     hoursWorked = Math.max(
       0,
@@ -577,13 +648,6 @@ export async function markAttendance(
   let adminApprovedLeave = false;
 
   if (finalStatus === "absent" || finalStatus === "on_leave") {
-    const devQuery = query(
-      collection(db, "developers"),
-      where("uid", "==", uid),
-    );
-    const devSnap = await getDocs(devQuery);
-    const employee = devSnap.empty ? null : (devSnap.docs[0].data() as any);
-
     if (employee) {
       const monthPrefix = date.slice(0, 7);
       const start = `${monthPrefix}-01`;
@@ -634,6 +698,7 @@ export async function markAttendance(
       status: finalStatus,
       hoursWorked: Math.round(hoursWorked * 100) / 100,
       isLate,
+      flexibilityUsed,
       isOvertime,
       overtimeMinutes: overtime,
       ...(adminApprovedLeave

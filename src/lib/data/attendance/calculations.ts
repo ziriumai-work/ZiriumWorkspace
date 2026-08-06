@@ -248,9 +248,11 @@ export function computeMonthlySummary(
     if (isForEmployee && isForMonth && t.status === "done") {
       if (t.isOvertime || t.compensatesWeeklyHours) {
         totalHoursWorked += Number(t.assignedHours) || 0;
-      }
-      if (t.isOvertime && !t.resolvesODH && !t.compensatesWeeklyHours) {
-        totalOvertimeMinutes += (Number(t.assignedHours) || 0) * 60;
+        if (isIntern) {
+          totalOvertimeMinutes += (Number(t.assignedHours) || 0) * 60;
+        } else if (!t.resolvesODH && !t.compensatesWeeklyHours) {
+          totalOvertimeMinutes += (Number(t.assignedHours) || 0) * 60;
+        }
       }
     }
   }
@@ -278,17 +280,18 @@ export function computeMonthlySummary(
     totalLate - settings.lateThresholdDays,
   );
 
-  const rawOdhMap = getWeeklyOvertimeDueMap(
-    allAttendanceRecords || records,
-    employee,
-    settings,
-    [],
-  );
   const initialPenaltyMap = getDailyPenaltyMap(
     allAttendanceRecords || records,
     employee,
     settings,
     targetMonthStr,
+  );
+  const rawOdhMap = getWeeklyOvertimeDueMap(
+    allAttendanceRecords || records,
+    employee,
+    settings,
+    [],
+    initialPenaltyMap
   );
   const clearingResult = resolveODHAndPenalties(
     allAttendanceRecords || records,
@@ -371,7 +374,7 @@ export function computeMonthlySummary(
       lateDaysOverThreshold: 0,
       excessLeaves: 0,
       deductionDays: 0,
-      overtimeDueMinutes: totalWeeklyODH + unclearedInternPenaltyMinutes,
+      overtimeDueMinutes: totalWeeklyODH,
       penaltyODHMinutes: unclearedInternPenaltyMinutes,
     };
   } else {
@@ -414,6 +417,7 @@ export function getWeeklyOvertimeDueMap(
   employee: any,
   settings: OfficeSettings,
   tasks: DailyTask[] = [],
+  penaltyMap?: Record<string, DatePenaltyChip[]>
 ): Record<string, number> {
   const odhMap: Record<string, number> = {};
   if (!records || records.length === 0) return odhMap;
@@ -553,6 +557,25 @@ export function getWeeklyOvertimeDueMap(
           remainingFlexMinutes,
         );
         weeklyOvertimeDueMinutes -= flexCovered;
+        
+        if (penaltyMap && flexCovered > 0) {
+          const sortedWeekRecords = [...weekRecords].sort((a, b) => b.date.localeCompare(a.date));
+          if (sortedWeekRecords.length > 0) {
+            const lastDate = sortedWeekRecords[0].date;
+            if (!penaltyMap[lastDate]) penaltyMap[lastDate] = [];
+            const hrs = Math.floor(flexCovered / 60);
+            const mins = flexCovered % 60;
+            const timeStr = mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h 0m`;
+            
+            penaltyMap[lastDate].push({
+              type: "flex_used",
+              label: `+${timeStr} Flex Used`,
+              tooltip: `Remaining weekly flexibility (${timeStr}) used to cover weekly ODH`,
+              color: "#3b82f6",
+              bgcolor: "#3b82f622",
+            });
+          }
+        }
       }
     }
 
@@ -608,7 +631,6 @@ export function getDailyPenaltyMap(
   employee: any,
   settings: OfficeSettings,
   targetMonthStr?: string,
-  tasks?: DailyTask[],
 ): Record<string, DatePenaltyChip[]> {
   const penaltyMap: Record<string, DatePenaltyChip[]> = {};
   if (!records || records.length === 0) return penaltyMap;
@@ -724,20 +746,6 @@ export function getDailyPenaltyMap(
         }
       }
     }
-  }
-
-  if (tasks && tasks.length > 0) {
-    const initialOdhMap = getWeeklyOvertimeDueMap(records, employee, settings, []);
-    const res = resolveODHAndPenalties(
-      records,
-      tasks,
-      employee,
-      settings,
-      initialOdhMap,
-      penaltyMap,
-      targetMonthStr,
-    );
-    return res.penaltyMap;
   }
 
   return penaltyMap;

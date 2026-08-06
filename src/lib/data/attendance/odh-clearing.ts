@@ -97,6 +97,14 @@ export function resolveODHAndPenalties(
     const earlierMonthQueue = allDatesInMonth.filter((d) => d < mondayOfTaskWeek);
     const orderedQueue = [...sameDayQueue, ...sameWeekQueue, ...earlierMonthQueue];
 
+    const taskDateRec = recordByDate[taskDate];
+    const isTaskDateAbsent = taskDateRec?.status === "absent";
+    const isTaskDateLeave =
+      taskDateRec?.status === "on_leave" ||
+      taskDateRec?.status === "sick_leave" ||
+      (penaltyMap[taskDate] && penaltyMap[taskDate].some((c) => c.type === "leave"));
+    const canClearOtherAbsences = t.compensatesWeeklyHours && (isTaskDateAbsent || isTaskDateLeave);
+
     let lastMatchedDay: string | null = null;
 
     for (const d of orderedQueue) {
@@ -114,37 +122,137 @@ export function resolveODHAndPenalties(
 
       // §4: When searching automatically across other days (d !== taskDate), we MUST ALWAYS skip
       // absent days, leave days, and weekends! They can only be cleared if the task is assigned
-      // EXACTLY on that absent/leave date (d === taskDate).
+      // EXACTLY on that absent/leave date (d === taskDate), AND then it can propagate.
       if (d !== taskDate) {
-        if (isAbsent || isLeave || isWeekend) {
+        if (!canClearOtherAbsences && (isAbsent || isLeave)) {
+          continue;
+        }
+        if (isWeekend) {
           continue;
         }
       }
+      // No need to inject ghost ODH here. Interns already have an intern_absent_odh penalty chip.
+      
+      let penaltyNeeded = 0;
+      let penaltyTypeToClear = "";
+      let hasUnclearedPenalty = false;
 
-      let dayNeeded = odhMap[d] || 0;
-      // For an absent or leave day targeted with Compensatory Task = true, standard daily hours is the ODH target if 0
-      if ((isAbsent || isLeave) && dayNeeded === 0 && t.compensatesWeeklyHours) {
-        dayNeeded = dailyMinutes;
+      if (treatAsUnpaidIntern && t.compensatesWeeklyHours) {
+        const chips = penaltyMap[d] || [];
+        for (const chip of chips) {
+          if (chip.isClearingChip) continue;
+          const alreadyCleared = chips.some(
+            (c) => c.isClearingChip && c.clearedPenaltyType === chip.type
+          );
+          if (alreadyCleared) continue;
+          if (
+            chip.type === "intern_late_odh" ||
+            chip.type === "intern_leave_odh" ||
+            chip.type === "intern_absent_odh" ||
+            chip.type === "odh"
+          ) {
+            penaltyNeeded = chip.minutes || (chip.type === "intern_late_odh" ? dailyMinutes / 2 : dailyMinutes);
+            penaltyTypeToClear = chip.type;
+            hasUnclearedPenalty = true;
+            break;
+          }
+        }
       }
+
+      if (treatAsUnpaidIntern && hasUnclearedPenalty) {
+        const totalOTAbsorbed = (penaltyMap[d] || []).filter(c => c.type === "clearing_odh_absorbed").reduce((sum, c) => sum + (c.minutes || 0), 0);
+        const originalOdhNeeded = initialOdhMap[d] || 0;
+        const otTowardsPenalties = Math.max(0, totalOTAbsorbed - originalOdhNeeded);
+        penaltyNeeded = Math.max(0, penaltyNeeded - otTowardsPenalties);
+      }
+
+      // The total debt for this day is the current ODH shortfall (tracked live in odhMap) PLUS any uncleared penalty.
+      // For employees, we only absorb ODH shortfall here.
+      const currentOdhNeeded = odhMap[d] || 0;
+      const totalDebt = treatAsUnpaidIntern ? (currentOdhNeeded + penaltyNeeded) : currentOdhNeeded;
+      let remainingDebt = totalDebt;
 
       let didAbsorbODH = false;
       let absorbedOnDay = 0;
-      if (dayNeeded > 0) {
+      
+      if (remainingDebt > 0 && taskMins > 0) {
         lastMatchedDay = d;
-        absorbedOnDay = Math.min(taskMins, dayNeeded);
-        odhMap[d] = Math.max(0, dayNeeded - absorbedOnDay);
+        absorbedOnDay = Math.min(taskMins, remainingDebt);
+        
+        // Update odhMap[d] (which tracks the remaining ODH shortfall for the UI)
+        odhMap[d] = Math.max(0, currentOdhNeeded - absorbedOnDay);
+        
         taskMins -= absorbedOnDay;
         totalResolvedODHMinutes += absorbedOnDay;
         didAbsorbODH = true;
+        
+        // Check if ODH shortfall was just fully paid off in this step
+        if (
+          treatAsUnpaidIntern && 
+          currentOdhNeeded > 0 && 
+          odhMap[d] === 0
+        ) {
+          const hrs = Math.floor(currentOdhNeeded / 60);
+          const mins = currentOdhNeeded % 60;
+          const timeStr = mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+
+          if (!penaltyMap[d]) penaltyMap[d] = [];
+          penaltyMap[d].push({
+            type: "clearing_intern_odh",
+            label: `${timeStr} ODH Resolved`,
+            tooltip: `ODH shortfall (${timeStr}) resolved by task (${t.title})`,
+            color: "#22c55e",
+            bgcolor: "#22c55e20",
+            isClearingChip: true,
+            clearedPenaltyType: "odh",
+          });
+        }
+
+        // Check if Penalty was just fully paid off in this step
+        if (
+          treatAsUnpaidIntern && 
+          hasUnclearedPenalty && 
+          absorbedOnDay >= penaltyNeeded // We only need to check if we absorbed enough to cover the remaining penaltyNeeded!
+        ) {
+          const p_hrs = Math.floor(penaltyNeeded / 60);
+          const p_mins = penaltyNeeded % 60;
+          const p_timeStr = p_mins > 0 ? `${p_hrs}h ${p_mins}m` : `${p_hrs}h`;
+
+          if (!penaltyMap[d]) penaltyMap[d] = [];
+          penaltyMap[d].push({
+            type: "clearing_intern_odh",
+            label: `${p_timeStr} Penalty Resolved`,
+            tooltip: `Penalty (${p_timeStr}) resolved by task (${t.title})`,
+            color: "#22c55e",
+            bgcolor: "#22c55e20",
+            isClearingChip: true,
+            clearedPenaltyType: penaltyTypeToClear,
+          });
+        }
       }
 
-      const canClearPenalty =
-        (odhMap[d] || 0) === 0 && t.compensatesWeeklyHours;
-
-      let clearedAnyOnDay = false;
-      if (canClearPenalty) {
+      if (
+        !treatAsUnpaidIntern &&
+        (odhMap[d] || 0) === 0 &&
+        t.compensatesWeeklyHours
+      ) {
         const chips = penaltyMap[d] || [];
         const newChips: DatePenaltyChip[] = [...chips];
+        let clearedAnyOnDay = false;
+
+        let totalPenaltyCosts = 0;
+        for (const c of chips) {
+          if (c.isClearingChip) continue;
+          const isCleared = chips.some(clearingChip => clearingChip.isClearingChip && clearingChip.clearedPenaltyType === c.type);
+          if (isCleared) continue;
+          let cost = c.minutes || 0;
+          if (!cost) {
+            cost = (c.type === "late" || c.type === "half_day" || c.type === "employee_late_deduction") ? dailyMinutes / 2 : dailyMinutes;
+          }
+          totalPenaltyCosts += cost;
+        }
+        const totalOTAbsorbed = chips.filter(c => c.type === "clearing_odh_absorbed").reduce((sum, c) => sum + (c.minutes || 0), 0);
+        let remainingDebtForPenalties = Math.max(0, totalPenaltyCosts - totalOTAbsorbed);
 
         for (const chip of chips) {
           if (chip.isClearingChip) continue;
@@ -156,7 +264,6 @@ export function resolveODHAndPenalties(
           let chipCost = chip.minutes || 0;
           if (!chipCost) {
             if (
-              chip.type === "intern_late_odh" ||
               chip.type === "late" ||
               chip.type === "half_day" ||
               chip.type === "employee_late_deduction"
@@ -167,68 +274,61 @@ export function resolveODHAndPenalties(
             }
           }
 
-          if (!didAbsorbODH && taskMins < chipCost) continue;
+          const actualCost = Math.min(chipCost, remainingDebtForPenalties);
+          if (actualCost <= 0) continue;
 
-          if (treatAsUnpaidIntern) {
-            if (
-              chip.type === "intern_late_odh" ||
-              chip.type === "intern_leave_odh" ||
-              chip.type === "intern_absent_odh" ||
-              chip.type === "odh"
-            ) {
-              newChips.push({
-                type: "clearing_intern_odh",
-                label: "ODH Resolved (Task Cleared)",
-                tooltip: `ODH penalty resolved by Compensatory + ODH Task (${t.title})`,
-                color: "#22c55e",
-                bgcolor: "#22c55e20",
-                isClearingChip: true,
-                clearedPenaltyType: chip.type,
-              });
-              clearedAnyOnDay = true;
-              if (!didAbsorbODH) taskMins = Math.max(0, taskMins - chipCost);
-              break;
+          if (!didAbsorbODH && taskMins < actualCost) {
+            absorbedOnDay += taskMins;
+            taskMins = 0;
+            break;
+          }
+
+          if (
+            chip.type === "late" ||
+            chip.type === "half_day" ||
+            chip.type === "employee_late_deduction"
+          ) {
+            newChips.push({
+              type: "clearing_late",
+              label: "+0.5d Salary (Task Cleared)",
+              tooltip: `Late-day penalty cleared by Compensatory Task (${t.title})`,
+              color: "#22c55e",
+              bgcolor: "#22c55e20",
+              isClearingChip: true,
+              clearedPenaltyType: chip.type,
+            });
+            clearedDeductionDays += 0.5;
+            clearedAnyOnDay = true;
+            if (!didAbsorbODH) {
+              taskMins = Math.max(0, taskMins - actualCost);
+              absorbedOnDay += actualCost;
+              remainingDebtForPenalties = Math.max(0, remainingDebtForPenalties - actualCost);
             }
-          } else {
-            if (
-              chip.type === "late" ||
-              chip.type === "half_day" ||
-              chip.type === "employee_late_deduction"
-            ) {
-              newChips.push({
-                type: "clearing_late",
-                label: "+0.5d Salary (Task Cleared)",
-                tooltip: `Late-day penalty cleared by Compensatory Task (${t.title})`,
-                color: "#22c55e",
-                bgcolor: "#22c55e20",
-                isClearingChip: true,
-                clearedPenaltyType: chip.type,
-              });
-              clearedDeductionDays += 0.5;
-              clearedAnyOnDay = true;
-              if (!didAbsorbODH) taskMins = Math.max(0, taskMins - chipCost);
-              break;
-            } else if (
-              chip.type === "absent" ||
-              chip.type === "employee_absent_deduction" ||
-              chip.type === "employee_leave_deduction" ||
-              chip.type === "leave" ||
-              chip.type === "full_day"
-            ) {
-              newChips.push({
-                type: "clearing_absent",
-                label: "+1.0d Salary (Task Cleared)",
-                tooltip: `Salary deduction cleared by Compensatory Task (${t.title})`,
-                color: "#22c55e",
-                bgcolor: "#22c55e20",
-                isClearingChip: true,
-                clearedPenaltyType: chip.type,
-              });
-              clearedDeductionDays += 1.0;
-              clearedAnyOnDay = true;
-              if (!didAbsorbODH) taskMins = Math.max(0, taskMins - chipCost);
-              break;
+            break;
+          } else if (
+            chip.type === "absent" ||
+            chip.type === "employee_absent_deduction" ||
+            chip.type === "employee_leave_deduction" ||
+            chip.type === "leave" ||
+            chip.type === "full_day"
+          ) {
+            newChips.push({
+              type: "clearing_absent",
+              label: "+1.0d Salary (Task Cleared)",
+              tooltip: `Salary deduction cleared by Compensatory Task (${t.title})`,
+              color: "#22c55e",
+              bgcolor: "#22c55e20",
+              isClearingChip: true,
+              clearedPenaltyType: chip.type,
+            });
+            clearedDeductionDays += 1.0;
+            clearedAnyOnDay = true;
+            if (!didAbsorbODH) {
+              taskMins = Math.max(0, taskMins - actualCost);
+              absorbedOnDay += actualCost;
+              remainingDebtForPenalties = Math.max(0, remainingDebtForPenalties - actualCost);
             }
+            break;
           }
         }
 
@@ -237,28 +337,29 @@ export function resolveODHAndPenalties(
         }
       }
 
-      if (absorbedOnDay > 0 && d !== taskDate && !clearedAnyOnDay) {
+      if (absorbedOnDay > 0 && d !== taskDate) {
+        if (!penaltyMap[d]) penaltyMap[d] = [];
+
         const hrs = Math.floor(absorbedOnDay / 60);
         const mins = absorbedOnDay % 60;
-        const timeStr = mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h 0m`;
-        const chipLabel = `+${timeStr} OT (${t.date} Task)`;
-        const chipTooltip = `Overtime Due (${timeStr}) absorbed by task on ${t.date} (${t.title})`;
+        const timeStr = mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+        
+        const dObj = new Date(t.date + "T12:00:00");
+        const dateStr = dObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        
+        const chipLabel = `+${timeStr} OT (from ${dateStr})`;
+        const chipTooltip = `Overtime Due (${timeStr}) absorbed by task on ${dateStr} (${t.title})`;
 
-        if (!penaltyMap[d]) penaltyMap[d] = [];
-        const alreadyHasChip = penaltyMap[d].some(
-          (c) => c.type === "clearing_odh_absorbed" && c.label === chipLabel
-        );
-        if (!alreadyHasChip) {
-          penaltyMap[d].push({
-            type: "clearing_odh_absorbed",
-            label: chipLabel,
-            tooltip: chipTooltip,
-            color: "#22c55e",
-            bgcolor: "#22c55e20",
-            isClearingChip: true,
-            clearedPenaltyType: "odh",
-          });
-        }
+        penaltyMap[d].push({
+          type: "clearing_odh_absorbed",
+          label: chipLabel,
+          tooltip: chipTooltip,
+          color: "#22c55e",
+          bgcolor: "#22c55e20",
+          minutes: absorbedOnDay,
+          isClearingChip: true,
+          clearedPenaltyType: "odh",
+        });
       }
     }
   }

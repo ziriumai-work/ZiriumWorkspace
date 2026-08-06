@@ -142,18 +142,18 @@ export function generateAttendanceExportData(
       totalHoursWorked += summary.totalHoursWorked;
       totalDeductionDays += summary.deductionDays;
 
-      const rawOdhMap = getWeeklyOvertimeDueMap(
-        monthRecords,
-        emp,
-        settings || DEFAULT_OFFICE_SETTINGS,
-        monthTasks
-      );
       const rawPenaltyMap = getDailyPenaltyMap(
         monthRecords,
         emp,
         settings || DEFAULT_OFFICE_SETTINGS,
-        undefined,
-        monthTasks
+        undefined
+      );
+      const rawOdhMap = getWeeklyOvertimeDueMap(
+        monthRecords,
+        emp,
+        settings || DEFAULT_OFFICE_SETTINGS,
+        monthTasks,
+        rawPenaltyMap
       );
       const cleared = resolveODHAndPenalties(
         monthRecords,
@@ -215,17 +215,32 @@ export function generateAttendanceExportData(
             t.status === "done" &&
             (t.isOvertime || t.compensatesWeeklyHours)
         );
-        const taskOtMinutes = dailyTasksForRecord.reduce(
-          (acc, t) => acc + (Number(t.assignedHours) || 0) * 60,
-          0
-        );
-        const totalOtMinutes = (rec?.isOvertime ? rec.overtimeMinutes || 0 : 0) + taskOtMinutes;
-        if (totalOtMinutes > 0) {
+        const isIntern = emp?.accessLevel === "intern";
+        const compensatoryTasks = dailyTasksForRecord.filter(t => t.compensatesWeeklyHours || t.resolvesODH);
+        const paidTasks = dailyTasksForRecord.filter(t => !(t.compensatesWeeklyHours || t.resolvesODH));
+
+        let compensatoryOtMinutes = compensatoryTasks.reduce((acc, t) => acc + (Number(t.assignedHours) || 0) * 60, 0);
+        let paidOtMinutes = paidTasks.reduce((acc, t) => acc + (Number(t.assignedHours) || 0) * 60, 0) + (rec?.isOvertime ? (rec.overtimeMinutes || 0) : 0);
+
+        if (isIntern) {
+          compensatoryOtMinutes += paidOtMinutes;
+          paidOtMinutes = 0;
+        }
+
+        if (compensatoryOtMinutes > 0) {
           const otLabel =
-            totalOtMinutes < 60
-              ? `+${totalOtMinutes}m OT`
-              : `+${Math.floor(totalOtMinutes / 60)}h ${totalOtMinutes % 60}m OT`;
+            compensatoryOtMinutes < 60
+              ? `+${compensatoryOtMinutes}m OT`
+              : `+${Math.floor(compensatoryOtMinutes / 60)}h ${compensatoryOtMinutes % 60}m OT`;
           flags.push(otLabel);
+        }
+
+        if (paidOtMinutes > 0) {
+          const potLabel =
+            paidOtMinutes < 60
+              ? `+${paidOtMinutes}m POT`
+              : `+${Math.floor(paidOtMinutes / 60)}h ${paidOtMinutes % 60}m POT`;
+          flags.push(potLabel);
         }
 
         const penaltyChips = cleared.penaltyMap[dateStr];

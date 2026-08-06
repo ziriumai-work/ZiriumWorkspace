@@ -52,18 +52,18 @@ export function AdminEmployeeCard({
   const [expanded, setExpanded] = useState(false);
 
   const { odhMap, penaltyMap } = useMemo(() => {
+    const rawPenaltyMap = getDailyPenaltyMap(
+      monthRecords,
+      employee,
+      settings || DEFAULT_OFFICE_SETTINGS,
+      undefined
+    );
     const rawOdhMap = getWeeklyOvertimeDueMap(
       monthRecords,
       employee,
       settings || DEFAULT_OFFICE_SETTINGS,
       [],
-    );
-    const rawPenaltyMap = getDailyPenaltyMap(
-      monthRecords,
-      employee,
-      settings || DEFAULT_OFFICE_SETTINGS,
-      undefined,
-      monthTasks,
+      rawPenaltyMap
     );
     const cleared = resolveODHAndPenalties(
       monthRecords,
@@ -220,28 +220,55 @@ export function AdminEmployeeCard({
                           return null;
                         })()}
                         {(() => {
+                          const isIntern = employee?.accessLevel === "intern";
                           const dailyTasksForRecord = monthTasks.filter(t => t.date === r.date && (t.assigneeId === employee.id || t.assigneeId === employee.uid || t.assigneeId === r.uid) && t.status === "done" && (t.isOvertime || t.compensatesWeeklyHours));
-                          const taskOvertimeMinutes = dailyTasksForRecord.reduce((acc, t) => acc + (Number(t.assignedHours) || 0) * 60, 0);
-                          const totalOtMinutes = (r.isOvertime ? r.overtimeMinutes : 0) + taskOvertimeMinutes;
                           
-                          if (totalOtMinutes > 0) {
-                            return (
-                              <Chip
-                                size="small"
-                                label={`+${totalOtMinutes < 60 ? `${totalOtMinutes}m` : `${Math.floor(totalOtMinutes / 60)}h ${totalOtMinutes % 60}m`} OT`}
-                                sx={{
-                                  height: 22,
-                                  fontSize: 11,
-                                  bgcolor: "#3b82f622",
-                                  color: "#3b82f6",
-                                  fontWeight: 600,
-                                  borderRadius: "6px",
-                                  border: "1px solid #3b82f633",
-                                }}
-                              />
-                            );
+                          const compensatoryTasks = dailyTasksForRecord.filter(t => t.compensatesWeeklyHours || t.resolvesODH);
+                          const paidTasks = dailyTasksForRecord.filter(t => !(t.compensatesWeeklyHours || t.resolvesODH));
+
+                          let compensatoryOtMinutes = compensatoryTasks.reduce((acc, t) => acc + (Number(t.assignedHours) || 0) * 60, 0);
+                          let paidOtMinutes = paidTasks.reduce((acc, t) => acc + (Number(t.assignedHours) || 0) * 60, 0) + (r.isOvertime ? (r.overtimeMinutes || 0) : 0);
+
+                          if (isIntern) {
+                            compensatoryOtMinutes += paidOtMinutes;
+                            paidOtMinutes = 0;
                           }
-                          return null;
+                          
+                          return (
+                            <>
+                              {compensatoryOtMinutes > 0 && (
+                                <Chip
+                                  size="small"
+                                  label={`+${compensatoryOtMinutes < 60 ? `${compensatoryOtMinutes}m` : `${Math.floor(compensatoryOtMinutes / 60)}h ${compensatoryOtMinutes % 60}m`} OT`}
+                                  sx={{
+                                    height: 22,
+                                    fontSize: 11,
+                                    bgcolor: "#3b82f622",
+                                    color: "#3b82f6",
+                                    fontWeight: 600,
+                                    borderRadius: "6px",
+                                    border: "1px solid #3b82f633",
+                                    mr: 0.5,
+                                  }}
+                                />
+                              )}
+                              {paidOtMinutes > 0 && (
+                                <Chip
+                                  size="small"
+                                  label={`+${paidOtMinutes < 60 ? `${paidOtMinutes}m` : `${Math.floor(paidOtMinutes / 60)}h ${paidOtMinutes % 60}m`} POT`}
+                                  sx={{
+                                    height: 22,
+                                    fontSize: 11,
+                                    bgcolor: "#8b5cf622", // Purple color to distinguish POT
+                                    color: "#8b5cf6",
+                                    fontWeight: 600,
+                                    borderRadius: "6px",
+                                    border: "1px solid #8b5cf633",
+                                  }}
+                                />
+                              )}
+                            </>
+                          );
                         })()}
                         {(() => {
                           const chips = penaltyMap[r.date] || [];

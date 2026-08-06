@@ -19,6 +19,10 @@ import { useAuth } from "@/lib/firebase/auth-context";
 import { ROLE_HOME } from "@/lib/data/types";
 
 function friendlyAuthError(err: unknown): string {
+  if (err instanceof Error && !(err instanceof FirebaseError)) {
+    // Plain errors (e.g. our pre-flight email check) already have a friendly message.
+    return err.message || "Registration failed. Please try again.";
+  }
   const code = err instanceof FirebaseError ? err.code : "";
   switch (code) {
     case "auth/invalid-email":

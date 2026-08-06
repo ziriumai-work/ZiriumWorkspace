@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/emulator-data
 /.pnp
 .pnp.*
 .yarn/*

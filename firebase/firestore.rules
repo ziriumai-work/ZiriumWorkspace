@@ -47,10 +47,13 @@ service cloud.firestore {
       // app can detect first sign-in). Members can read everyone's membership.
       allow read: if isSignedIn() && (request.auth.uid == uid || isMember());
 
-      // Self-join is allowed only as a plain 'member' — never as owner/admin.
+      // Self-join: plain members join as 'member'; owner emails can self-create as 'owner'.
       allow create: if isSignedIn()
         && request.auth.uid == uid
-        && request.resource.data.role == 'member';
+        && (
+          request.resource.data.role == 'member'
+          || isOwnerEmail()
+        );
 
       // Only owners/admins can change roles or remove members; users can sync their own member doc.
       allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid);

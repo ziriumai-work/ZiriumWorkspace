@@ -107,7 +107,7 @@ export async function downloadAttendancePdf(
 
   const watermarkedPages = new Set<number>();
   const ensurePageWatermark = () => {
-    const pageNum = doc.internal.getCurrentPageInfo().pageNumber;
+    const pageNum = (doc.internal as any).getCurrentPageInfo().pageNumber;
     if (!watermarkedPages.has(pageNum)) {
       watermarkedPages.add(pageNum);
       drawWatermark(doc, logoDataUrl);
