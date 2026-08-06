@@ -31,7 +31,7 @@ const rippleAnimation = keyframes`
 `;
 
 export function GlobalBanner() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, employee } = useAuth();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissedUntil, setDismissedUntil] = useState<number>(0);
@@ -70,9 +70,17 @@ export function GlobalBanner() {
       if (createdAtMs <= dismissedUntil) {
         return false;
       }
+
+      // 3. Check role targeting
+      if (a.showToEmployees !== undefined && a.showToInterns !== undefined) {
+        const isIntern = employee?.accessLevel === "intern";
+        if (isIntern && !a.showToInterns) return false;
+        if (!isIntern && !a.showToEmployees) return false;
+      }
+
       return true;
     });
-  }, [announcements, dismissedUntil, tick]);
+  }, [announcements, dismissedUntil, tick, employee?.accessLevel]);
 
   // Reset index if bounds changed
   useEffect(() => {

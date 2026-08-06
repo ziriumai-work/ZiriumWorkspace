@@ -415,6 +415,8 @@ export interface Announcement {
   expiryDate: string | null;
   createdAt: Timestamp | null;
   createdBy: string;
+  showToEmployees?: boolean;
+  showToInterns?: boolean;
 }
 
 // Salaries

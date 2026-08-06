@@ -24,6 +24,8 @@ export default function AnnouncementsPage() {
   const [description, setDescription] = useState("");
   const [hasExpiry, setHasExpiry] = useState(false);
   const [expiryDate, setExpiryDate] = useState("");
+  const [showToEmployees, setShowToEmployees] = useState(true);
+  const [showToInterns, setShowToInterns] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [, setNowTick] = useState(() => Date.now());
 
@@ -50,11 +52,15 @@ export default function AnnouncementsPage() {
         description: description.trim(),
         expiryDate: hasExpiry && expiryDate ? new Date(expiryDate).toISOString() : null,
         createdBy: user.uid,
+        showToEmployees,
+        showToInterns,
       });
       setTitle("");
       setDescription("");
       setHasExpiry(false);
       setExpiryDate("");
+      setShowToEmployees(true);
+      setShowToInterns(true);
     } catch (err) {
       console.error(err);
       alert("Failed to create announcement.");
@@ -107,6 +113,17 @@ export default function AnnouncementsPage() {
           
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
             <FormControlLabel
+              control={<Switch checked={showToEmployees} onChange={(e) => setShowToEmployees(e.target.checked)} />}
+              label="Employees"
+            />
+            <FormControlLabel
+              control={<Switch checked={showToInterns} onChange={(e) => setShowToInterns(e.target.checked)} />}
+              label="Interns"
+            />
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+            <FormControlLabel
               control={<Switch checked={hasExpiry} onChange={(e) => setHasExpiry(e.target.checked)} />}
               label="Set Expiration"
             />
@@ -124,7 +141,7 @@ export default function AnnouncementsPage() {
           <Button
             variant="contained"
             onClick={handleCreate}
-            disabled={submitting || !title.trim()}
+            disabled={submitting || !title.trim() || (!showToEmployees && !showToInterns)}
             sx={{ alignSelf: "flex-start", px: 4, py: 1.5, borderRadius: 3, fontWeight: 600 }}
           >
             {submitting ? "Publishing..." : "Publish Announcement"}
@@ -155,6 +172,15 @@ export default function AnnouncementsPage() {
                         <Chip size="small" label="Expired" sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 600 }} />
                       ) : (
                         <Chip size="small" label="Active" sx={{ bgcolor: "#22c55e22", color: "#22c55e", fontWeight: 600 }} />
+                      )}
+                      {a.showToEmployees !== false && a.showToInterns !== false && (
+                        <Chip size="small" label="All Roles" sx={{ bgcolor: "action.selected", color: "text.primary", fontWeight: 600 }} />
+                      )}
+                      {a.showToEmployees && !a.showToInterns && (
+                        <Chip size="small" label="Employees Only" sx={{ bgcolor: "#3b82f622", color: "#3b82f6", fontWeight: 600 }} />
+                      )}
+                      {!a.showToEmployees && a.showToInterns && (
+                        <Chip size="small" label="Interns Only" sx={{ bgcolor: "#a855f722", color: "#a855f7", fontWeight: 600 }} />
                       )}
                     </Box>
                     {a.description && (
