@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 // AuthProvider: global state management for Firebase user auth & membership roles.
 // On first login, shows a "Setting up your account" screen with rotating messages
@@ -74,27 +74,34 @@ async function fetchOrCreateMember(user: User): Promise<Member> {
   try {
     const snap = await getDoc(memberRef);
     if (!snap.exists()) {
-      const newMember: Member = {
+      const newMember = {
         uid: user.uid,
-        role: "member",
-        teamIds: [],
+        role: "member" as const,
+        teamIds: [] as string[],
         createdAt: serverTimestamp(),
       };
-      await setDoc(memberRef, newMember);
-      return newMember;
+      await setDoc(memberRef, newMember).catch((err) =>
+        console.warn("Could not create member doc in Firestore:", err)
+      );
+      return { ...newMember, createdAt: null };
     }
     return snap.data() as Member;
   } catch (err) {
-    console.warn("Could not load member doc:", err);
-    throw err;
+    console.warn("Fallback to in-memory member:", err);
+    return {
+      uid: user.uid,
+      role: "member",
+      teamIds: [],
+      createdAt: null,
+    };
   }
 }
 
-// ─── Setup screen messages ────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Setup screen messages ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const SETUP_MESSAGES = [
-  "Loading your workspace…",
-  "Syncing your permissions…",
-  "Preparing your dashboard…",
+  "Loading your workspaceΓÇª",
+  "Syncing your permissionsΓÇª",
+  "Preparing your dashboardΓÇª",
 ];
 
 function SetupScreen() {
@@ -155,7 +162,7 @@ function SetupScreen() {
   );
 }
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Provider ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [member, setMember] = useState<Member | null>(null);
@@ -164,10 +171,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authResolved, setAuthResolved] = useState(false);
   // memberLoaded: member doc has been fetched (or user is null).
   const [memberLoaded, setMemberLoaded] = useState(false);
-  // roleSynced: the initial member ↔ employee role sync has completed.
+  // roleSynced: the initial member Γåö employee role sync has completed.
   const [roleSynced, setRoleSynced] = useState(false);
 
-  // ── 1. Auth state listener ────────────────────────────────────────────────
+  // ΓöÇΓöÇ 1. Auth state listener ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   useEffect(() => {
     let memberUnsub: (() => void) | undefined;
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
@@ -179,19 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (nextUser) {
         syncUserProfile(nextUser);
         try {
-          let m = await fetchOrCreateMember(nextUser);
-          // If the owner email has no member doc (e.g. after emulator reset), recreate it
-          // so that Firestore security rules (isMember()) work on subsequent reads.
-          if (m && m.role === "member" && nextUser.email) {
-            const ownerEmails = ["haseeb.a@ziriumai.com", "haseeb.a@zirium.com", "ziriumai@gmail.com"];
-            if (ownerEmails.includes(nextUser.email.trim().toLowerCase())) {
-              const memberRef = doc(db, "members", nextUser.uid);
-              await setDoc(memberRef, {
-                role: "owner" as const,
-              }, { merge: true }).catch(() => {});
-              m = { uid: nextUser.uid, role: "owner", teamIds: [], createdAt: null };
-            }
-          }
+          const m = await fetchOrCreateMember(nextUser);
           setMember(m);
         } catch (err) {
           console.error("Failed to load membership", err);
@@ -207,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setMember(null);
         setMemberLoaded(true);
-        setRoleSynced(true); // no user → nothing to sync
+        setRoleSynced(true); // no user ΓåÆ nothing to sync
         setEmployees(null);
       }
       setAuthResolved(true);
@@ -218,17 +213,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // ── 2. Employee directory subscription ────────────────────────────────────
+  // ΓöÇΓöÇ 2. Employee directory subscription ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   useEffect(() => {
-    if (!user || !memberLoaded) return;
-    const userIsOwnerEmail =
-      user.email != null &&
-      ["haseeb.a@ziriumai.com", "haseeb.a@zirium.com", "ziriumai@gmail.com"].includes(
-        user.email.trim().toLowerCase(),
-      );
-    // Subscribe for members with a member doc, OR for the hard-coded owner email
-    // (in case their member doc was wiped by an emulator restart / data reset).
-    if (!member && !userIsOwnerEmail) return;
+    if (!user || !memberLoaded || !member) return;
     // Reset sync state on new user login
     setRoleSynced(false);
     const unsub = subscribeToDevelopers(
@@ -241,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user, memberLoaded, member]);
 
-  // ── 3. Match current user to their employee record ────────────────────────
+  // ΓöÇΓöÇ 3. Match current user to their employee record ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const employee =
     user?.email && employees
       ? (employees.find(
@@ -249,14 +236,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ) ?? null)
       : null;
 
-  // ── 4. Bind auth uid → employee record on first match ─────────────────────
+  // ΓöÇΓöÇ 4. Bind auth uid ΓåÆ employee record on first match ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   useEffect(() => {
     if (employee && user && !employee.uid) {
       updateDeveloper(employee.id, { uid: user.uid }).catch(() => {});
     }
   }, [employee, user]);
 
-  // ── 5. Sync member.role ↔ employee.accessLevel ────────────────────────────
+  // ΓöÇΓöÇ 5. Sync member.role Γåö employee.accessLevel ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const syncedRolesRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!user || !member || employees === null) return;
@@ -282,7 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Mark role as synced — this unblocks the loading gate.
+    // Mark role as synced ΓÇö this unblocks the loading gate.
     setRoleSynced(true);
 
     // Admin: batch-sync all employees' member roles in Firestore
@@ -301,41 +288,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, member, employee, employees]);
 
-  // ── 6. Compute loading ────────────────────────────────────────────────────
-  // loading stays true until auth is resolved AND member doc has been checked.
-  // If member is null (unregistered user), we don't try to load employees at all —
-  // accessBlocked will fire immediately so the user sees an error without hanging.
-  const loading =
-    !authResolved ||
-    (!!user && !memberLoaded) ||
-    // If member doc exists, also wait for employees and role sync.
-    (!!user && !!member && (employees === null || !roleSynced));
+  // ΓöÇΓöÇ 6. Compute loading ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // loading stays true until auth is resolved, member is loaded, employees
+  // have loaded, AND the initial role sync has completed.
+  const loading = !authResolved || (!!user && (!memberLoaded || employees === null || !roleSynced));
 
-  // ── 7. Access check (offboarded / terminated / unregistered) ──────────────
-  const isOwnerByEmail =
-    user?.email != null &&
-    ["haseeb.a@ziriumai.com", "haseeb.a@zirium.com", "ziriumai@gmail.com"].includes(
-      user.email.trim().toLowerCase(),
-    );
-
-  const isPrivileged = member?.role === "owner" || member?.role === "admin" || isOwnerByEmail;
+  // ΓöÇΓöÇ 7. Access check (offboarded / terminated / unregistered) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  const isPrivileged = member?.role === "owner" || member?.role === "admin";
   const accessBlocked: string | null =
-    !user || loading
+    !user || loading || employees === null || !member
       ? null
-      // Unregistered user (no member doc) who is not the owner email
-      : !member && !isOwnerByEmail
-        ? "Your email is not registered in the system. Please contact your administrator to be added before logging in or registering."
-        : employees === null
-          ? null
-          : employee
-            ? employee.status === "terminated" || employee.status === "offboarded"
-              ? "Your account access has been revoked. If you believe this is an error, please contact your administrator."
-              : null
-            : !isPrivileged
-              ? "Your email is not registered in the system. Please contact your administrator to be added before logging in or registering."
-              : null;
+      : employee
+        ? employee.status === "terminated" || employee.status === "offboarded"
+          ? "Your account access has been revoked. If you believe this is an error, please contact your administrator."
+          : null
+        : !isPrivileged
+          ? "Your email is not registered in the system. Please contact your administrator to be added before logging in or registering."
+          : null;
 
-  // ── 8. Role resolution ────────────────────────────────────────────────────
+  // ΓöÇΓöÇ 8. Role resolution ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const isAdmin = employee
     ? employee.accessLevel === "admin" || member?.role === "owner"
     : employees !== null && (
@@ -358,7 +329,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             : "employee"
           : null;
 
-  // ── Auth actions ──────────────────────────────────────────────────────────
+  // ΓöÇΓöÇ Auth actions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   async function signInWithGoogle() {
     await signInWithPopup(auth, googleProvider);
   }
@@ -369,7 +340,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signUpWithEmail(name: string, email: string, password: string) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    const displayName = (name || "").trim();
+    const displayName = name.trim();
     if (displayName) {
       await updateProfile(cred.user, { displayName });
     }
@@ -383,7 +354,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(auth);
   }
 
-  // ── Render gates ──────────────────────────────────────────────────────────
+  // ΓöÇΓöÇ Render gates ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
   // Access denied screen (offboarded / terminated / unregistered)
   if (accessBlocked) {
