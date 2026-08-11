@@ -74,14 +74,14 @@ async function fetchOrCreateMember(user: User): Promise<Member> {
   try {
     const snap = await getDoc(memberRef);
     if (!snap.exists()) {
-      const newMember: Member = {
+      const newMember = {
         uid: user.uid,
-        role: "member",
-        teamIds: [],
+        role: "member" as const,
+        teamIds: [] as string[],
         createdAt: serverTimestamp(),
       };
       await setDoc(memberRef, newMember);
-      return newMember;
+      return newMember as unknown as Member;
     }
     return snap.data() as Member;
   } catch (err) {
