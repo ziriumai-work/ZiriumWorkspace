@@ -149,6 +149,62 @@ export default function AttendancePage() {
     setBusy(true);
     setError(null);
     try {
+      if (markUid.startsWith("bulk_")) {
+        let targets = employees.filter((e) => e.uid);
+        if (markUid === "bulk_interns") {
+          targets = targets.filter((e) => e.accessLevel === "intern" || e.employmentType === "intern");
+        } else if (markUid === "bulk_employees") {
+          targets = targets.filter((e) => e.accessLevel !== "intern" && e.employmentType !== "intern");
+        }
+
+        if (targets.length === 0) {
+          setError("No matching staff found for this bulk operation.");
+          setBusy(false);
+          return;
+        }
+
+        if (markStatus === "clock_out" && markDate !== new Date().toISOString().slice(0, 10)) {
+          setError("You can only clock out staff for today's date.");
+          setBusy(false);
+          return;
+        }
+
+        let successCount = 0;
+        let failCount = 0;
+
+        await Promise.all(
+          targets.map(async (emp) => {
+            try {
+              if (markStatus === "clock_out") {
+                const res = await clockOut(emp.uid!, settings, emp);
+                if (res.status === "success") successCount++;
+                else failCount++;
+              } else {
+                await markAttendance(
+                  emp.uid!,
+                  emp.name,
+                  markDate,
+                  markStatus,
+                  settings,
+                  null, // checkIn
+                  null // checkOut
+                );
+                successCount++;
+              }
+            } catch (err) {
+              failCount++;
+            }
+          })
+        );
+
+        setMarkOpen(false);
+        setSuccess(`Successfully marked ${successCount} staff. ${failCount > 0 ? `Skipped ${failCount} (already clocked out or failed).` : ""}`);
+        setTimeout(() => setSuccess(null), 4000);
+        setBusy(false);
+        return;
+      }
+
+      // Single employee mark logic
       const emp = employees.find((e) => e.uid === markUid);
       const name = emp?.name ?? "Unknown";
       if (markStatus === "clock_out") {
@@ -176,7 +232,7 @@ export default function AttendancePage() {
         markStatus,
         settings,
         markCheckIn ? new Date(`${markDate}T${markCheckIn}`).toISOString() : null,
-        markCheckOut ? new Date(`${markDate}T${markCheckOut}`).toISOString() : null,
+        markCheckOut ? new Date(`${markDate}T${markCheckOut}`).toISOString() : null
       );
       setMarkOpen(false);
       setSuccess("Attendance marked successfully!");

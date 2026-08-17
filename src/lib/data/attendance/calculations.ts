@@ -175,6 +175,7 @@ export interface MonthlySummary {
   totalPresent: number;
   totalLate: number;
   totalLeaves: number;
+  totalAdminLeaves: number;
   totalSickLeaves: number;
   totalAbsent: number;
   totalHoursWorked: number;
@@ -202,7 +203,7 @@ export function computeMonthlySummary(
   let totalAbsent = 0;
   let totalHoursWorked = 0;
   let totalOvertimeMinutes = 0;
-  let totalAdminApprovedLeaves = 0;
+  let totalAdminLeaves = 0;
 
   for (const r of records) {
     switch (r.status) {
@@ -213,8 +214,11 @@ export function computeMonthlySummary(
         totalLate++;
         break;
       case "on_leave":
-        totalLeaves++;
-        if (r.adminApprovedLeave) totalAdminApprovedLeaves++;
+        if (r.adminApprovedLeave) {
+          totalAdminLeaves++;
+        } else {
+          totalLeaves++;
+        }
         break;
       case "sick_leave":
         totalSickLeaves++;
@@ -270,10 +274,6 @@ export function computeMonthlySummary(
         : settings.employeeLeavesPerMonth;
 
   const excessLeaves = Math.max(0, totalLeaves - allowedLeaves);
-  const excessLeavesToPenalize = Math.max(
-    0,
-    excessLeaves - totalAdminApprovedLeaves,
-  );
 
   const grossLatePenalties = Math.max(
     0,
@@ -367,6 +367,7 @@ export function computeMonthlySummary(
       totalPresent,
       totalLate,
       totalLeaves,
+      totalAdminLeaves,
       totalSickLeaves,
       totalAbsent: unclearedAbsentCount,
       totalHoursWorked: Math.round(totalHoursWorked * 100) / 100,
@@ -374,7 +375,7 @@ export function computeMonthlySummary(
       lateDaysOverThreshold: 0,
       excessLeaves: 0,
       deductionDays: 0,
-      overtimeDueMinutes: totalWeeklyODH,
+      overtimeDueMinutes: totalWeeklyODH + unclearedInternPenaltyMinutes,
       penaltyODHMinutes: unclearedInternPenaltyMinutes,
     };
   } else {
@@ -382,7 +383,7 @@ export function computeMonthlySummary(
 
     // Each excess late day = 0.5 day deduction; each excess leave = 1 day deduction. Each absent day = 1 day deduction.
     const rawDeductionDays =
-      lateDaysOverThreshold * 0.5 + excessLeavesToPenalize + totalAbsent;
+      lateDaysOverThreshold * 0.5 + excessLeaves + totalAbsent;
     const deductionDays = Math.max(
       0,
       rawDeductionDays - clearingResult.clearedDeductionDays,
@@ -392,6 +393,7 @@ export function computeMonthlySummary(
       totalPresent,
       totalLate,
       totalLeaves,
+      totalAdminLeaves,
       totalSickLeaves,
       totalAbsent: unclearedAbsentCount,
       totalHoursWorked: Math.round(totalHoursWorked * 100) / 100,

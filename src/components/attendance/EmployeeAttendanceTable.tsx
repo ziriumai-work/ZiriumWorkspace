@@ -185,13 +185,14 @@ export function EmployeeAttendanceTable({
                 <TableCell>
                   <Chip
                     label={
-                      ATTENDANCE_STATUSES.find((s) => s.value === r.status)
-                        ?.label ?? r.status
+                      r.status === "on_leave" && r.adminApprovedLeave
+                        ? "Admin Leave"
+                        : ATTENDANCE_STATUSES.find((s) => s.value === r.status)?.label ?? r.status
                     }
                     size="small"
                     sx={{
-                      bgcolor: `${STATUS_COLORS[r.status]}22`,
-                      color: STATUS_COLORS[r.status],
+                      bgcolor: r.status === "on_leave" && r.adminApprovedLeave ? "#0ea5e922" : `${STATUS_COLORS[r.status]}22`,
+                      color: r.status === "on_leave" && r.adminApprovedLeave ? "#0ea5e9" : STATUS_COLORS[r.status],
                       fontWeight: 600,
                       fontSize: 11,
                     }}

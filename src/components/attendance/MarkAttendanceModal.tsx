@@ -6,6 +6,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
+import Divider from "@mui/material/Divider";
 import { type AttendanceStatus, type Employee } from "@/lib/data/types";
 
 export function MarkAttendanceModal({
@@ -70,8 +71,18 @@ export function MarkAttendanceModal({
           sx={{ borderRadius: 2, fontSize: 14 }}
         >
           <MenuItem value="" disabled>
-            Select employee
+            Select staff / bulk group
           </MenuItem>
+          <MenuItem value="bulk_interns" sx={{ fontWeight: 600 }}>
+            All Interns
+          </MenuItem>
+          <MenuItem value="bulk_employees" sx={{ fontWeight: 600 }}>
+            All Employees
+          </MenuItem>
+          <MenuItem value="bulk_all" sx={{ fontWeight: 600 }}>
+            All Staff
+          </MenuItem>
+          <Divider sx={{ my: 0.5 }} />
           {employees
             .filter((e) => e.uid)
             .map((e) => (

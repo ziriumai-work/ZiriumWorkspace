@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useAuth } from "@/lib/firebase/auth-context";
-import { autoClockOutUnclosedShifts, autoClockOutAllUnclosedShifts, subscribeToOfficeSettings, autoFillMissingAttendance } from "@/lib/data/attendance";
+import { autoClockOutUnclosedShifts, autoClockOutAllUnclosedShifts, subscribeToOfficeSettings, autoFillMissingAttendance, autoFillAllMissingAttendance } from "@/lib/data/attendance";
 import { OfficeSettings } from "@/lib/data/types";
 
 export function SessionManager() {
@@ -17,12 +17,12 @@ export function SessionManager() {
       currentSettings = settings;
       if (role === "admin") {
         autoClockOutAllUnclosedShifts(settings).catch(console.error);
+        autoFillAllMissingAttendance(settings).catch(console.error);
       } else {
         autoClockOutUnclosedShifts(user.uid, settings).catch(console.error);
-      }
-      
-      if (employee) {
-        autoFillMissingAttendance(employee, settings).catch(console.error);
+        if (employee) {
+          autoFillMissingAttendance(employee, settings).catch(console.error);
+        }
       }
     });
 

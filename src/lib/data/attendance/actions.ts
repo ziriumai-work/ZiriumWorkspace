@@ -484,7 +484,7 @@ export async function autoFillMissingAttendance(
   settings: OfficeSettings,
 ): Promise<void> {
   const uid = employee.uid || employee.id;
-  if (!employee.startDate || !uid) return;
+  if (!uid) return;
 
   const q = query(collection(db, COL), where("uid", "==", uid));
   const snap = await getDocs(q);
@@ -497,7 +497,12 @@ export async function autoFillMissingAttendance(
 
   const now = new Date();
   const todayStr = getLocalISODate(now);
-  const start = new Date(employee.startDate + "T00:00:00");
+  
+  let startStr = employee.startDate;
+  if (!startStr) {
+    startStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  }
+  const start = new Date(startStr + "T00:00:00");
 
   const batchUpdates = [];
 
@@ -736,4 +741,23 @@ export async function deleteAttendance(id: string): Promise<void> {
     "Deleted Attendance",
     `Deleted attendance record (ID: ${id})`,
   );
+}
+
+export async function autoFillAllMissingAttendance(
+  settings: OfficeSettings,
+): Promise<void> {
+  const empSnap = await getDocs(collection(db, "developers"));
+  const employees: Developer[] = [];
+  empSnap.forEach((d) => {
+    employees.push({ id: d.id, ...d.data() } as Developer);
+  });
+
+  for (const emp of employees) {
+    if (emp.status === "inactive") continue;
+    try {
+      await autoFillMissingAttendance(emp, settings);
+    } catch (err) {
+      console.error(`Failed to auto-fill attendance for ${emp.uid || emp.id}:`, err);
+    }
+  }
 }

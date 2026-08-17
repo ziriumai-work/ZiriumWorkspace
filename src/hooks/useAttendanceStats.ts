@@ -119,7 +119,9 @@ export function useAttendanceStats({
     return employee;
   }, [isAdmin, filterUid, employees, employee]);
 
-  const isTargetIntern = targetEmployee?.accessLevel === "intern";
+  const isTargetIntern =
+    targetEmployee?.accessLevel === "intern" ||
+    targetEmployee?.employmentType === "intern";
 
   const summary = useMemo(() => {
     if (isAdmin && filterUid === "all") {
@@ -137,6 +139,7 @@ export function useAttendanceStats({
         totalPresent: 0,
         totalLate: 0,
         totalLeaves: 0,
+        totalAdminLeaves: 0,
         totalSickLeaves: 0,
         totalAbsent: 0,
         totalHoursWorked: 0,
@@ -160,6 +163,7 @@ export function useAttendanceStats({
         aggregated.totalPresent += s.totalPresent;
         aggregated.totalLate += s.totalLate;
         aggregated.totalLeaves += s.totalLeaves;
+        aggregated.totalAdminLeaves += s.totalAdminLeaves;
         aggregated.totalSickLeaves += s.totalSickLeaves;
         aggregated.totalAbsent += s.totalAbsent;
         aggregated.totalHoursWorked += s.totalHoursWorked;

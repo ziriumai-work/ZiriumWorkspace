@@ -138,7 +138,7 @@ export function generateAttendanceExportData(
       totalPresent += summary.totalPresent;
       totalLate += summary.totalLate;
       totalAbsent += summary.totalAbsent;
-      totalLeave += summary.totalLeaves;
+      totalLeave += summary.totalLeaves + summary.totalAdminLeaves;
       totalHoursWorked += summary.totalHoursWorked;
       totalDeductionDays += summary.deductionDays;
 
@@ -274,7 +274,7 @@ export function generateAttendanceExportData(
           totalPresent: summary.totalPresent,
           totalLate: summary.totalLate,
           totalAbsent: summary.totalAbsent,
-          totalLeave: summary.totalLeaves,
+          totalLeave: summary.totalLeaves + summary.totalAdminLeaves,
           totalHoursWorked: summary.totalHoursWorked.toFixed(1),
           deductionDays: summary.deductionDays.toFixed(2),
         },

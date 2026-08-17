@@ -4,7 +4,7 @@ import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
 import Divider from "@mui/material/Divider";
 import Chip from "@mui/material/Chip";
-import { red, amber, green, purple, pink } from "@/lib/theme/colors";
+import { red, amber, green, purple, pink, blue } from "@/lib/theme/colors";
 import { StatCard } from "./StatCard";
 import { formatHoursMinutes } from "./attendance-utils";
 
@@ -15,6 +15,7 @@ interface MonthlySummaryCardProps {
     totalPresent: number;
     totalLate: number;
     totalLeaves: number;
+    totalAdminLeaves?: number;
     totalSickLeaves: number;
     totalAbsent: number;
     totalHoursWorked: number;
@@ -70,7 +71,7 @@ export function MonthlySummaryCard({
           gridTemplateColumns: {
             xs: "repeat(2, 1fr)",
             sm: "repeat(3, 1fr)",
-            md: "repeat(5, 1fr)",
+            md: "repeat(6, 1fr)",
           },
           gap: 2,
         }}
@@ -78,6 +79,7 @@ export function MonthlySummaryCard({
         <StatCard label="Present" value={summary.totalPresent} color={green.main} />
         <StatCard label="Late" value={summary.totalLate} color={amber.main} />
         <StatCard label="Leaves" value={summary.totalLeaves} color={purple.main} />
+        <StatCard label="Admin Leaves" value={summary.totalAdminLeaves || 0} color={blue[500]} />
         <StatCard label="Sick Leaves" value={summary.totalSickLeaves} color={pink.main} />
         <StatCard label="Absent" value={summary.totalAbsent} color={red.main} />
       </Box>

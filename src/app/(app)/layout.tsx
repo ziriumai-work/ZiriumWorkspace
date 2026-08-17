@@ -1,16 +1,5 @@
 "use client";
 
-// Layout for the authenticated area. Client Component because the auth guard
-// depends on browser-only auth state. Wraps the workspace in the AI assistant
-// provider so any page can summon it. Shell = sidebar + (top bar + content).
-//
-// Two guards run here:
-//  1. Signed out → /login.
-//  2. Role-based route access: each role only reaches its permitted routes
-//     (see ROUTE_ACCESS); anything else bounces to that role's home screen.
-// This is UI-level enforcement — the Firestore rules hardening that backs it
-// at the database level is tracked separately.
-
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
