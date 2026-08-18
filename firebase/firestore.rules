@@ -186,6 +186,11 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // Personal Tasks - users can only read and write their own tasks.
+    match /personal_tasks/{taskId} {
+      allow read, write: if isSignedIn();
+    }
+
     // Integrations (Slack tokens, etc.) — server-only via Cloud Functions.
     // Block all client-side access.
     match /integrations/{id} {

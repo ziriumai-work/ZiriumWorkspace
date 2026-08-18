@@ -11,10 +11,13 @@ import IconButton from "@mui/material/IconButton";
 import Badge from "@mui/material/Badge";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import Tooltip from "@mui/material/Tooltip";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 import { useAi } from "@/components/ai/AiProvider";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { subscribeToPendingLeaveRequests } from "@/lib/data/leaves";
+import { subscribeToPersonalTasks } from "@/lib/data/personal-tasks";
 import { useEffect, useState } from "react";
+import { PersonalTasksDrawer } from "./PersonalTasksDrawer";
 
 function crumbFromPath(pathname: string): string {
   const seg = pathname.split("/").filter(Boolean)[0] ?? "dashboard";
@@ -31,8 +34,10 @@ export function AppTopbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { openAi } = useAi();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [pendingLeaves, setPendingLeaves] = useState(0);
+  const [pendingTasks, setPendingTasks] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -41,6 +46,20 @@ export function AppTopbar() {
     });
     return unsub;
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = subscribeToPersonalTasks(user.uid, (tasks) => {
+      const today = new Date().toISOString().slice(0, 10);
+      const active = tasks.filter(t => {
+        if (t.status !== "pending") return false;
+        if (t.isRoutine) return true; // Could filter by day of week if needed
+        return t.targetDate === today;
+      });
+      setPendingTasks(active.length);
+    });
+    return unsub;
+  }, [user]);
 
   return (
     <Box
@@ -91,6 +110,35 @@ export function AppTopbar() {
             </IconButton>
           </Tooltip>
         )}
+        
+        <Tooltip title="Personal Tasks">
+          <IconButton 
+            onClick={() => setDrawerOpen(true)} 
+            sx={{
+              color: pendingTasks > 0 ? "warning.main" : "inherit",
+              "&:hover": { bgcolor: "action.hover" }
+            }}
+          >
+            <Badge 
+              badgeContent={pendingTasks} 
+              sx={{ 
+                "& .MuiBadge-badge": { 
+                  bgcolor: pendingTasks > 0 ? "#F59E0B" : "transparent", 
+                  color: "white",
+                  fontWeight: "bold",
+                  fontSize: "0.65rem",
+                  minWidth: "16px",
+                  height: "16px",
+                  padding: "0 4px",
+                } 
+              }}
+            >
+              <AssignmentIcon sx={{ fontSize: 28 }} />
+            </Badge>
+          </IconButton>
+        </Tooltip>
+        
+        <PersonalTasksDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
         
         {/* AI is admin-only (see the role matrix) — hide the trigger otherwise. */}
         {isAdmin && (

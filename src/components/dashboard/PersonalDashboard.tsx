@@ -17,6 +17,8 @@ import { useAuth } from "@/lib/firebase/auth-context";
 import { subscribeToProjects } from "@/lib/data/projects";
 import { subscribeToTasksForEmployee, updateTask } from "@/lib/data/tasks";
 import { subscribeToDevelopers } from "@/lib/data/developers";
+import { subscribeToPersonalTasks } from "@/lib/data/personal-tasks";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 import {
   STATUS_META,
   TASK_STATUS_COLORS,
@@ -32,6 +34,7 @@ import {
   type DailyTaskStatus,
   type Employee,
   type Project,
+  type PersonalTask,
 } from "@/lib/data/types";
 
 function todayIso() {
@@ -48,23 +51,26 @@ export function PersonalDashboard() {
   const { user, employee, role } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<DailyTask[]>([]);
+  const [personalTasks, setPersonalTasks] = useState<PersonalTask[]>([]);
   const [directory, setDirectory] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!employee) return;
+    if (!employee || !user) return;
     const u1 = subscribeToProjects(setProjects);
     const u2 = subscribeToTasksForEmployee(employee.id, (t) => {
       setTasks(t);
       setLoading(false);
     });
     const u3 = subscribeToDevelopers(setDirectory);
+    const u4 = subscribeToPersonalTasks(user.uid, setPersonalTasks);
     return () => {
       u1();
       u2();
       u3();
+      u4();
     };
-  }, [employee]);
+  }, [employee, user]);
 
   const myProjects = useMemo(
     () =>
@@ -175,6 +181,50 @@ export function PersonalDashboard() {
         {/* Main column */}
         <Grid size={{ xs: 12, lg: 8 }}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {/* Upcoming Personal Tasks Widget */}
+            <Box component="section">
+              <Box sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
+                <AssignmentIcon sx={{ color: "warning.main", fontSize: 20 }} />
+                <Typography variant="subtitle2">Upcoming Personal Tasks</Typography>
+              </Box>
+              
+              {personalTasks.filter(t => t.status === "pending").length === 0 ? (
+                <Paper variant="outlined" sx={{ p: 3, textAlign: "center", borderRadius: 3, borderStyle: "dashed", bgcolor: "background.default" }}>
+                  <Typography variant="body2" color="text.secondary">No upcoming personal tasks.</Typography>
+                </Paper>
+              ) : (
+                <Grid container spacing={2}>
+                  {personalTasks.filter(t => t.status === "pending").map(pt => (
+                    <Grid size={{ xs: 12, sm: 6 }} key={pt.id}>
+                      <Paper 
+                        variant="outlined" 
+                        sx={{ 
+                          p: 2, 
+                          borderRadius: 2, 
+                          transition: 'all 0.2s ease-in-out',
+                          borderColor: (theme) => `${theme.palette[pt.priority === 'High' ? 'error' : pt.priority === 'Medium' ? 'warning' : 'info'].main}80`, // slightly transparent by default
+                          '&:hover': {
+                            borderColor: pt.priority === 'High' ? 'error.main' : pt.priority === 'Medium' ? 'warning.main' : 'info.main',
+                            boxShadow: (theme) => `0 4px 16px ${theme.palette[pt.priority === 'High' ? 'error' : pt.priority === 'Medium' ? 'warning' : 'info'].main}40`
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>{pt.title}</Typography>
+                          <Chip size="small" label={pt.category} variant="outlined" sx={{ height: 20, fontSize: '0.65rem' }} />
+                        </Box>
+                        {pt.isRoutine ? (
+                          <Typography variant="caption" color="primary">Routine · {pt.targetTime}</Typography>
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">One-time · {pt.targetDate} at {pt.targetTime}</Typography>
+                        )}
+                      </Paper>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
+            </Box>
+
             {/* This week's tasks */}
             <Box component="section">
               <Box

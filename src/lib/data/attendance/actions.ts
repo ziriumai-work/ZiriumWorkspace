@@ -753,7 +753,7 @@ export async function autoFillAllMissingAttendance(
   });
 
   for (const emp of employees) {
-    if (emp.status === "inactive") continue;
+    if (emp.status === "terminated" || emp.status === "offboarded") continue;
     try {
       await autoFillMissingAttendance(emp, settings);
     } catch (err) {

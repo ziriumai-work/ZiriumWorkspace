@@ -444,4 +444,31 @@ export interface SalaryRecord {
   paidAt: Timestamp | null;
   fulfilledAt: Timestamp | null;
 }
-
+
+// Personal Tasks
+export type PersonalTaskPriority = "High" | "Medium" | "Low";
+export type PersonalTaskCategory = "Work" | "Meeting" | "Personal" | "Other";
+export type PersonalTaskStatus = "pending" | "done" | "archived";
+
+export interface PersonalTask {
+  id: string;
+  uid: string; // The user who created the task
+  title: string;
+  description?: string;
+  priority: PersonalTaskPriority;
+  category: PersonalTaskCategory;
+  status: PersonalTaskStatus;
+  
+  // Timing
+  isRoutine: boolean;
+  routineDays?: number[]; // 0 = Sunday, 1 = Monday, etc.
+  targetDate?: string; // ISO yyyy-mm-dd (for one-time tasks)
+  targetTime: string; // HH:mm format
+  
+  // Notifications
+  notifyMinutesBefore: number; // default 30
+  emailSent?: boolean; // to prevent spamming
+  
+  createdAt: Timestamp | null;
+  updatedAt: Timestamp | null;
+}
