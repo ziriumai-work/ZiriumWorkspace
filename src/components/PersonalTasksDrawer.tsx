@@ -106,7 +106,7 @@ export function PersonalTasksDrawer({ open, onClose }: { open: boolean; onClose:
     setPriority(task.priority);
     setCategory(task.category);
     setIsRoutine(task.isRoutine);
-    setRoutineDays(task.routineDays);
+    setRoutineDays(task.routineDays || []);
     setTargetDate(task.targetDate || new Date().toISOString().slice(0, 10));
     setTargetTime(task.targetTime);
     setNotifyMinutes(task.notifyMinutesBefore);
