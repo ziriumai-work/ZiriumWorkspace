@@ -113,12 +113,23 @@ export function AdminEmployeeCard({
           {todayRecord ? (
             <Box sx={{ textAlign: { xs: "left", sm: "right" }, display: "flex", flexDirection: { xs: "row", sm: "column" }, alignItems: { xs: "center", sm: "flex-end" }, gap: { xs: 1.5, sm: 0 } }}>
               <Chip
-                label={ATTENDANCE_STATUSES.find(s => s.value === todayRecord.status)?.label ?? todayRecord.status}
+                label={
+                  todayRecord.status === "on_leave" && todayRecord.adminApprovedLeave
+                    ? "Admin Leave"
+                    : ATTENDANCE_STATUSES.find((s) => s.value === todayRecord.status)?.label ?? todayRecord.status
+                }
                 size="small"
-                sx={{ bgcolor: `${STATUS_COLORS[todayRecord.status]}22`, color: STATUS_COLORS[todayRecord.status], fontWeight: 600, mb: { xs: 0, sm: 0.5 } }}
+                sx={{
+                  bgcolor: todayRecord.status === "on_leave" && todayRecord.adminApprovedLeave ? "#0ea5e922" : `${STATUS_COLORS[todayRecord.status]}22`,
+                  color: todayRecord.status === "on_leave" && todayRecord.adminApprovedLeave ? "#0ea5e9" : STATUS_COLORS[todayRecord.status],
+                  fontWeight: 600,
+                  mb: { xs: 0, sm: 0.5 },
+                }}
               />
               <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                In: {fmtTime(todayRecord.checkIn)} {todayRecord.checkOut ? `• Out: ${fmtTime(todayRecord.checkOut)}` : "• Active"}
+                {todayRecord.checkIn 
+                  ? `In: ${fmtTime(todayRecord.checkIn)} ${todayRecord.checkOut ? `• Out: ${fmtTime(todayRecord.checkOut)}` : "• Active"}`
+                  : "No check-in data"}
               </Typography>
             </Box>
           ) : (
@@ -171,9 +182,18 @@ export function AdminEmployeeCard({
                     <TableCell>{new Date(r.date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}</TableCell>
                     <TableCell>
                       <Chip
-                        label={ATTENDANCE_STATUSES.find((s) => s.value === r.status)?.label ?? r.status}
+                        label={
+                          r.status === "on_leave" && r.adminApprovedLeave
+                            ? "Admin Leave"
+                            : ATTENDANCE_STATUSES.find((s) => s.value === r.status)?.label ?? r.status
+                        }
                         size="small"
-                        sx={{ bgcolor: `${STATUS_COLORS[r.status]}22`, color: STATUS_COLORS[r.status], fontWeight: 600, fontSize: 11 }}
+                        sx={{
+                          bgcolor: r.status === "on_leave" && r.adminApprovedLeave ? "#0ea5e922" : `${STATUS_COLORS[r.status]}22`,
+                          color: r.status === "on_leave" && r.adminApprovedLeave ? "#0ea5e9" : STATUS_COLORS[r.status],
+                          fontWeight: 600,
+                          fontSize: 11,
+                        }}
                       />
                     </TableCell>
                     <TableCell>{fmtTime(r.checkIn)}</TableCell>
