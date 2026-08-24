@@ -1,11 +1,6 @@
 "use client";
 
-// Attendance page — comprehensive attendance management with:
-// - Clock in/out for employees/interns (within office hours only)
-// - Auto late detection with grace period
-// - Overtime tracking
-// - Admin: view all records, mark attendance, configure office hours
-// - Monthly summary with deduction flags
+// Attendance page — comprehensive attendance management with clock in/out, auto late detection, overtime tracking, admin controls, and monthly summaries.
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Alert from "@mui/material/Alert";
@@ -102,11 +97,22 @@ export default function AttendancePage() {
     [records, user, todayStr],
   );
 
-  // Compute canClock only on the client to avoid SSR timezone mismatch
-  // (Vercel SSR uses UTC; the user's browser uses local time).
+  // Compute canClock securely by pinging the backend API
   const [canClock, setCanClock] = useState(true);
   useEffect(() => {
-    const check = () => setCanClock(isWithinOfficeHours(settings));
+    const check = async () => {
+      try {
+        const res = await fetch("/api/time", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setCanClock(isWithinOfficeHours(settings, new Date(data.iso)));
+          return;
+        }
+      } catch (err) {
+        // Silently fail the UI check; the actual click handler will show the offline toast
+      }
+      setCanClock(isWithinOfficeHours(settings)); // fallback to local for UI only
+    };
     check();
     const interval = setInterval(check, 30_000); // refresh every 30s
     return () => clearInterval(interval);

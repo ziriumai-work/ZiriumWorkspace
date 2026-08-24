@@ -58,24 +58,35 @@ export function normalizeOfficeHours(settings: OfficeSettings): {
 
 export function isWithinOfficeHours(settings: OfficeSettings, currentTime?: Date): boolean {
   const now = currentTime ? new Date(currentTime) : new Date();
-  const day = now.getDay();
-  if (day === 0 || day === 6) {
+  
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Karachi",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  
+  const parts = formatter.formatToParts(now);
+  const day = parts.find(p => p.type === "weekday")?.value;
+  let h = parseInt(parts.find(p => p.type === "hour")?.value || "0", 10);
+  if (h === 24) h = 0;
+  const m = parseInt(parts.find(p => p.type === "minute")?.value || "0", 10);
+
+  if (day === "Sat" || day === "Sun") {
     return false;
   }
 
   const { startH, startM, endH, endM } = normalizeOfficeHours(settings);
 
-  const start = new Date(now);
-  start.setHours(startH, startM, 0, 0);
+  const currentMinutes = h * 60 + m;
+  const startMinutes = startH * 60 + startM;
+  const endMinutes = endH * 60 + endM;
 
-  const end = new Date(now);
-  end.setHours(endH, endM, 59, 999);
-
-  // If start is after end (e.g. overnight shift 10 PM to 6 AM -> 22:00 to 06:00),
-  // then we are in office hours if now >= start OR now <= end.
-  if (start > end) {
-    return now >= start || now <= end;
+  // Overnight shift logic (e.g. 10 PM to 6 AM)
+  if (startMinutes > endMinutes) {
+    return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
   }
 
-  return now >= start && now <= end;
+  return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
 }

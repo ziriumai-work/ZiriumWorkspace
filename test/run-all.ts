@@ -5,6 +5,8 @@ import "./attendance-auto-clockout.test";
 import "./odh-clearing.test";
 import "./integration/odh-penalty-flow.test";
 import "./personal-tasks.test";
+import "./unit/secure-time.test";
+import "./integration/secure-time-flow.test";
 
 
 import { runAllSuites } from "./test-runner";

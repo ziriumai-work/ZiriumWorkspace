@@ -13,28 +13,56 @@ export function isCheckInLate(
   checkInIso: string,
   settings: OfficeSettings,
 ): boolean {
-  const checkIn = new Date(checkInIso);
-  const deadline = new Date(checkIn);
-  deadline.setHours(settings.startHour, settings.startMinute, 0, 0);
-  deadline.setMinutes(deadline.getMinutes() + settings.graceMinutes);
-  return checkIn > deadline;
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Karachi",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(new Date(checkInIso));
+  // Intl sometimes returns "24" instead of "00" depending on environment. We handle that.
+  let h = parseInt(parts.find(p => p.type === "hour")?.value || "0", 10);
+  if (h === 24) h = 0;
+  const m = parseInt(parts.find(p => p.type === "minute")?.value || "0", 10);
+
+  const checkInMinutes = h * 60 + m;
+  const deadlineMinutes = settings.startHour * 60 + settings.startMinute + settings.graceMinutes;
+  
+  return checkInMinutes > deadlineMinutes;
 }
 
 export function calcOvertimeMinutes(
   checkOutIso: string,
   settings: OfficeSettings,
 ): number {
-  const checkOut = new Date(checkOutIso);
-  const endTime = new Date(checkOut);
-  endTime.setHours(settings.endHour, settings.endMinute, 0, 0);
-  const diff = (checkOut.getTime() - endTime.getTime()) / 60_000;
-  return Math.max(0, Math.round(diff));
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Karachi",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(new Date(checkOutIso));
+  let h = parseInt(parts.find(p => p.type === "hour")?.value || "0", 10);
+  if (h === 24) h = 0;
+  const m = parseInt(parts.find(p => p.type === "minute")?.value || "0", 10);
+
+  const checkOutMinutes = h * 60 + m;
+  const endMinutes = settings.endHour * 60 + settings.endMinute;
+  const diff = checkOutMinutes - endMinutes;
+  return Math.max(0, diff);
 }
 
 export function getLocalISODate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(date);
+  const y = parts.find(p => p.type === "year")?.value;
+  const m = parts.find(p => p.type === "month")?.value;
+  const d = parts.find(p => p.type === "day")?.value;
   return `${y}-${m}-${d}`;
 }
 

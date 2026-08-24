@@ -63,12 +63,23 @@ async function fetchSubscribedAdminEmails(): Promise<string[]> {
   return Array.from(emailsSet);
 }
 
+async function getSecureTime(): Promise<Date> {
+  try {
+    const res = await fetch("/api/time", { cache: "no-store" });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    return new Date(data.iso);
+  } catch (err) {
+    throw new Error("Time match error. Please check your internet connection.");
+  }
+}
+
 export async function clockIn(
   employee: Developer,
   settings: OfficeSettings,
 ): Promise<{ status: "success" | "warning"; message: string }> {
-  const now = new Date();
-  const date = now.toISOString().slice(0, 10);
+  const now = await getSecureTime();
+  const date = getLocalISODate(now);
   const uid = employee.uid || employee.id;
   const id = recordId(uid, date);
   const checkInIso = now.toISOString();
@@ -248,8 +259,8 @@ export async function clockOut(
   settings: OfficeSettings,
   employee?: Developer,
 ): Promise<{ status: "success" | "warning" | "error"; message: string }> {
-  const now = new Date();
-  const date = now.toISOString().slice(0, 10);
+  const now = await getSecureTime();
+  const date = getLocalISODate(now);
   const id = recordId(uid, date);
   const docRef = doc(db, COL, id);
 
