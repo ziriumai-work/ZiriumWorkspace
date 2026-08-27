@@ -1,12 +1,8 @@
-import { describe, it, expect } from "../../test-runner";
-import { clockIn, clockOut } from "../../../src/lib/data/attendance/actions";
-import type { OfficeSettings, Developer } from "../../../src/lib/data/types";
+import { describe, it, expect } from "../test-runner";
+import { clockIn, clockOut } from "../../src/lib/data/attendance/actions";
+import type { OfficeSettings, Developer } from "../../src/lib/data/types";
 
-// Mocking Firebase modules for integration tests
-jest.mock("../../../src/lib/firebase/client", () => ({
-  db: {},
-  auth: { currentUser: null }
-}));
+
 
 const mockSettings: OfficeSettings = {
   id: "default",

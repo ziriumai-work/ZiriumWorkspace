@@ -530,7 +530,7 @@ export async function autoFillMissingAttendance(
 
       let leavesThisMonth = 0;
       for (const rec of existingRecords.values()) {
-        if (rec.date.startsWith(monthPrefix) && rec.status === "on_leave") {
+        if (rec.date.startsWith(monthPrefix) && rec.status === "on_leave" && !rec.adminApprovedLeave) {
           leavesThisMonth++;
         }
       }
@@ -681,7 +681,8 @@ export async function markAttendance(
           r.date >= start &&
           r.date <= end &&
           r.date !== date &&
-          r.status === "on_leave"
+          r.status === "on_leave" &&
+          !r.adminApprovedLeave
         ) {
           totalLeavesThisMonth++;
         }

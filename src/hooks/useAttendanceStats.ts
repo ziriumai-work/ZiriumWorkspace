@@ -270,7 +270,7 @@ export function useAttendanceStats({
     records.forEach(r => {
       if (r.date.startsWith(monthPrefix) && r.uid === user?.uid) {
         if (r.isLate) monthlyLates++;
-        if (r.status === "on_leave") monthlyLeaves++;
+        if (r.status === "on_leave" && !r.adminApprovedLeave) monthlyLeaves++;
         if (r.status === "sick_leave") monthlySickLeaves++;
       }
     });

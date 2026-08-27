@@ -162,7 +162,8 @@ export function getDynamicLeaveAllowance({
       if (
         r.uid === employee.uid &&
         r.date.startsWith(monthPrefix) &&
-        r.status === "on_leave"
+        r.status === "on_leave" &&
+        !r.adminApprovedLeave
       ) {
         usedLeaves++;
       }
