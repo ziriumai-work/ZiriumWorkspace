@@ -90,12 +90,12 @@ describe("Unit Testing: Admin Leave Logic", () => {
       targetMonthStr: "2026-08",
       allAttendanceRecords: records,
     });
-    
+
     // They get 2 base leaves for August. 
     // Since their July leave was Admin Approved, it didn't consume their July allowance.
     // So 2 leaves roll over from July -> Total 4 allowed in August.
     expect(allowed).toBe(4);
-    
+
     const summary = computeMonthlySummary(
       records,
       [],
