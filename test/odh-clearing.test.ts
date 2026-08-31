@@ -425,7 +425,7 @@ describe("ODH + Compensatory Toggles and Penalty-Clearing Rules", () => {
     // 2) 2026-08-25 late day should absorb remaining 1h (60 mins) and have 2h (120 mins) ODH left!
     expect(resIntern.odhMap["2026-08-25"]).toBe(120); // 180 - 60 = 120
     expect(resIntern.penaltyMap["2026-08-25"].length).toBe(2);
-    expect(resIntern.penaltyMap["2026-08-25"][1].label).toBe("+1h 0m OT (2026-08-26 Task)");
+    expect(resIntern.penaltyMap["2026-08-25"][1].label).toBe("+1h OT (from Aug 26)");
 
     // 3) 2026-08-19 should NOT be touched (since all 4h were absorbed in 2026-08-26 and 2026-08-25)
     expect(resIntern.odhMap["2026-08-19"]).toBe(120);
@@ -452,6 +452,6 @@ describe("ODH + Compensatory Toggles and Penalty-Clearing Rules", () => {
     expect(resFollowUp.odhMap["2026-08-25"]).toBe(0); // 120 - 120 = 0
     expect(resFollowUp.penaltyMap["2026-08-25"].length).toBe(4);
     expect(resFollowUp.penaltyMap["2026-08-25"][2].label).toBe("ODH Resolved (Task Cleared)");
-    expect(resFollowUp.penaltyMap["2026-08-25"][3].label).toBe("+2h 0m OT (2026-08-27 Task)");
+    expect(resFollowUp.penaltyMap["2026-08-25"][3].label).toBe("+2h OT (from Aug 27)");
   });
 });

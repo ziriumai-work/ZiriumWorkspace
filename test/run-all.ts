@@ -7,6 +7,7 @@ import "./integration/odh-penalty-flow.test";
 import "./personal-tasks.test";
 import "./unit/secure-time.test";
 import "./unit/admin-leave.test";
+import "./unit/security-fixes.test";
 import "./integration/secure-time-flow.test";
 
 

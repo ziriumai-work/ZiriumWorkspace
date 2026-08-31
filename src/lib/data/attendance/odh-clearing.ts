@@ -161,15 +161,14 @@ export function resolveODHAndPenalties(
 
       if (treatAsUnpaidIntern && hasUnclearedPenalty) {
         const totalOTAbsorbed = (penaltyMap[d] || []).filter(c => c.type === "clearing_odh_absorbed").reduce((sum, c) => sum + (c.minutes || 0), 0);
-        const originalOdhNeeded = initialOdhMap[d] || 0;
-        const otTowardsPenalties = Math.max(0, totalOTAbsorbed - originalOdhNeeded);
-        penaltyNeeded = Math.max(0, penaltyNeeded - otTowardsPenalties);
+        // For unpaid interns, any OT absorbed directly reduces the penalty debt since ODH and penalty are the same thing.
+        penaltyNeeded = Math.max(0, penaltyNeeded - totalOTAbsorbed);
       }
 
       // The total debt for this day is the current ODH shortfall (tracked live in odhMap) PLUS any uncleared penalty.
-      // For employees, we only absorb ODH shortfall here.
+      // For interns, these represent the same debt, so we take the max to avoid double counting.
       const currentOdhNeeded = odhMap[d] || 0;
-      const totalDebt = treatAsUnpaidIntern ? (currentOdhNeeded + penaltyNeeded) : currentOdhNeeded;
+      const totalDebt = treatAsUnpaidIntern ? Math.max(currentOdhNeeded, penaltyNeeded) : currentOdhNeeded;
       let remainingDebt = totalDebt;
 
       let didAbsorbODH = false;
@@ -180,40 +179,27 @@ export function resolveODHAndPenalties(
         absorbedOnDay = Math.min(taskMins, remainingDebt);
         
         // Update odhMap[d] (which tracks the remaining ODH shortfall for the UI)
-        odhMap[d] = Math.max(0, currentOdhNeeded - absorbedOnDay);
+        odhMap[d] = Math.max(0, totalDebt - absorbedOnDay);
         
         taskMins -= absorbedOnDay;
         totalResolvedODHMinutes += absorbedOnDay;
         didAbsorbODH = true;
         
-        // Check if ODH shortfall was just fully paid off in this step
-        if (
-          treatAsUnpaidIntern && 
-          currentOdhNeeded > 0 && 
-          odhMap[d] === 0
-        ) {
-          const hrs = Math.floor(currentOdhNeeded / 60);
-          const mins = currentOdhNeeded % 60;
-          const timeStr = mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
-
+        // Check if ODH shortfall was just fully paid off in this step.
+        // For unpaid interns, ODH and the penalty chip represent the same debt, so we emit ONE chip.
+        if (treatAsUnpaidIntern && odhMap[d] === 0) {
           if (!penaltyMap[d]) penaltyMap[d] = [];
           penaltyMap[d].push({
             type: "clearing_intern_odh",
-            label: `${timeStr} ODH Resolved`,
-            tooltip: `ODH shortfall (${timeStr}) resolved by task (${t.title})`,
+            label: "ODH Resolved (Task Cleared)",
+            tooltip: `ODH / penalty resolved by task (${t.title})`,
             color: "#22c55e",
             bgcolor: "#22c55e20",
             isClearingChip: true,
-            clearedPenaltyType: "odh",
+            clearedPenaltyType: penaltyTypeToClear || "odh",
           });
-        }
-
-        // Check if Penalty was just fully paid off in this step
-        if (
-          treatAsUnpaidIntern && 
-          hasUnclearedPenalty && 
-          absorbedOnDay >= penaltyNeeded // We only need to check if we absorbed enough to cover the remaining penaltyNeeded!
-        ) {
+        } else if (treatAsUnpaidIntern && hasUnclearedPenalty && absorbedOnDay >= penaltyNeeded && odhMap[d] > 0) {
+          // ODH not yet fully cleared but the penalty portion is resolved — emit a partial chip.
           const p_hrs = Math.floor(penaltyNeeded / 60);
           const p_mins = penaltyNeeded % 60;
           const p_timeStr = p_mins > 0 ? `${p_hrs}h ${p_mins}m` : `${p_hrs}h`;
@@ -222,7 +208,7 @@ export function resolveODHAndPenalties(
           penaltyMap[d].push({
             type: "clearing_intern_odh",
             label: `${p_timeStr} Penalty Resolved`,
-            tooltip: `Penalty (${p_timeStr}) resolved by task (${t.title})`,
+            tooltip: `Penalty (${p_timeStr}) partially resolved by task (${t.title})`,
             color: "#22c55e",
             bgcolor: "#22c55e20",
             isClearingChip: true,
@@ -279,6 +265,7 @@ export function resolveODHAndPenalties(
 
           if (!didAbsorbODH && taskMins < actualCost) {
             absorbedOnDay += taskMins;
+            totalResolvedODHMinutes += taskMins;
             taskMins = 0;
             break;
           }
@@ -302,6 +289,7 @@ export function resolveODHAndPenalties(
             if (!didAbsorbODH) {
               taskMins = Math.max(0, taskMins - actualCost);
               absorbedOnDay += actualCost;
+              totalResolvedODHMinutes += actualCost;
               remainingDebtForPenalties = Math.max(0, remainingDebtForPenalties - actualCost);
             }
             break;
@@ -326,6 +314,7 @@ export function resolveODHAndPenalties(
             if (!didAbsorbODH) {
               taskMins = Math.max(0, taskMins - actualCost);
               absorbedOnDay += actualCost;
+              totalResolvedODHMinutes += actualCost;
               remainingDebtForPenalties = Math.max(0, remainingDebtForPenalties - actualCost);
             }
             break;
@@ -334,6 +323,8 @@ export function resolveODHAndPenalties(
 
         if (clearedAnyOnDay) {
           penaltyMap[d] = newChips;
+          // Ensure odhMap[d] is always explicitly set to 0 when fully cleared (even if it had no entry)
+          if (odhMap[d] === undefined) odhMap[d] = 0;
         }
       }
 

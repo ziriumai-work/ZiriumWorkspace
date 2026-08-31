@@ -102,13 +102,17 @@ export default function AttendancePage() {
   useEffect(() => {
     const check = async () => {
       try {
-        const res = await fetch("/api/time", { cache: "no-store" });
+        const { auth } = await import("@/lib/firebase/client");
+        const token = await auth.currentUser?.getIdToken();
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        const res = await fetch("/api/time", { cache: "no-store", headers });
         if (res.ok) {
           const data = await res.json();
           setCanClock(isWithinOfficeHours(settings, new Date(data.iso)));
           return;
         }
-      } catch (err) {
+      } catch {
         // Silently fail the UI check; the actual click handler will show the offline toast
       }
       setCanClock(isWithinOfficeHours(settings)); // fallback to local for UI only

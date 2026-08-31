@@ -65,11 +65,14 @@ async function fetchSubscribedAdminEmails(): Promise<string[]> {
 
 async function getSecureTime(): Promise<Date> {
   try {
-    const res = await fetch("/api/time", { cache: "no-store" });
+    const token = await auth.currentUser?.getIdToken();
+    const headers: Record<string, string> = { cache: "no-store" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch("/api/time", { cache: "no-store", headers });
     if (!res.ok) throw new Error();
     const data = await res.json();
     return new Date(data.iso);
-  } catch (err) {
+  } catch {
     throw new Error("Time match error. Please check your internet connection.");
   }
 }
@@ -79,6 +82,13 @@ export async function clockIn(
   settings: OfficeSettings,
 ): Promise<{ status: "success" | "warning"; message: string }> {
   const now = await getSecureTime();
+
+  // Server-side office hours guard — prevents bypassing the UI check via direct API calls.
+  const { isWithinOfficeHours: checkHours } = await import("./settings");
+  if (!checkHours(settings, now)) {
+    return { status: "warning", message: "Office is currently closed. You can only clock in during office hours." };
+  }
+
   const date = getLocalISODate(now);
   const uid = employee.uid || employee.id;
   const id = recordId(uid, date);

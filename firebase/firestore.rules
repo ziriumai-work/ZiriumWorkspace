@@ -55,8 +55,11 @@ service cloud.firestore {
           || isOwnerEmail()
         );
 
-      // Only owners/admins can change roles or remove members; users can sync their own member doc.
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+      // Only owners/admins can change roles or remove members; users can sync their own member doc without escalating role.
+      allow update: if isAdmin() || (
+        isSignedIn() && request.auth.uid == uid &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))
+      );
       allow delete: if isAdmin();
     }
 
@@ -97,8 +100,8 @@ service cloud.firestore {
     // Only admins can add, edit, or remove employees from the roster.
     // -----------------------------------------------------------------------
     match /developers/{devId} {
-      allow read, update: if isMember();
-      allow create, delete: if isAdmin();
+      allow read: if isMember();
+      allow create, update, delete: if isAdmin();
     }
 
     // -----------------------------------------------------------------------
@@ -130,7 +133,9 @@ service cloud.firestore {
     //  - Employee/Intern: read + create + update records.
     // -----------------------------------------------------------------------
     match /attendance/{recordId} {
-      allow read, create, update: if isMember();
+      allow read: if isMember();
+      allow create: if isAdmin() || (isMember() && request.resource.data.uid == request.auth.uid);
+      allow update: if isAdmin() || (isMember() && request.resource.data.uid == request.auth.uid && resource.data.uid == request.auth.uid);
       allow delete: if isAdmin();
     }
 
@@ -158,13 +163,11 @@ service cloud.firestore {
     }
 
     // -----------------------------------------------------------------------
-    // Salaries — ADMIN ONLY. Previously open to the internet (if true).
-    // Now locked to owner/admin roles.
+    // Salaries — ADMIN ONLY.
+    // Locked to owner/admin roles.
     // -----------------------------------------------------------------------
     match /salaries/{id} {
-      allow read: if isAdmin() || isMember();
-      allow create, delete: if isAdmin();
-      allow update: if isAdmin() || isMember();
+      allow read, create, update, delete: if isAdmin();
     }
 
     // Sick Leave Requests
@@ -188,7 +191,8 @@ service cloud.firestore {
 
     // Personal Tasks - users can only read and write their own tasks.
     match /personal_tasks/{taskId} {
-      allow read, write: if isSignedIn();
+      allow read, update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
     }
 
     // Integrations (Slack tokens, etc.) — server-only via Cloud Functions.

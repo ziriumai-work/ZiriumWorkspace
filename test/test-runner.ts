@@ -48,7 +48,13 @@ export function expect<T>(actual: T) {
     },
     toBeLessThanOrEqual(expected: number) {
       assert.ok(typeof actual === "number" && actual <= expected, `Expected ${actual} <= ${expected}`);
-    }
+    },
+    toContain(expected: string) {
+      assert.ok(
+        typeof actual === "string" && actual.includes(expected),
+        `Expected "${actual}" to contain "${expected}"`
+      );
+    },
   };
 }
 
