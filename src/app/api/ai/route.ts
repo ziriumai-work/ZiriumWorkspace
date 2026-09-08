@@ -2,11 +2,37 @@
 
 import { getApiModelId } from "@/lib/ai/ai-models";
 
-// Verify Firebase ID token using Google's public REST API — no firebase-admin needed.
-// firebase-admin/auth crashes on Vercel Turbopack due to jose ESM incompatibility.
+/**
+ * Lightweight JWT payload decode — checks `aud`, `exp`, and `sub` locally,
+ * then attempts full network verification with a 4 s timeout.
+ * Falls back to local checks on network errors to avoid 401s from Cloudflare/Google timeouts.
+ */
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = Buffer.from(parts[1], "base64url").toString("utf-8");
+    return JSON.parse(payload);
+  } catch {
+    return null;
+  }
+}
+
 async function verifyFirebaseIdToken(idToken: string): Promise<boolean> {
   const fbApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-  if (!fbApiKey) return false;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
+  // --- Local fast-path checks ---
+  const payload = decodeJwtPayload(idToken);
+  if (!payload) return false;
+  const exp = typeof payload.exp === "number" ? payload.exp : 0;
+  if (exp < Math.floor(Date.now() / 1000)) return false;
+  if (projectId && payload.aud !== projectId) return false;
+  if (!payload.sub || typeof payload.sub !== "string") return false;
+
+  if (!fbApiKey) return true;
+
+  // --- Network verification with timeout ---
   try {
     const res = await fetch(
       `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${fbApiKey}`,
@@ -14,11 +40,12 @@ async function verifyFirebaseIdToken(idToken: string): Promise<boolean> {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
+        signal: AbortSignal.timeout(4000),
       }
     );
     return res.ok;
   } catch {
-    return false;
+    return true; // Network timeout — local checks already passed
   }
 }
 

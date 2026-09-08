@@ -519,11 +519,17 @@ export async function autoFillMissingAttendance(
   const now = new Date();
   const todayStr = getLocalISODate(now);
   
-  let startStr = employee.startDate;
+  let startStr = (employee.startDate && employee.startDate.length >= 7)
+    ? employee.startDate
+    : null;
   if (!startStr) {
     startStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   }
-  const start = new Date(startStr + "T00:00:00");
+  // Ensure it's a valid date string before constructing a Date object
+  const startCandidate = new Date(startStr + "T00:00:00");
+  const start = isNaN(startCandidate.getTime())
+    ? new Date(now.getFullYear(), now.getMonth(), 1)
+    : startCandidate;
 
   const batchUpdates = [];
 
