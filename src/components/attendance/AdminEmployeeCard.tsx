@@ -80,13 +80,13 @@ export function AdminEmployeeCard({
   }, [monthRecords, employee, settings, monthTasks]);
 
   return (
-    <Paper 
-      variant="outlined" 
-      sx={{ 
-        p: { xs: 2, sm: 3 }, 
-        borderRadius: 4, 
-        display: "flex", 
-        flexDirection: "column", 
+    <Paper
+      variant="outlined"
+      sx={{
+        p: { xs: 2, sm: 3 },
+        borderRadius: 4,
+        display: "flex",
+        flexDirection: "column",
         gap: { xs: 1.5, sm: 2 },
         transition: "all 0.2s ease-in-out",
         "&:hover": {
@@ -108,7 +108,7 @@ export function AdminEmployeeCard({
             </Typography>
           </Box>
         </Box>
-        
+
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, pl: { xs: 6.5, sm: 0 } }}>
           {todayRecord ? (
             <Box sx={{ textAlign: { xs: "left", sm: "right" }, display: "flex", flexDirection: { xs: "row", sm: "column" }, alignItems: { xs: "center", sm: "flex-end" }, gap: { xs: 1.5, sm: 0 } }}>
@@ -127,7 +127,7 @@ export function AdminEmployeeCard({
                 }}
               />
               <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                {todayRecord.checkIn 
+                {todayRecord.checkIn
                   ? `In: ${fmtTime(todayRecord.checkIn)} ${todayRecord.checkOut ? `• Out: ${fmtTime(todayRecord.checkOut)}` : "• Active"}`
                   : "No check-in data"}
               </Typography>
@@ -138,13 +138,13 @@ export function AdminEmployeeCard({
               <Button size="small" variant="outlined" onClick={() => onMarkAttendance(employee.uid!)} sx={{ px: { xs: 1.5, sm: 2 } }}>Mark</Button>
             </Box>
           )}
-          
+
           <IconButton size="small" onClick={() => setExpanded(!expanded)} sx={{ bgcolor: "action.hover", width: 32, height: 32 }}>
             {expanded ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
           </IconButton>
         </Box>
       </Box>
-      
+
       <Collapse in={expanded}>
         <Divider sx={{ my: 2 }} />
         <TableContainer sx={{ overflowX: "auto" }}>
@@ -164,7 +164,7 @@ export function AdminEmployeeCard({
                 <TableRow><TableCell colSpan={6} align="center" sx={{ color: "text.secondary", py: 3 }}>No other records this month</TableCell></TableRow>
               ) : (
                 monthRecords.map(r => (
-                  <TableRow 
+                  <TableRow
                     key={r.id}
                     hover
                     sx={{
@@ -242,7 +242,7 @@ export function AdminEmployeeCard({
                         {(() => {
                           const isIntern = employee?.accessLevel === "intern";
                           const dailyTasksForRecord = monthTasks.filter(t => t.date === r.date && (t.assigneeId === employee.id || t.assigneeId === employee.uid || t.assigneeId === r.uid) && t.status === "done" && (t.isOvertime || t.compensatesWeeklyHours));
-                          
+
                           const compensatoryTasks = dailyTasksForRecord.filter(t => t.compensatesWeeklyHours || t.resolvesODH);
                           const paidTasks = dailyTasksForRecord.filter(t => !(t.compensatesWeeklyHours || t.resolvesODH));
 
@@ -253,7 +253,7 @@ export function AdminEmployeeCard({
                             compensatoryOtMinutes += paidOtMinutes;
                             paidOtMinutes = 0;
                           }
-                          
+
                           return (
                             <>
                               {compensatoryOtMinutes > 0 && (
