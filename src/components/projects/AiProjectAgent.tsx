@@ -66,10 +66,21 @@ export function AiProjectAgent({
         }
       }
 
-      // 1. Parse File via API route
+      // 1. Parse File via API route (requires auth token, same as /api/ai)
+      let parseToken = "";
+      try {
+        const { getAuth } = await import("firebase/auth");
+        parseToken = (await getAuth().currentUser?.getIdToken()) ?? "";
+      } catch {
+        // proceed without token — server will return 401 which we surface below
+      }
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/parse", { method: "POST", body: formData });
+      const res = await fetch("/api/parse", {
+        method: "POST",
+        body: formData,
+        headers: parseToken ? { Authorization: `Bearer ${parseToken}` } : {},
+      });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         throw new Error(d.error || "Failed to parse file.");
