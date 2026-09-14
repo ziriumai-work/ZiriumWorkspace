@@ -25,24 +25,24 @@ export type FinanceProjectStatus = "ongoing" | "completed";
 export interface FinanceProject {
   id: string;
   name: string;
-  worth: number; //          total contract value
-  received: number; //       money received so far
+  worth: number; // total contract value
+  received: number; // money received so far
   milestoneCount: number;
   status: FinanceProjectStatus;
-  currency: string; //       "PKR" | "USD" | "EUR" etc.
+  currency: string;
   files?: import("./types").TaskFile[]; // attached service agreements/docs
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 }
 
-// Pending is always derived so the numbers can never drift out of sync.
+// Pending is always derived so the numbers stay in sync.
 export function pendingOf(p: Pick<FinanceProject, "worth" | "received">): number {
   return p.worth - p.received;
 }
 
 export interface InvoiceItem {
   id: string;
-  category: string; //       e.g. "Development", "Design", "Hosting"
+  category: string;
   description: string;
   qty: number;
   unitPrice: number;
@@ -50,11 +50,11 @@ export interface InvoiceItem {
 
 export interface Invoice {
   id: string;
-  number: string; //         e.g. INV-2026-001
+  number: string; // e.g. INV-2026-001
   clientName: string;
   clientCompany: string;
   clientAddress: string;
-  currency: string; //       ISO code from CURRENCIES
+  currency: string;
   items: InvoiceItem[];
   notes: string;
   paymentMethod: "ubl" | "wise";
@@ -92,24 +92,24 @@ export interface AllotmentInvoice {
 
 export interface Allotment {
   id: string;
-  month: string; //          "yyyy-MM"
-  label: string; //          where the money goes, e.g. "Marketing"
-  amount: number; //         amount in PKR (automatically computed from invoices)
+  month: string; // "yyyy-MM"
+  label: string; // where the money goes, e.g. "Marketing"
+  amount: number; // amount in PKR (automatically computed from invoices)
   note: string;
-  invoices: AllotmentInvoice[]; // Replaces invoiceId/invoiceNumber
+  invoices: AllotmentInvoice[];
   createdAt: Timestamp | null;
 }
 
 export interface MonthlyExpense {
   id: string;
-  month: string; //          "yyyy-MM"
-  type: string; //           "Salaries" | "Utilities" | ... (free-form allowed)
+  month: string; // "yyyy-MM"
+  type: string; // e.g. "Salaries", "Utilities" (free-form)
   label: string;
-  amount: number; //         amount in PKR
+  amount: number; // amount in PKR
   createdAt: Timestamp | null;
 }
 
-// Preset expense types for the monthly sheet (admin can type a custom one).
+// Preset expense types for the monthly sheet.
 export const EXPENSE_TYPES = [
   "Salaries",
   "Utilities",
@@ -121,7 +121,7 @@ export const EXPENSE_TYPES = [
   "Miscellaneous",
 ];
 
-// Currency options for invoices (symbol used in the UI and the PDF).
+// Currency options for invoices.
 export const CURRENCIES: { code: string; symbol: string; label: string }[] = [
   { code: "PKR", symbol: "Rs", label: "Pakistani Rupee" },
   { code: "USD", symbol: "$", label: "US Dollar" },
@@ -194,14 +194,13 @@ export async function addFinanceProject(
 ): Promise<string> {
   const ref = doc(collection(db, PROJECTS));
   
-  // 1. Create Finance Project
   await setDoc(ref, {
     ...input,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 
-  // 2. Create corresponding App Project
+  // Also create a linked App Project entry.
   await setDoc(doc(db, "projects", ref.id), {
     title: input.name,
     description: "",
@@ -237,7 +236,7 @@ export async function updateFinanceProject(
   const updates = Object.keys(patch).join(", ");
   await logAdminAction("Updated Finance Project", `Updated finance project (ID: ${id}) fields: ${updates}`);
 
-  // Sync files to App Project if they were updated
+  // Sync files to App Project if updated.
   if (patch.files) {
     await updateDoc(doc(db, "projects", id), {
       financeFiles: patch.files,

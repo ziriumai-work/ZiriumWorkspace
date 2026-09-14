@@ -1,9 +1,5 @@
 "use client";
 
-// Finance → Invoices: build an invoice from categorized line items with a
-// currency choice, store it (with timestamp), and download any stored invoice
-// as a PDF. The template in invoicePdf.ts is intentionally general — it will
-// be customized later.
 
 import { useEffect, useMemo, useState } from "react";
 import Alert from "@mui/material/Alert";
@@ -245,9 +241,6 @@ export default function InvoicesPage() {
         actualReceivedNote: actualReceivedNote.trim() || null,
       });
 
-      // Auto-adjust logic for allotments has been removed as Allotments now handle
-      // multiple invoices dynamically and store their own exchange rates.
-      // If a decrease happens, the admin must manually adjust the allotment if needed.
 
       setUpdateReceivedFor(null);
       setActualReceived("");
@@ -269,7 +262,7 @@ export default function InvoicesPage() {
 
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 4 }}>
-      {/* Builder */}
+      {}
       <ZiriumDetails />
       <ScrollReveal>
         <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
@@ -363,7 +356,7 @@ export default function InvoicesPage() {
           </Grid>
         </Grid>
 
-        {/* Line items */}
+        {}
         <Typography variant="caption" color="text.secondary" sx={{ mt: 2, mb: 1, display: "block", fontWeight: 500 }}>
           Line items
         </Typography>
@@ -468,7 +461,7 @@ export default function InvoicesPage() {
         </Alert>
       )}
 
-      {/* Stored invoices */}
+      {}
       <Typography variant="subtitle2" sx={{ mt: 4, mb: 1.5 }}>
         Saved invoices ({invoices.length})
       </Typography>

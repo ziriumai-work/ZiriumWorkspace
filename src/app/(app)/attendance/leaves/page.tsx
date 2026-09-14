@@ -236,7 +236,7 @@ export default function LeavesPage() {
         )}
       </Box>
 
-      {/* Filter Toggle */}
+      {}
       <Box sx={{ display: "flex", justifyContent: "flex-start", mb: showFilters ? 2 : 3 }}>
         <IconButton 
           onClick={() => setShowFilters(!showFilters)}
@@ -255,7 +255,7 @@ export default function LeavesPage() {
         </IconButton>
       </Box>
 
-      {/* Filters Form */}
+      {}
       <Collapse in={showFilters}>
         <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 3, display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center" }}>
           {isAdmin && (
@@ -373,7 +373,7 @@ export default function LeavesPage() {
         )}
       </Box>
 
-      {/* Request Dialog */}
+      {}
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Request Sick Leave</DialogTitle>
         <DialogContent>

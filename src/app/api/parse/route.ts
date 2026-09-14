@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Parses uploaded file and extracts plain text.
-// Uses mammoth for .docx, and raw UTF-8 decode for .txt/.csv.
-// PDF uses a lightweight manual byte extraction to avoid Node-worker dependencies on Vercel.
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
 
-/**
- * Lightweight JWT payload decode — no signature verification, but we check
- * the `aud` (Firebase project ID) and `exp` claims so forged tokens are
- * rejected without a network call. Full signature verification is done via
- * the Google Identity Toolkit API call with a short timeout.
- */
+
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const parts = token.split(".");

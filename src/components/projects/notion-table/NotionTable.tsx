@@ -261,7 +261,7 @@ export function NotionTable({
               </Box>
             ))}
 
-            {/* New row */}
+            {}
             {!readonly && (
               <Box component="tr">
                 <Box component="td" colSpan={columns.length + 1} sx={{ px: 1.5, py: 1 }}>
@@ -308,7 +308,7 @@ export function NotionTable({
         </MuiLink>
       )}
 
-      {/* Column menu */}
+      {}
       <Popover
         open={Boolean(menuAnchor && menuColumn)}
         anchorEl={menuAnchor?.el ?? null}

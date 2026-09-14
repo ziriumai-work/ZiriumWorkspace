@@ -49,11 +49,6 @@ export const firebaseApp: FirebaseApp = getApps().length
   ? getApp()
   : initializeApp(firebaseConfig);
 
-// getAuth()/getFirestore() throw on an empty/invalid apiKey. During a server
-// prerender without env vars (e.g. CI builds) that would crash the build, even
-// though these services are only ever *used* in the browser. So we initialize
-// eagerly in the browser and whenever a key is configured, and skip otherwise.
-// The casts keep the public type clean for the client code that consumes them.
 const isBrowser = typeof window !== "undefined";
 const canInit = isBrowser || Boolean(firebaseConfig.apiKey);
 
@@ -83,9 +78,6 @@ export const functions: Functions = canInit
   ? getFunctions(firebaseApp)
   : (undefined as unknown as Functions);
 
-// Local development against the Firebase emulators (see firebase.json). Set
-// NEXT_PUBLIC_FIREBASE_USE_EMULATOR=true in .env.local to develop without a real
-// Firebase project. Guarded so we only connect once, in the browser.
 if (
   isBrowser &&
   useEmulator &&
@@ -100,7 +92,4 @@ if (
   globalThis.__FIREBASE_EMULATORS_CONNECTED__ = true;
 }
 
-// Restrict Google sign-in to your company domain in production via the Firebase
-// console (Authentication -> Settings -> Authorized domains) and/or by checking
-// the email domain in the AuthProvider.
 export const googleProvider = new GoogleAuthProvider();

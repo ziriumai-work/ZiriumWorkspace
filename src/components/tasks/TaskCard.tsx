@@ -74,7 +74,7 @@ export function TaskCard({
         },
       }}
     >
-      {/* Top subtle scanline sweep effect on hover */}
+      {}
       <Box
         className="docket-scanline"
         sx={{
@@ -91,7 +91,7 @@ export function TaskCard({
       />
 
       <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.75, px: 2.5, py: 2 }}>
-        {/* Employee / Intern Profile Avatar */}
+        {}
         <Avatar
           src={emp?.photoURL || undefined}
           sx={{
@@ -112,7 +112,7 @@ export function TaskCard({
 
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-            {/* Assignee Name Label */}
+            {}
             <Typography
               variant="caption"
               sx={{
@@ -127,7 +127,7 @@ export function TaskCard({
               {task.assigneeName || "Unassigned"}
             </Typography>
 
-            {/* Live Indicator Dot */}
+            {}
             {isLive && (
               <Box
                 sx={{
@@ -152,7 +152,7 @@ export function TaskCard({
             </Typography>
           )}
 
-          {/* Micro Tags Bar */}
+          {}
           <Box
             sx={{
               mt: 1.25,
@@ -243,7 +243,7 @@ export function TaskCard({
           </Box>
         </Box>
 
-        {/* Status Dropdown / Complete Chip */}
+        {}
         {!currentUser.isAdmin && task.status === "done" ? (
           <Chip
             label="Complete"

@@ -170,7 +170,7 @@ export function WelcomeScreen() {
         </Button>
       </DialogActions>
 
-      {/* Render Toast for error */}
+      {}
       {toastError && (
         <Toast
           open={!!toastError}

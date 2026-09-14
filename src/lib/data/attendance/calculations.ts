@@ -20,7 +20,7 @@ export function isCheckInLate(
     hour12: false,
   });
   const parts = formatter.formatToParts(new Date(checkInIso));
-  // Intl sometimes returns "24" instead of "00" depending on environment. We handle that.
+  // Intl may return "24" instead of "00" in some environments.
   let h = parseInt(parts.find(p => p.type === "hour")?.value || "0", 10);
   if (h === 24) h = 0;
   const m = parseInt(parts.find(p => p.type === "minute")?.value || "0", 10);
@@ -211,9 +211,9 @@ export interface MonthlySummary {
   totalOvertimeMinutes: number;
   lateDaysOverThreshold: number; // late days beyond allowed threshold
   excessLeaves: number; // leaves beyond allowed quota
-  deductionDays: number; // total deduction days (half-day for late + full-day for excess leave)
-  overtimeDueMinutes?: number; // total ODH shortfall including weekly hours
-  penaltyODHMinutes?: number; // penalty ODH from late/absences only for interns and unpaid members
+  deductionDays: number; // total deduction days
+  overtimeDueMinutes?: number; // ODH shortfall
+  penaltyODHMinutes?: number; // penalty ODH for interns/unpaid members
 }
 
 export function computeMonthlySummary(
@@ -260,7 +260,7 @@ export function computeMonthlySummary(
     let hw = r.hoursWorked || 0;
     let ot = r.overtimeMinutes || 0;
 
-    // Dynamically calculate if 0 (e.g., currently clocked in or old record missing hours)
+    // Dynamically calculate hours if 0 (e.g., clocked in but not out, or old record).
     if (hw === 0 && r.checkIn) {
       const outTime = r.checkOut ? new Date(r.checkOut) : new Date();
       hw = Math.max(
@@ -489,13 +489,6 @@ export function getWeeklyOvertimeDueMap(
     fri.setDate(fri.getDate() + 4);
     const friStr = getLocalISODate(fri);
 
-    // Check if the week should be evaluated:
-    // 1. Friday is strictly in the past (friStr < todayStr), OR
-    // 2. Today is Friday or later in the week (todayStr >= friStr) AND:
-    //    a) there is a checkOut on Friday, OR
-    //    b) status on Friday is absent/on_leave/sick_leave, OR
-    //    c) today is Friday and now is past office close time, OR
-    //    d) today is Saturday/Sunday (todayStr > friStr)
     const friRec = weekRecords.find((r) => r.date === friStr);
     const isFriClosed =
       friStr < todayStr ||

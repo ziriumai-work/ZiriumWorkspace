@@ -1,4 +1,4 @@
-// Attendance write operations: clocking in/out, shift auto-closures, manual marks, and updates.
+// Attendance write operations: clock-in/out, shift auto-close, manual marks, and updates.
 
 import {
   collection,
@@ -58,7 +58,7 @@ async function fetchSubscribedAdminEmails(): Promise<string[]> {
       }
     });
   } catch {
-    // Non-admins cannot read developers collection, ignore silently
+    // Non-admins cannot read the developers collection; silently ignore.
   }
   return Array.from(emailsSet);
 }
@@ -83,7 +83,7 @@ export async function clockIn(
 ): Promise<{ status: "success" | "warning"; message: string }> {
   const now = await getSecureTime();
 
-  // Server-side office hours guard — prevents bypassing the UI check via direct API calls.
+  // Guard: prevents bypassing the office-hours check via direct API calls.
   const { isWithinOfficeHours: checkHours } = await import("./settings");
   if (!checkHours(settings, now)) {
     return { status: "warning", message: "Office is currently closed. You can only clock in during office hours." };
@@ -94,7 +94,7 @@ export async function clockIn(
   const id = recordId(uid, date);
   const checkInIso = now.toISOString();
 
-  // Check if a record already exists for today (e.g., approved leave)
+  // Check if a record already exists for today (e.g., approved leave).
   const docRef = doc(db, COL, id);
   const snap = await getDoc(docRef);
   if (snap.exists()) {
@@ -390,7 +390,7 @@ export async function autoClockOutUnclosedShifts(
 
     let shouldClose = false;
     if (endH < startH) {
-      // Overnight shift (e.g. 10 PM to 6 AM): close shift from previous date once morning closing time passes
+  // Overnight shift: close shift from previous date once morning closing time passes.
       if (data.date < todayStr && now > todayEnd) {
         shouldClose = true;
       }
@@ -457,7 +457,7 @@ export async function autoClockOutAllUnclosedShifts(
 
     let shouldClose = false;
     if (endH < startH) {
-      // Overnight shift (e.g. 10 PM to 6 AM): close shift from previous date once morning closing time passes
+      // Overnight shift: close shift from previous date once morning closing time passes.
       if (data.date < todayStr && now > todayEnd) {
         shouldClose = true;
       }
@@ -525,7 +525,7 @@ export async function autoFillMissingAttendance(
   if (!startStr) {
     startStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   }
-  // Ensure it's a valid date string before constructing a Date object
+  // Ensure date string is valid before constructing a Date object.
   const startCandidate = new Date(startStr + "T00:00:00");
   const start = isNaN(startCandidate.getTime())
     ? new Date(now.getFullYear(), now.getMonth(), 1)
@@ -604,12 +604,12 @@ export async function markAttendance(
   let isOvertime = false;
   let flexibilityUsed = 0;
 
-  // 1. Fetch employee early to check required hours and flexibility
+  // Fetch employee to check required hours and flexibility.
   const devQuery = query(collection(db, "developers"), where("uid", "==", uid));
   const devSnap = await getDocs(devQuery);
   const employee = devSnap.empty ? null : (devSnap.docs[0].data() as any);
 
-  // 2. Compute isLate exactly as clockIn does
+  // Compute isLate the same way clockIn does.
   if (checkIn && employee) {
     const now = new Date(checkIn);
     const officeStart = new Date(now);

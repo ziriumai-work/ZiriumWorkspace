@@ -1,8 +1,5 @@
 "use client";
 
-// A Select styled as a soft colored pill/badge — the inline status editor used
-// in tables and cards (tasks, projects, employees). The pill color follows the
-// currently selected value via the shared chipSx helper.
 
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";

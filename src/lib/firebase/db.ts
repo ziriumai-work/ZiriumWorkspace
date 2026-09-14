@@ -18,8 +18,7 @@ export const STATUS_OPTIONS: SelectOption[] = [
   { id: "blocked", label: "Blocked", color: "red" },
 ];
 
-// The columns every new project starts with. Stable ids ("name", "phase", ...)
-// let the seed and the legacy-task migration map onto them reliably.
+// Default columns every new project starts with. Stable ids allow reliable migration.
 export function defaultColumns(): DbColumn[] {
   return [
     { id: "name", name: "Name", type: "text" },
@@ -29,8 +28,7 @@ export function defaultColumns(): DbColumn[] {
   ];
 }
 
-// Convert a legacy fixed task list into the columns/rows database model. Used
-// once when an older project (with `tasks`) is first opened.
+// Migrate legacy tasks array into columns/rows database format.
 export function migrateTasksToDb(tasks: TaskItem[]): {
   columns: DbColumn[];
   rows: DbRow[];

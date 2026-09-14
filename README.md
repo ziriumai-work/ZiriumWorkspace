@@ -1,48 +1,80 @@
-# Workspace
+# Company Workspace - Project Handover
 
-A Notion-style company workspace: project tracking with flexible databases,
-developer assignment, and a built-in DeepSeek-powered AI assistant ("Zirium AI").
+Welcome to the Company Workspace repository. This document serves as the primary "Start Here" guide for developers taking over or contributing to the project.
 
-**New here? Start with these:**
-- 📐 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — full developer guide (stack, data model, file map, conventions, how to extend). **Read this first.**
-- ⚙️ [docs/SETUP.md](docs/SETUP.md) — how to run it (Firebase + DeepSeek).
-- 🤖 [AGENTS.md](AGENTS.md) — rules for AI coding assistants (Next.js 16 has breaking changes — read its bundled docs before coding).
+This is a Notion-style company internal tool that provides project tracking with flexible databases, an employee directory with role-based access, daily task assignments, HR modules (Attendance, Leaves, Salaries, Invoices), and a built-in AI assistant ("Zirium AI") powered by DeepSeek.
+
+**Important Companion Docs:**
+- 📐 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Full developer guide (stack, data model, file map, conventions, how to extend). **Read this first before changing code.**
+- ⚙️ [docs/SETUP.md](docs/SETUP.md) — Instructions on how to run the project locally (Firebase Emulators or Real Project) and how to configure DeepSeek API keys.
 
 ---
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## 🚀 Current State & Features Shipped
 
-## Getting Started
+The project is currently in the middle of active development (Phases 0–2 completed). It is a single-tenant application meant for one company's internal use via Google Sign-In.
 
-First, run the development server:
+**Key Features Implemented:**
+- **Auth & Access Control:** Role-based access (`admin` vs `employee`). First signed-in, unlisted user defaults to `admin` to prevent lockouts.
+- **Employee Directory:** HR record management (Job title, department, access level) linking directly to Firebase Auth logins.
+- **Project Tracking:** Notion-style customizable databases for each project. Table and Board views. Employees can only see projects they are assigned to.
+- **Daily Tasks:** Task assignment system with daily reports (supports text, links, and file uploads via Firebase Storage).
+- **Zirium AI:** A DeepSeek-powered AI assistant that functions as a full chat interface, a ⌘K quick assistant, and a "Generate with AI" project planner.
+- **HR & Finance Modules:** Added sections for Attendance, Leaves, Finance (Salaries, Allotment, Invoices), and Documents.
+- **Dashboards:** Role-filtered dashboard displaying live status counts, employee stats, and recent projects.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 🛠 Tech Stack
+
+- **Framework:** [Next.js 16.2.9](https://nextjs.org/) (App Router, Turbopack)
+- **UI & Styling:** React 19, [Tailwind CSS v4](https://tailwindcss.com/) (config-less with CSS variables)
+- **Backend & Database:** Firebase (Cloud Firestore NoSQL, Firebase Auth, Firebase Storage)
+- **AI Integration:** DeepSeek API (OpenAI-compatible) called strictly from server-side Route Handlers.
+- **Language:** TypeScript (Strict mode)
+
+> ⚠️ **Note on Next.js 16:** This project uses Next.js 16 which includes breaking changes (e.g., `params` / `searchParams` are Promises). Read the bundled docs in `node_modules/next/dist/docs/` before implementing new routes.
+
+---
+
+## 📂 Project Structure Overview
+
+```text
+src/
+├── app/                  # Next.js App Router pages and API routes
+│   ├── (app)/            # Authenticated route group (dashboard, projects, tasks, finance, etc.)
+│   ├── api/ai/           # Server-side Route Handler for DeepSeek API
+│   └── login/            # Public Google sign-in page
+├── components/           # Reusable React components (UI, layout, NotionTable, etc.)
+├── hooks/                # Custom React hooks (e.g., useAttendanceData, useLocalStorage)
+├── lib/                  # Core business logic and utilities
+│   ├── ai/               # AI models, DeepSeek client, and agent helpers
+│   ├── data/             # Firestore CRUD operations & TS types for all domain entities
+│   ├── firebase/         # Firebase initialization, DB helpers, and AuthProvider context
+│   └── utils/            # General utilities (PDF generation, date formatting)
+firebase/                 # Firebase rules for Firestore and Storage
+docs/                     # Detailed architectural and setup documentation
+scripts/                  # Project maintenance scripts (e.g., comment cleanup)
+test/                     # Test suites (unit tests)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🔒 Security & Known Gaps (Action Required)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The following security enhancements are required before deploying to production:
 
-## Learn More
+1. **Rule-Level Access Control:** Currently, role gating (admin vs employee) is primarily handled in the UI. A determined employee could query unauthorized data (like other people's salaries or unassigned projects) using the Firebase SDK directly. **Action:** Harden `firestore.rules` using the implementation plan documented in the workspace.
+2. **Endpoint Authentication:** The `/api/ai` endpoint protects the API key but does not verify caller identity. **Action:** Add Firebase ID-token verification (`firebase-admin`) to prevent unauthorized API consumption.
+3. **Data Scaling:** The Notion-style `rows` for projects are stored inline on the `projects` document. **Action:** Migrate to a `projects/{id}/rows` subcollection if a project is expected to exceed Firestore's 1 MB document limit.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🏁 Getting Started
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+To pick up where development left off, follow these steps:
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) to deeply understand the data flow and UI conventions.
+2. Read [docs/SETUP.md](docs/SETUP.md) and set up your local `.env.local` and Firebase emulators.
+3. Run `npm install` and start the local development server with `npm run dev`.
+4. Run `npm run lint` and `npx tsc --noEmit` before committing new code to ensure everything passes the strict TS/ESLint checks.

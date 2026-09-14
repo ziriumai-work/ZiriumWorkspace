@@ -1,8 +1,5 @@
 "use client";
 
-// Table view of the Projects database. Status and priority are editable inline
-// via pill selects (writes straight to Firestore). The title links to the
-// project detail page.
 
 import { useState } from "react";
 import Link from "next/link";

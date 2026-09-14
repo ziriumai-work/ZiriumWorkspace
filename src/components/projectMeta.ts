@@ -1,7 +1,3 @@
-// Shared display metadata (labels + brand colors) for project status and
-// priority, plus the soft-badge styling helper used everywhere a colored
-// chip/pill appears. Keeping this in one place means the dashboard, table,
-// board, and detail views stay visually consistent.
 
 import { alpha, darken, lighten, type Theme } from "@mui/material/styles";
 import type {
@@ -43,11 +39,6 @@ export const TASK_STATUS_COLORS: Record<DailyTaskStatus, string> =
 export const EMPLOYEE_STATUS_COLORS: Record<EmployeeStatus, string> =
   employeeStatus;
 
-// Soft badge styling: tinted background with a readable tone of the same hue.
-// Works on MUI Chip (`sx`), Select-as-pill, and plain Boxes. Adapts to dark
-// mode via theme.applyStyles so the same hue stays legible on both schemes.
-// Returns a theme function — pass it as an `sx` array member, never spread it
-// into an object literal (spreading a function yields no properties).
 export function chipSx(color: string) {
   return (theme: Theme) => ({
     bgcolor: alpha(color, 0.16),

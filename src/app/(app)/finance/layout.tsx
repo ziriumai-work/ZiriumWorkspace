@@ -1,8 +1,5 @@
 "use client";
 
-// Finance section shell (admin-only): header + sub-section tabs. The actual
-// role gate also lives in the app layout's ROUTE_ACCESS map; this guard is a
-// courtesy message in case an employee lands here mid-role-resolution.
 
 import Link from "next/link";
 import { usePathname, redirect } from "next/navigation";

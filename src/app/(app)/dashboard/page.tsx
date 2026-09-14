@@ -116,7 +116,7 @@ export default function DashboardPage() {
         <AdminEmailSubscriptionToggle />
       </Box>
 
-      {/* Global Summaries (Admin Only) */}
+      {}
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 4 }}>
         <Box
           sx={{
@@ -216,7 +216,7 @@ export default function DashboardPage() {
         </Box>
       </Box>
 
-      {/* Status summary cards */}
+      {}
       <Grid container spacing={1.5}>
         {PROJECT_STATUSES.map((s) => (
           <Grid key={s.value} size={{ xs: 6, sm: 4, lg: 2 }}>
@@ -266,7 +266,7 @@ export default function DashboardPage() {
         ))}
       </Grid>
 
-      {/* Recently updated */}
+      {}
       <Box component="section" sx={{ mt: 5 }}>
         <Box
           sx={{

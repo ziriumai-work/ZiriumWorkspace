@@ -1,7 +1,3 @@
-// Seed data: the MARK Architects website delivery timeline (5 weeks).
-// Structured as Week -> Phase -> Tasks, then flattened into TaskItem[] for the
-// project's embedded task table. Used by the one-click sample action on the
-// Projects page.
 
 import {
   OPTION_COLOR_CYCLE,
@@ -228,9 +224,6 @@ export const MARK_TIMELINE: WeekPlan[] = [
   },
 ];
 
-// Build the Notion-style database (columns + rows) for the MARK timeline:
-// columns Name · Phase · Week (select) · Status, with a Week option per week and
-// every row starting at status "todo".
 export function buildMarkDatabase(): { columns: DbColumn[]; rows: DbRow[] } {
   const columns = defaultColumns();
   const weekCol = columns.find((c) => c.id === "week")!;

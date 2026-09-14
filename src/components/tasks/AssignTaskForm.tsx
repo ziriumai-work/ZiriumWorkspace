@@ -275,7 +275,7 @@ export function AssignTaskForm({
 
             {isOvertime && (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 1.5 }}>
-                {/* Compensatory Task Sub-Toggle */}
+                {}
                 <Box
                   onClick={() => setCompensatesWeeklyHours(!compensatesWeeklyHours)}
                   sx={{
@@ -338,7 +338,7 @@ export function AssignTaskForm({
                   />
                 </Box>
 
-                {/* Mark as ODH Sub-Toggle */}
+                {}
                 <Box
                   onClick={() => setResolvesODH(!resolvesODH)}
                   sx={{

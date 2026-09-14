@@ -166,7 +166,7 @@ export function ExportAttendanceModal({
         Export Attendance Sheet
       </DialogTitle>
       <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 3, pt: "16px !important" }}>
-        {/* Filter Employee & Months */}
+        {}
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
           <Box>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: "block", mb: 0.5 }}>
@@ -211,7 +211,7 @@ export function ExportAttendanceModal({
           </Box>
         </Box>
 
-        {/* Multi-Select Month Chips */}
+        {}
         <Box>
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: "block", mb: 1 }}>
             SELECT ONE OR MULTIPLE MONTHS ({selectedMonths.length} Selected)
@@ -235,7 +235,7 @@ export function ExportAttendanceModal({
 
         <Divider />
 
-        {/* Live Export Preview & Summary */}
+        {}
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
             📊 Overall Summary Preview Across Selected Months

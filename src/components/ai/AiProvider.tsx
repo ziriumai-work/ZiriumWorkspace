@@ -1,10 +1,5 @@
 "use client";
 
-// Global AI assistant (Notion-AI style). Provides `useAi()` so any part of the
-// app can open the assistant — optionally pre-filled with a prompt, primed with
-// a system instruction, and/or given an `onInsert` target so the result can be
-// written back into a page. The DeepSeek model is chosen here; the API key stays
-// on the server (see /api/ai).
 
 import {
   createContext,
@@ -61,9 +56,6 @@ export function AiProvider({ children }: { children: ReactNode }) {
   const { isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
   const [opts, setOpts] = useState<OpenOptions>({});
-  // Lazy initializer restores the user's last model choice. Safe against SSR:
-  // the assistant panel isn't rendered until opened, so there's no hydration
-  // mismatch from the client-only localStorage read.
   const [modelId, setModelId] = useState<string>(() => {
     if (typeof window === "undefined") return DEFAULT_MODEL_ID;
     const saved = localStorage.getItem(MODEL_STORAGE_KEY);
@@ -243,7 +235,7 @@ function AiPanel({
         },
       }}
     >
-      {/* Header */}
+      {}
       <Box
         sx={{
           display: "flex",
@@ -262,7 +254,7 @@ function AiPanel({
           </Typography>
         </Box>
 
-        {/* Model picker */}
+        {}
         <Button
           onClick={(e) => setModelAnchor(e.currentTarget)}
           variant="outlined"
@@ -315,7 +307,7 @@ function AiPanel({
         </Menu>
       </Box>
 
-      {/* Prompt */}
+      {}
       <Box sx={{ px: 2, pt: 2 }}>
         <TextField
           inputRef={promptRef}
@@ -362,7 +354,7 @@ function AiPanel({
         </Box>
       </Box>
 
-      {/* Output */}
+      {}
       <Box sx={{ minHeight: 0, flex: 1, overflowY: "auto", px: 2, pb: 1, pt: 1 }}>
         {error && <Alert severity="error">{error}</Alert>}
 
@@ -450,7 +442,7 @@ function AiPanel({
         )}
       </Box>
 
-      {/* Footer actions */}
+      {}
       {output && !streaming && (
         <>
           <Divider />

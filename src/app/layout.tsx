@@ -45,8 +45,7 @@ export default function RootLayout({
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <CssBaseline />
-            {/* AuthProvider is a Client Component; it wraps only children so the
-                rest of the static layout stays server-rendered. */}
+            {}
             <AuthProvider>
               <AiProvider>
                 <UploadProvider>

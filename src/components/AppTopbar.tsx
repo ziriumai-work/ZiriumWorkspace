@@ -140,7 +140,7 @@ export function AppTopbar() {
         
         <PersonalTasksDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
         
-        {/* AI is admin-only (see the role matrix) — hide the trigger otherwise. */}
+        {}
         {isAdmin && (
         <Button
           onClick={() => openAi()}

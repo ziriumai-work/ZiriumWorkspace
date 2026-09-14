@@ -19,8 +19,7 @@ import { logAdminAction } from "./logs";
 
 const COLLECTION = "projects";
 
-// Convert a Firestore document into a typed Project, tolerating missing fields
-// from older/partial documents.
+// Converts a Firestore document into a typed Project, tolerating missing fields.
 function toProject(id: string, data: Record<string, unknown>): Project {
   return {
     id,
@@ -75,8 +74,7 @@ export async function getProject(id: string): Promise<Project | null> {
   return snap.exists() ? toProject(snap.id, snap.data()) : null;
 }
 
-// Create a project. `createdByUid` is the signed-in user's uid (the rules
-// require createdBy == request.auth.uid on create).
+// Create a new project. createdByUid is required by Firestore rules.
 export async function createProject(
   input: NewProject,
   createdByUid: string,

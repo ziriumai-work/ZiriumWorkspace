@@ -1,8 +1,5 @@
 "use client";
 
-// The persistent workspace sidebar: brand, primary navigation, and the
-// signed-in user with a sign-out action. Phase 2 will add a nested page tree
-// below the primary nav.
 
 import { useState } from "react";
 import Link from "next/link";
@@ -232,7 +229,7 @@ export function AppSidebar() {
         </IconButton>
       </Box>
 
-      {/* Mobile: Full-height sidebar edge with integrated curved toggle */}
+      {}
       <Box
         sx={{
           display: { xs: "flex", md: "none" },
@@ -247,10 +244,10 @@ export function AppSidebar() {
           pointerEvents: "none",
         }}
       >
-        {/* Top border segment */}
+        {}
         <Box sx={{ flex: 1, borderLeft: "1px solid", borderColor: "divider" }} />
 
-        {/* Curved bump — the border line itself curves around the chevron */}
+        {}
         <Box
           onClick={() => setCollapsed(!collapsed)}
           sx={{
@@ -270,12 +267,12 @@ export function AppSidebar() {
             viewBox="0 0 14 80"
             style={{ position: "absolute", left: 0, top: 0 }}
           >
-            {/* Fill to mask content behind the bump */}
+            {}
             <path
               d="M0,0 C0,15 13,22 13,40 C13,58 0,65 0,80 Z"
               fill="var(--mui-palette-surface)"
             />
-            {/* The curved border line */}
+            {}
             <path
               d="M0,0 C0,15 13,22 13,40 C13,58 0,65 0,80"
               fill="none"
@@ -302,7 +299,7 @@ export function AppSidebar() {
           </Box>
         </Box>
 
-        {/* Bottom border segment */}
+        {}
         <Box sx={{ flex: 1, borderLeft: "1px solid", borderColor: "divider" }} />
       </Box>
 
@@ -508,12 +505,6 @@ export function AppSidebar() {
             const url = await uploadProfilePhoto(user.uid, blob);
             await updateProfile(user, { photoURL: url });
             await updateDeveloper(employee.id, { photoURL: url });
-            // The auth context will automatically pick up the new photoURL on reload, 
-            // but for immediate UI updates, the components using user.photoURL will re-render
-            // if we trigger a state change. The easiest way is to let Firebase Auth trigger its listener.
-            // (updateProfile usually triggers onAuthStateChanged, or at least updates the user object).
-            // Actually, we should probably force a refresh or rely on the reactive user object.
-            // A simple page reload is a brute force way, but let's just let React handle it.
             window.location.reload();
           }}
         />

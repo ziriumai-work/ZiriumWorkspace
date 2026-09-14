@@ -1,9 +1,5 @@
 "use client";
 
-// Finance → Projects: add commercial projects (name, worth, received,
-// milestones, status) and edit any of them inline at any time. Every change
-// writes straight to Firestore, so the dashboard, monthly sheet, and any other
-// open session update in real time.
 
 import { useEffect, useMemo, useState } from "react";
 import Alert from "@mui/material/Alert";
@@ -137,7 +133,7 @@ export default function FinanceProjectsPage() {
 
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 4 }}>
-      {/* Add a project */}
+      {}
       <Paper variant="outlined" sx={{ p: 4, borderRadius: 4, mb: 4, bgcolor: "surface" }}>
         <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
           Create New Project
@@ -266,7 +262,7 @@ export default function FinanceProjectsPage() {
         {projects.length} {projects.length === 1 ? "Project" : "Projects"}
       </Typography>
 
-      {/* Editable list as Cards */}
+      {}
       {loading ? (
         <CircularProgress size={24} sx={{ mt: 4 }} />
       ) : projects.length === 0 ? (

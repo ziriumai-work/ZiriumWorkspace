@@ -1,8 +1,5 @@
 "use client";
 
-// Board (Kanban) view: one column per status, cards grouped by status. Dragging
-// a card to another column updates its status in Firestore (native HTML5 drag
-// and drop — no extra dependency).
 
 import { useState } from "react";
 import Link from "next/link";

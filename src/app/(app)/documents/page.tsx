@@ -334,7 +334,7 @@ Enjoy your time at Zirium, and let's build something great together!`;
           )}
         </Box>
       </Paper>
-      {/* Render Toast Message */}
+      {}
       {toastMsg && (
         <Toast
           open={!!toastMsg}

@@ -373,7 +373,7 @@ export default function SalariesPage() {
         </Box>
       )}
 
-      {/* Payment Dialog */}
+      {}
       <Dialog open={!!payDialogFor} onClose={() => setPayDialogFor(null)} maxWidth="xs" fullWidth>
         <DialogTitle>Mark as Paid</DialogTitle>
         <DialogContent>

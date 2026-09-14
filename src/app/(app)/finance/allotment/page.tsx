@@ -1,9 +1,5 @@
 "use client";
 
-// Finance → Money Allotment: month by month, record where the money goes.
-// Every entry is an expense, so amounts always render red with a − sign.
-// The same entries feed the shared available-balance formula used by the
-// dashboard and the monthly sheet, in real time.
 
 import { useEffect, useMemo, useState } from "react";
 import Alert from "@mui/material/Alert";
@@ -176,14 +172,14 @@ export default function AllotmentPage() {
 
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 4 }}>
-      {/* Month selector + add form */}
+      {}
       <ScrollReveal>
         <Paper variant="outlined" sx={{ p: 5, borderRadius: 4 }}>
           <Typography variant="body2" sx={{ mb: 3, fontWeight: 500 }}>
             Allot money for a month
           </Typography>
           <Grid container spacing={3}>
-            {/* First Row */}
+            {}
             <Grid size={{ xs: 6, sm: 3, lg: 2 }}>
               <TextField
                 type="month"
@@ -230,7 +226,7 @@ export default function AllotmentPage() {
               </Button>
             </Grid>
 
-            {/* Second Row: Invoices Linkage */}
+            {}
             <Grid size={12}>
               <Autocomplete
                 multiple
@@ -303,7 +299,7 @@ export default function AllotmentPage() {
         </Alert>
       )}
 
-      {/* Month summary + entries */}
+      {}
       <Box sx={{ mt: 3, display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
         <Typography variant="subtitle2">
           {new Date(month + "-01").toLocaleDateString(undefined, {

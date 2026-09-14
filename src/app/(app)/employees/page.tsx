@@ -124,7 +124,7 @@ export default function EmployeesPage() {
         </Button>
       </Box>
 
-      {/* Add employee */}
+      {}
       <ScrollReveal>
         <AddEmployeeForm employees={employees} onAdd={addDeveloper} />
       </ScrollReveal>
@@ -135,7 +135,7 @@ export default function EmployeesPage() {
         </Alert>
       )}
 
-      {/* Directory */}
+      {}
       <Box sx={{ mt: 5 }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: showFilters ? 2 : 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>Team Directory</Typography>

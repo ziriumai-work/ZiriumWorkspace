@@ -1,7 +1,4 @@
-// AI agent: turn a free-text project brief / timeline into a structured plan
-// (title + description + task rows), matching the Task/Phase/Week/Status shape
-// used everywhere else. Runs through DeepSeek via /api/ai and parses the JSON
-// the model returns.
+// AI agent: converts a free-text project brief into a structured plan (title + tasks + columns/rows).
 
 import { streamCompletion } from "@/lib/ai/ai-client";
 import { defaultColumns } from "@/lib/firebase/db";
@@ -37,8 +34,7 @@ Rules:
 - Keep each task concise and actionable.
 - Output the JSON object only.`;
 
-// Pull the JSON object out of the model's reply, tolerating code fences or
-// stray text around it.
+// Extract JSON from raw model output, tolerating code fences or stray text.
 function extractJson(raw: string): string {
   let s = raw.trim();
   const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -82,7 +78,7 @@ export async function generateProjectPlan(
     ? (parsed.tasks as Record<string, unknown>[])
     : [];
 
-  // Normalize the raw tasks.
+  // Normalize raw tasks.
   const norm = rawTasks
     .map((t) => ({
       task: String(t.task ?? "").trim(),
@@ -95,8 +91,7 @@ export async function generateProjectPlan(
     throw new Error("The AI returned no tasks. Try a more detailed brief.");
   }
 
-  // Map into the Notion-style database: default columns + a Week option per
-  // distinct week, every row starting as "todo".
+  // Map into Notion-style database: default columns + Week options, all rows start as 'todo'.
   const columns = defaultColumns();
   const weekCol = columns.find((c) => c.id === "week")!;
   const weekLabels: string[] = [];
@@ -216,7 +211,7 @@ export async function generateTableImport(
     colNameMap.set(c.name, newCol);
   }
 
-  // Ensure status column exists
+  // Ensure a status column always exists.
   if (!columns.some(c => c.type === "status")) {
     const statusCol: DbColumn = { id: uuid(), name: "Status", type: "status", width: 140, options: [...STATUS_OPTIONS] };
     columns.push(statusCol);
@@ -241,7 +236,7 @@ export async function generateTableImport(
       }
     }
     
-    // Fallback status if missing
+    // Fallback: set status to 'todo' if missing.
     const statusCol = columns.find(c => c.type === "status");
     if (statusCol && !cells[statusCol.id]) {
       cells[statusCol.id] = "todo";

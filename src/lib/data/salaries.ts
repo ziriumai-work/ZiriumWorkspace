@@ -32,12 +32,12 @@ export async function generateSalariesForMonth(month: string): Promise<void> {
   const y = parseInt(yearStr, 10);
   const m = parseInt(monthStr, 10);
 
-  // 1. Get office settings
+  // Get office settings.
   let settings = DEFAULT_OFFICE_SETTINGS;
   const setSnap = await getDoc(doc(db, "settings", "office"));
   if (setSnap.exists()) settings = setSnap.data() as OfficeSettings;
 
-  // 2. Get all employees with a monthly salary and uid, filtered by start/end dates
+  // Get all employees with a monthly salary, filtered by start/end dates.
   const empSnap = await getDocs(collection(db, "developers"));
   const employees: Developer[] = [];
   empSnap.forEach((d) => {
@@ -61,19 +61,17 @@ export async function generateSalariesForMonth(month: string): Promise<void> {
     }
   });
 
-  // 3. Get all attendance for the month
-  // Since we don't have a direct month index, we can fetch all attendance for these users 
-  // or just fetch all attendance and filter. Filtering all is fine for small/medium teams.
+  // Fetch all attendance for the month.
   const attSnap = await getDocs(collection(db, "attendance"));
   const allAttendance: AttendanceRecord[] = [];
   attSnap.forEach(d => allAttendance.push(d.data() as AttendanceRecord));
 
-  // 4. Get all tasks for the month (for overtime)
+  // Get all tasks for the month (for overtime calculation).
   const taskSnap = await getDocs(collection(db, "tasks"));
   const allTasks: DailyTask[] = [];
   taskSnap.forEach(d => allTasks.push(d.data() as DailyTask));
 
-  // 5. Generate salary record for each employee
+  // Generate salary record for each employee.
   for (const emp of employees) {
     const base = emp.monthlySalary!;
     const dailyRate = dailySalary(base, y, m);

@@ -43,9 +43,6 @@ export function normalizeOfficeHours(settings: OfficeSettings): {
   let endH = Number(settings.endHour) || 18;
   const endM = Number(settings.endMinute) || 0;
 
-  // Normalize 12-hour PM input:
-  // e.g., if start is 10 (AM) and end is 6 (PM), convert end to 18.
-  // e.g., if start is 2 (PM) and end is 6 (PM), convert both 2 -> 14 and 6 -> 18.
   if (startH >= 1 && startH <= 6 && endH > startH && endH <= 11) {
     startH += 12;
     endH += 12;

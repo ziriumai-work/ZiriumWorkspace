@@ -137,7 +137,7 @@ export function PersonalDashboard() {
 
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1000, px: { xs: 2, sm: 3, md: 4 }, py: { xs: 3, md: 5 } }}>
-      {/* Header */}
+      {}
       <Box component="header" sx={{ mb: 4 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
           <Typography variant="h1">Welcome, {firstName}</Typography>
@@ -161,7 +161,7 @@ export function PersonalDashboard() {
         </Typography>
       </Box>
 
-      {/* Stats */}
+      {}
       <Grid container spacing={1.5}>
         <Grid size={{ xs: 6, sm: 3 }}>
           <Stat label="Due today" value={dueToday} accent={dueToday > 0} />
@@ -178,10 +178,10 @@ export function PersonalDashboard() {
       </Grid>
 
       <Grid container spacing={3} sx={{ mt: 1 }}>
-        {/* Main column */}
+        {}
         <Grid size={{ xs: 12, lg: 8 }}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {/* Upcoming Personal Tasks Widget */}
+            {}
             <Box component="section">
               <Box sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
                 <AssignmentIcon sx={{ color: "warning.main", fontSize: 20 }} />
@@ -225,7 +225,7 @@ export function PersonalDashboard() {
               )}
             </Box>
 
-            {/* This week's tasks */}
+            {}
             <Box component="section">
               <Box
                 sx={{
@@ -378,7 +378,7 @@ export function PersonalDashboard() {
               )}
             </Box>
 
-            {/* My projects */}
+            {}
             <Box component="section">
               <Box
                 sx={{
@@ -455,10 +455,10 @@ export function PersonalDashboard() {
           </Box>
         </Grid>
 
-        {/* Side column */}
+        {}
         <Grid size={{ xs: 12, lg: 4 }}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            {/* Profile */}
+            {}
             <Paper component="section" variant="outlined" sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3 }}>
               <Typography variant="subtitle2" sx={{ mb: 2 }}>
                 My profile
@@ -502,7 +502,7 @@ export function PersonalDashboard() {
               </Box>
             </Paper>
 
-            {/* Team */}
+            {}
             <Paper component="section" variant="outlined" sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3 }}>
               <Typography variant="subtitle2" sx={{ mb: 2 }}>
                 {deptLabel} team

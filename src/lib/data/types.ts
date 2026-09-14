@@ -3,7 +3,7 @@ import type { Timestamp } from "firebase/firestore";
 
 export type Role = "owner" | "admin" | "member" | "employee" | "intern";
 
-// users/{uid} — public-ish profile shown across the app.
+// Public user profile stored in users/{uid}.
 export interface UserProfile {
   uid: string;
   email: string | null;
@@ -12,7 +12,7 @@ export interface UserProfile {
   createdAt: Timestamp | null;
 }
 
-// members/{uid} — company membership + role. The real permission gate.
+// Company membership and role. Primary permission gate.
 export interface Member {
   uid: string;
   role: Role;
@@ -23,7 +23,7 @@ export interface Member {
   createdAt: Timestamp | null;
 }
 
-// admin_logs/{logId} — tracks actions performed by admins
+// Admin action audit log entry.
 export interface AdminLog {
   id: string;
   adminId: string;
@@ -34,7 +34,7 @@ export interface AdminLog {
   timestamp: Timestamp | null;
 }
 
-// documents/{docId} — company guidelines, NDAs, etc.
+// Company documents — guidelines, NDAs, etc.
 export interface CompanyDocument {
   id: string; // "guidelines_employee" or "guidelines_intern"
   title: string;
@@ -44,7 +44,7 @@ export interface CompanyDocument {
   updatedAt: Timestamp | null;
 }
 
-// teams/{teamId} — a group inside the single company.
+// Team grouping within the company.
 export interface Team {
   id: string;
   name: string;
@@ -52,11 +52,7 @@ export interface Team {
   createdAt: Timestamp | null;
 }
 
-// Phase 1 ships an opinionated Projects tracker. The shapes below are designed
-// so the generic "databases with custom properties" engine (Phase 2) can grow
-// on top of them without a rewrite.
-
-// projects/{projectId} — a tracked project (one "row" in the Projects database).
+// Project tracker with Notion-style database support.
 export type ProjectStatus =
   | "backlog"
   | "planned"
@@ -73,61 +69,45 @@ export interface Project {
   description: string; // free-form notes / page body (plain text for now)
   status: ProjectStatus;
   priority: ProjectPriority;
-  assigneeUid: string | null; // members/{uid} — legacy, superseded by developerIds
-  teamId: string | null; // teams/{teamId}
+  assigneeUid: string | null; // legacy field, superseded by developerIds
+  teamId: string | null;
   dueDate: Timestamp | null;
-  order: number; // manual sort within a status column (board view)
-  // Developers assigned to the WHOLE project (references developers/{id}). Start
-  // with one; add or remove people as the team changes (e.g. someone leaves).
-  developerIds: string[];
-  // Custom roles per developer for this specific project (e.g. { devId: "Project Lead" })
-  projectRoles?: Record<string, string>;
-  slackChannelId?: string; // linked Slack channel for automated notifications
+  order: number; // sort order within a status column
+  developerIds: string[]; // employees assigned to the project
+  projectRoles?: Record<string, string>; // per-developer role labels
+  slackChannelId?: string;
   lastUpdatedBy?: { uid: string; name: string; avatar?: string | null };
-  // Notion-style database: customizable columns + rows (see below).
   columns: DbColumn[];
   rows: DbRow[];
-  // Legacy fixed task list (pre-database). Auto-migrated into columns/rows when
-  // a project is opened. Kept optional so old documents still load.
-  tasks?: TaskItem[];
+  tasks?: TaskItem[]; // legacy field; auto-migrated to columns/rows on open
   financeFiles?: TaskFile[]; // attached service agreements/docs
   createdBy: string; // uid of creator
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 }
 
-// A row in a project's task table. Stored as an array on the project document
-// (no separate collection — keeps it within the existing Firestore rules). Fine
-// for up to a few hundred tasks per project.
 export type TaskStatus = "todo" | "in_progress" | "done" | "blocked";
 
 export interface TaskItem {
   id: string;
-  task: string; // what needs doing
-  phase: string; // grouping, e.g. "1.1 Project Kickoff & Asset Collection"
-  week: string; // e.g. "Week 1"
+  task: string;
+  phase: string;
+  week: string;
   status: TaskStatus;
-  order: number; // sort order within the project
+  order: number;
 }
 
-// developers/{id} — an EMPLOYEE record (collection name kept as "developers" for
-// backwards-compat). Distinct from `members` (auth accounts): an employee is
-// created by an admin and linked to a login by matching `email` on first sign-in.
+// Employee record stored under developers/{id} (collection name kept for backward compat).
+// Linked to a Firebase Auth account by matching email on first sign-in.
 export type Department = "web" | "ai" | "app" | "custom";
 export type EmploymentType = "full_time" | "part_time" | "contract" | "intern";
 export type EmployeeStatus = "active" | "on_leave" | "terminated" | "offboarded";
-// App-level access (UI gate). "intern" gets the same restricted scope as
-// "employee" but lands on its own My Space screen (/intern).
 export type AccessLevel = "admin" | "employee" | "intern";
 
-// The resolved role of the signed-in user (see useAuth().role). Unlike
-// AccessLevel (a field on the employee record), this also accounts for member
-// roles and the owner fallback, so it's what UI/routing decisions key off.
+// Resolved app role used for UI/routing decisions (combines member role + employee access level).
 export type AppRole = "admin" | "employee" | "intern";
 
-// Where each role lands after sign-in (and when kicked off a page they can't
-// access). Employees keep the role-filtered dashboard until their dedicated
-// "My Workflow" screen ships.
+// Default landing route per role after sign-in.
 export const ROLE_HOME: Record<AppRole, string> = {
   admin: "/dashboard",
   employee: "/dashboard",
@@ -137,26 +117,25 @@ export const ROLE_HOME: Record<AppRole, string> = {
 export interface Developer {
   id: string;
   name: string;
-  email: string; // used to link to the Google sign-in account
-  jobTitle?: string; // what they actually do (e.g. "Full stack Developer")
-  role?: string; // management role (e.g. "Lead", "Manager") - making it optional as requested
+  email: string; // used to link to the Firebase Auth account
+  jobTitle?: string;
+  role?: string; // management/team role label
   department: Department;
-  customDepartment?: string; // Name if department === "custom"
+  customDepartment?: string;
   employmentType: EmploymentType;
   startDate: string | null; // ISO yyyy-mm-dd
   endDate: string | null; // ISO yyyy-mm-dd
   status: EmployeeStatus;
-  accessLevel: AccessLevel; // "admin" can manage; "employee" gets a restricted view
-  uid: string | null; // bound on first matching sign-in
-  photoURL?: string; // custom uploaded profile photo overriding auth default
-  monthlySalary?: number; // base monthly salary
-  officeHours?: number; // expected weekly office hours
-  flexibilityHours?: number; // weekly flexibility time allowed
-  subscribeToEmails?: boolean; // whether an admin subscribes to clock-in/out email alerts
+  accessLevel: AccessLevel;
+  uid: string | null; // bound on first sign-in
+  photoURL?: string;
+  monthlySalary?: number;
+  officeHours?: number; // expected weekly hours
+  flexibilityHours?: number; // weekly flex buffer in hours
+  subscribeToEmails?: boolean; // opt-in for clock-in/out email alerts
   createdAt: Timestamp | null;
 }
 
-// Alias so new code can use the clearer name while storage stays "developers".
 export type Employee = Developer;
 
 export const DEPARTMENTS: { value: Department; label: string }[] = [
@@ -186,12 +165,12 @@ export const ACCESS_LEVELS: { value: AccessLevel; label: string }[] = [
   { value: "admin", label: "Admin" },
 ];
 
-// Daily tasks assigned to employees (tasks/{id})
+// Daily tasks assigned to employees, stored in tasks/{id}.
 export type DailyTaskStatus = "todo" | "in_progress" | "done" | "not_completed";
 
 export interface TaskFile {
   name: string;
-  url: string; // Firebase Storage download URL
+  url: string;
 }
 
 export interface TaskReport {
@@ -211,19 +190,19 @@ export interface DailyTask {
   description: string;
   projectId: string | null;
   projectTitle: string | null; // denormalized for display
-  assigneeId: string; // employee id (developers/{id})
+  assigneeId: string;
   assigneeName: string; // denormalized
-  date: string; // ISO yyyy-mm-dd (the day it's due/for)
+  date: string; // ISO yyyy-mm-dd
   status: DailyTaskStatus;
-  report: TaskReport; // legacy fallback
-  reports?: TaskReport[]; // ordered history of reports/reviews
-  assignedHours?: number; // specific number of hours assigned
-  isOvertime?: boolean; // toggle to mark as overtime
-  compensatesWeeklyHours?: boolean; // if true, these hours count towards weekly total instead of extra pay (Compensatory Task)
-  resolvesODH?: boolean; // if true, these hours pay down ODH balance (Mark as ODH toggle)
-  overtimeCost?: number; // computed overtime cost
-  attachments?: TaskFile[]; // admin attached docs
-  createdBy: string; // uid of the admin who assigned it
+  report: TaskReport; // legacy single-report field
+  reports?: TaskReport[];
+  assignedHours?: number;
+  isOvertime?: boolean;
+  compensatesWeeklyHours?: boolean; // hours count toward weekly total (compensatory)
+  resolvesODH?: boolean; // hours pay down ODH balance
+  overtimeCost?: number;
+  attachments?: TaskFile[];
+  createdBy: string;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 }
@@ -242,8 +221,7 @@ export const TASK_STATUSES: { value: TaskStatus; label: string }[] = [
   { value: "blocked", label: "Blocked" },
 ];
 
-// Notion-style database (flexible columns + rows), stored on the project doc.
-
+// Notion-style database columns/rows, stored on the project document.
 export type ColumnType =
   | "text"
   | "number"
@@ -280,9 +258,6 @@ export interface DbColumn {
   options?: SelectOption[]; // for select/status
 }
 
-// A cell value is keyed by column id. Strings cover text/select/status/date/
-// url/email/phone, numbers cover number, booleans cover checkbox, and string[]
-// covers multi-select (a list of option ids).
 export type CellValue = string | number | boolean | string[] | null;
 
 export interface DbRow {
@@ -302,8 +277,7 @@ export const OPTION_COLOR_CYCLE: OptionColor[] = [
   "gray",
 ];
 
-// Fields a client supplies when creating a project. Server-managed fields
-// (id, order, createdBy, timestamps) are filled in by the data layer.
+// Client-provided fields for project creation (server fills id, order, timestamps).
 export type NewProject = Pick<Project, "title"> &
   Partial<
     Pick<
@@ -311,9 +285,6 @@ export type NewProject = Pick<Project, "title"> &
       "description" | "status" | "priority" | "assigneeUid" | "teamId" | "dueDate"
     >
   >;
-
-// Display metadata for statuses/priorities lives next to the types so the UI
-// and (later) automations share one source of truth.
 export const PROJECT_STATUSES: { value: ProjectStatus; label: string }[] = [
   { value: "backlog", label: "Backlog" },
   { value: "planned", label: "Planned" },
@@ -330,17 +301,17 @@ export const PROJECT_PRIORITIES: { value: ProjectPriority; label: string }[] = [
   { value: "urgent", label: "Urgent" },
 ];
 
-// Office Settings (settings/office)
+// Office hours, leave policy, and app URL stored in settings/office.
 export interface OfficeSettings {
-  startHour: number; // e.g. 10
-  startMinute: number; // e.g. 0
-  endHour: number; // e.g. 18
-  endMinute: number; // e.g. 0
-  graceMinutes: number; // e.g. 60 — clock-in within this window is still "on time"
-  lateThresholdDays: number; // e.g. 3 — after this many late days, deduction kicks in
-  employeeLeavesPerMonth: number; // e.g. 2
-  internLeavesPerMonth: number; // e.g. 1
-  appUrl?: string; // Live domain / base URL (e.g. https://zirium.vercel.app)
+  startHour: number;
+  startMinute: number;
+  endHour: number;
+  endMinute: number;
+  graceMinutes: number; // minutes after start still counted as on-time
+  lateThresholdDays: number; // late days before salary deduction kicks in
+  employeeLeavesPerMonth: number;
+  internLeavesPerMonth: number;
+  appUrl?: string;
 }
 
 export const DEFAULT_OFFICE_SETTINGS: OfficeSettings = {
@@ -374,38 +345,35 @@ export const ATTENDANCE_STATUSES: { value: AttendanceStatus; label: string }[] =
 
 export interface AttendanceRecord {
   id: string;
-  uid: string; // the employee's auth uid
-  employeeName: string; // denormalised for easy display
+  uid: string;
+  employeeName: string; // denormalized for display
   date: string; // ISO yyyy-mm-dd
-  checkIn: string | null; // ISO datetime string
-  checkOut: string | null; // ISO datetime string
+  checkIn: string | null;
+  checkOut: string | null;
   status: AttendanceStatus;
-  hoursWorked: number; // auto-calculated from check-in/out
-  isLate: boolean; // true if checked in after grace period
-  flexibilityUsed?: number; // minutes of flexibility used today
-  isOvertime: boolean; // true if checked out after office end time
-  overtimeMinutes: number; // extra minutes past office end time
-  adminApprovedLeave?: boolean; // true if admin explicitly marked as on_leave (penalty exempt)
+  hoursWorked: number;
+  isLate: boolean;
+  flexibilityUsed?: number; // flex minutes consumed today
+  isOvertime: boolean;
+  overtimeMinutes: number;
+  adminApprovedLeave?: boolean; // exempt from leave penalty when true
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 }
 
-// Leave Requests (leaveRequests/{id})
 export type LeaveRequestStatus = "pending" | "approved" | "rejected";
 
 export interface LeaveRequest {
   id: string;
-  uid: string; // auth uid of the requester
-  employeeName: string; // denormalised name
-  dates: string[]; // array of ISO yyyy-mm-dd dates requested
+  uid: string;
+  employeeName: string; // denormalized
+  dates: string[]; // ISO yyyy-mm-dd dates
   reason: string;
-  proofUrls: string[]; // urls of uploaded documents
+  proofUrls: string[];
   status: LeaveRequestStatus;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 }
-
-// Attendance helpers
 
 // Announcements
 export interface Announcement {
@@ -419,19 +387,18 @@ export interface Announcement {
   showToInterns?: boolean;
 }
 
-// Salaries
 export type SalaryStatus = "due" | "paid" | "fulfilled";
 
 export interface SalaryLineItem {
   description: string;
-  amount: number; // positive for additions (overtime), negative for deductions
-  dateStr?: string; // e.g., "2026-07-20"
+  amount: number; // positive = addition, negative = deduction
+  dateStr?: string;
 }
 
 export interface SalaryRecord {
   id: string;
   month: string; // "yyyy-MM"
-  employeeId: string; // developers/{id}
+  employeeId: string;
   employeeName: string;
   baseSalary: number;
   overtimeTotal: number;
@@ -445,30 +412,24 @@ export interface SalaryRecord {
   fulfilledAt: Timestamp | null;
 }
 
-// Personal Tasks
 export type PersonalTaskPriority = "High" | "Medium" | "Low";
 export type PersonalTaskCategory = "Work" | "Meeting" | "Personal" | "Other";
 export type PersonalTaskStatus = "pending" | "done" | "archived";
 
 export interface PersonalTask {
   id: string;
-  uid: string; // The user who created the task
+  uid: string;
   title: string;
   description?: string;
   priority: PersonalTaskPriority;
   category: PersonalTaskCategory;
   status: PersonalTaskStatus;
-  
-  // Timing
   isRoutine: boolean;
-  routineDays?: number[]; // 0 = Sunday, 1 = Monday, etc.
-  targetDate?: string; // ISO yyyy-mm-dd (for one-time tasks)
-  targetTime: string; // HH:mm format
-  
-  // Notifications
-  notifyMinutesBefore: number; // default 30
-  emailSent?: boolean; // to prevent spamming
-  
+  routineDays?: number[]; // 0 = Sunday … 6 = Saturday
+  targetDate?: string; // ISO yyyy-mm-dd (one-time tasks)
+  targetTime: string; // HH:mm
+  notifyMinutesBefore: number;
+  emailSent?: boolean;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 }

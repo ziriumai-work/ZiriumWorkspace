@@ -1,9 +1,5 @@
 "use client";
 
-// Finance dashboard: live totals across the finance projects, with a filter
-// to look at everything, only ongoing, or only completed work. All numbers
-// come from real-time subscriptions, so edits made in any other finance
-// section appear here instantly.
 
 import { useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
@@ -198,7 +194,7 @@ export default function FinanceDashboardPage() {
         </Paper>
       )}
 
-      {/* Headline stats */}
+      {}
       {viewMode === "unified" ? (
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" sx={{ mb: 1.5 }}>Unified Totals (converted to {unifiedCurrency})</Typography>
@@ -255,7 +251,7 @@ export default function FinanceDashboardPage() {
         ))
       )}
 
-      {/* Company-wide available balance (always across ALL projects/expenses) */}
+      {}
       <ScrollReveal>
         <Paper
           variant="outlined"
@@ -295,7 +291,7 @@ export default function FinanceDashboardPage() {
       </Paper>
       </ScrollReveal>
 
-      {/* Per-project quick view */}
+      {}
       <Typography variant="subtitle2" sx={{ mt: 4, mb: 1.5 }}>
         {filter === "all" ? "All projects" : filter === "ongoing" ? "Ongoing projects" : "Completed projects"}
       </Typography>

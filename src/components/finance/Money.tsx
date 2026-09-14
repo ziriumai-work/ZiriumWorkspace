@@ -1,9 +1,5 @@
 "use client";
 
-// Consistent money rendering for the Finance section.
-// - `expense` → always red with a leading − sign.
-// - `balance` → green when positive (or zero), red with a − sign when negative.
-// - default   → plain themed text.
 
 import Typography, { type TypographyProps } from "@mui/material/Typography";
 import { formatAmount } from "@/lib/data/finance";

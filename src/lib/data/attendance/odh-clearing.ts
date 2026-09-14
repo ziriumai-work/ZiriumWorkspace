@@ -47,13 +47,13 @@ export function resolveODHAndPenalties(
     ? records.filter((r) => r.uid === empId || r.uid === employee?.uid || r.uid === employee?.id)
     : records;
 
-  // Group records by date for fast status check
+  // Group records by date for fast status lookup.
   const recordByDate: Record<string, AttendanceRecord> = {};
   for (const r of filteredRecords) {
     recordByDate[r.date] = r;
   }
 
-  // Filter relevant tasks: completed, overtime, and either ODH or compensatory for this employee
+  // Filter tasks that are completed, overtime, and either ODH or compensatory.
   const relevantTasks = (tasks || []).filter((t) => {
     if (t.status !== "done") return false;
     if (!t.isOvertime) return false;
@@ -63,7 +63,7 @@ export function resolveODHAndPenalties(
     return true;
   });
 
-  // Sort tasks chronologically by date
+  // Sort tasks chronologically.
   relevantTasks.sort((a, b) => a.date.localeCompare(b.date));
 
   for (const t of relevantTasks) {
@@ -74,7 +74,7 @@ export function resolveODHAndPenalties(
     const taskMonth = taskDate.slice(0, 7);
     const mondayOfTaskWeek = getMondayOfWeek(taskDate);
 
-    // Collect all candidate dates in the same month up to taskDate
+    // Collect all candidate dates in the same month up to taskDate.
     const allDatesInMonth: string[] = [];
     const dateSet = new Set<string>([
       ...Object.keys(odhMap),
@@ -88,10 +88,6 @@ export function resolveODHAndPenalties(
     }
     allDatesInMonth.sort((a, b) => b.localeCompare(a)); // latest to earliest
 
-    // Build ordered search queue (§3):
-    // 1. Same day first
-    // 2. Backward search same week (Monday to taskDate-1)
-    // 3. Backward search earlier weeks in same month
     const sameDayQueue = allDatesInMonth.filter((d) => d === taskDate);
     const sameWeekQueue = allDatesInMonth.filter((d) => d < taskDate && d >= mondayOfTaskWeek);
     const earlierMonthQueue = allDatesInMonth.filter((d) => d < mondayOfTaskWeek);
@@ -120,9 +116,6 @@ export function resolveODHAndPenalties(
       const dayOfWeek = new Date(d + "T12:00:00").getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-      // §4: When searching automatically across other days (d !== taskDate), we MUST ALWAYS skip
-      // absent days, leave days, and weekends! They can only be cleared if the task is assigned
-      // EXACTLY on that absent/leave date (d === taskDate), AND then it can propagate.
       if (d !== taskDate) {
         if (!canClearOtherAbsences && (isAbsent || isLeave)) {
           continue;

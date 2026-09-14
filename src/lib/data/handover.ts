@@ -1,6 +1,5 @@
 // Database handover & reset utility.
-// Cleanly wipes all employee/intern records, attendance, tasks, projects,
-// finances, and logs, preserving ONLY the designated admin account.
+// Wipes all data except the designated admin account.
 
 import {
   collection,
@@ -35,10 +34,6 @@ const COLLECTIONS_TO_WIPE_ENTIRELY = [
   "teams",
 ];
 
-/**
- * Resets the entire Firestore database cleanly for company handover,
- * retaining ONLY the admin account with the specified email (default: haseeb.a@zirium.com).
- */
 export async function resetWorkspaceForHandover(
   targetAdminEmail: string = "haseeb.a@ziriumai.com",
   onProgress?: (step: string) => void
@@ -48,7 +43,7 @@ export async function resetWorkspaceForHandover(
 
   onProgress?.(`Locating admin account ${normalizedEmail} in /developers...`);
 
-  // 1. Inspect /developers and identify the target admin to keep
+  // Inspect /developers and identify the target admin to keep.
   const devSnap = await getDocs(collection(db, "developers"));
   let keptDevId: string | null = null;
   let keptDevUid: string | null = null;
@@ -63,7 +58,7 @@ export async function resetWorkspaceForHandover(
     }
   }
 
-  // Fallback: If UID isn't stamped on developer doc yet, match against current logged-in user
+  // Fallback: match against current logged-in user if uid not yet stamped.
   if (!keptDevUid && auth.currentUser?.email?.toLowerCase() === normalizedEmail) {
     keptDevUid = auth.currentUser.uid;
   }
@@ -74,7 +69,7 @@ export async function resetWorkspaceForHandover(
     );
   }
 
-  // 2. Delete all other developer accounts
+  // Delete all other developer accounts.
   onProgress?.(`Cleaning /developers directory (preserving ${normalizedEmail})...`);
   for (const d of devSnap.docs) {
     if (d.id !== keptDevId) {
@@ -84,12 +79,12 @@ export async function resetWorkspaceForHandover(
   }
   deletedCounts["developers"] = devDeleteCount;
 
-  // 3. Delete all other membership docs in /members
+  // Delete all other membership docs.
   onProgress?.(`Cleaning /members roles...`);
   const memberSnap = await getDocs(collection(db, "members"));
   let memberDeleteCount = 0;
   for (const m of memberSnap.docs) {
-    // Keep only the UID of the target admin
+    // Keep only the target admin UID.
     if (!keptDevUid || m.id !== keptDevUid) {
       await deleteDoc(m.ref);
       memberDeleteCount++;
@@ -97,7 +92,7 @@ export async function resetWorkspaceForHandover(
   }
   deletedCounts["members"] = memberDeleteCount;
 
-  // 4. Delete all other user profiles in /users
+  // Delete all other user profiles.
   onProgress?.(`Cleaning /users profiles...`);
   try {
     const userSnap = await getDocs(collection(db, "users"));
@@ -114,7 +109,7 @@ export async function resetWorkspaceForHandover(
     deletedCounts["users"] = 0;
   }
 
-  // 5. Wipe all operational collections completely
+  // Wipe all operational collections.
   for (const colName of COLLECTIONS_TO_WIPE_ENTIRELY) {
     onProgress?.(`Wiping collection /${colName}...`);
     try {

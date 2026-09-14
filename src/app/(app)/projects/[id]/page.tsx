@@ -192,7 +192,7 @@ export default function ProjectDetailPage({
         </MuiLink>
       </Box>
 
-      {/* Title */}
+      {}
       <InputBase
         value={title}
         readOnly={!isAdmin}
@@ -213,7 +213,7 @@ export default function ProjectDetailPage({
         }}
       />
 
-      {/* Properties */}
+      {}
       <Box
         component="dl"
         sx={{
@@ -327,7 +327,7 @@ export default function ProjectDetailPage({
         </PropRow>
       </Box>
 
-      {/* Database (Notion-style table) */}
+      {}
       <Box sx={{ mt: 4 }}>
         <Box sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
           <Chip
@@ -361,7 +361,7 @@ export default function ProjectDetailPage({
         />
       </Box>
 
-      {/* AI actions (admin-only, like the rest of the AI surface) */}
+      {}
       {isAdmin && (
         <Box
           sx={{
@@ -411,7 +411,7 @@ export default function ProjectDetailPage({
         </Box>
       )}
 
-      {/* Notes */}
+      {}
       <Box sx={{ mt: 2 }}>
         <Typography
           variant="caption"
@@ -441,7 +441,7 @@ export default function ProjectDetailPage({
         />
       </Box>
 
-      {/* Danger zone — admin only */}
+      {}
       {isAdmin && (
         <>
           <Divider sx={{ mt: 5 }} />

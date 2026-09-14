@@ -1,21 +1,10 @@
-// Zirium AI brand color system — single source of truth for every color in the
-// app. Brand values are sampled from public/logo.png (black Z + sky-blue Z on
-// white, sky-blue "Ai" wordmark). The MUI theme (theme.ts) and any remaining
-// CSS variables (globals.css) both derive from this file.
 
-// ---------------------------------------------------------------------------
-// Brand — the exact logo colors.
-// ---------------------------------------------------------------------------
 export const brand = {
   black: "#000000", // logo Z strokes + "Zirium" wordmark
   blue: "#3EC8F4", //  logo sky-blue strokes + "Ai" wordmark + sparkle
   white: "#FFFFFF", // logo background
 };
 
-// ---------------------------------------------------------------------------
-// Sky-blue ramp built around the brand blue (#3EC8F4 = blue[400]).
-// Lighter steps for soft backgrounds, darker steps for readable text/buttons.
-// ---------------------------------------------------------------------------
 export const blue = {
   50: "#EAF9FE",
   100: "#D0F2FD",
@@ -29,10 +18,6 @@ export const blue = {
   900: "#134E69",
 };
 
-// ---------------------------------------------------------------------------
-// Neutrals derived from the brand black, cooled with a hint of the brand blue
-// so grays harmonize with the sky-blue accent instead of fighting it.
-// ---------------------------------------------------------------------------
 export const neutral = {
   0: "#FFFFFF",
   50: "#F7F9FA",
@@ -48,9 +33,6 @@ export const neutral = {
   950: "#0C0F11", // near the brand black, lifted just enough for dark surfaces
 };
 
-// ---------------------------------------------------------------------------
-// Feedback / accent hues, tuned to sit well next to the sky blue.
-// ---------------------------------------------------------------------------
 export const green = { light: "#DCF5E9", main: "#2EA26E", dark: "#1E7A50" };
 export const amber = { light: "#FBF0DA", main: "#DE9B26", dark: "#9F6E17" };
 export const orange = { light: "#FCE9DD", main: "#E8793D", dark: "#B5541E" };
@@ -59,10 +41,6 @@ export const purple = { light: "#EFE9FB", main: "#8E6BD8", dark: "#6644B8" };
 export const pink = { light: "#FBE5F1", main: "#E45FA3", dark: "#B93B7C" };
 export const yellow = { light: "#FAF3D2", main: "#D9B024", dark: "#96781A" };
 
-// ---------------------------------------------------------------------------
-// Semantic surfaces per color scheme. These back both the MUI palette and the
-// CSS variables in globals.css.
-// ---------------------------------------------------------------------------
 export const light = {
   background: neutral[50],
   surface: neutral[100], // slightly darker surface for variety, or keep 50
@@ -89,10 +67,6 @@ export const dark = {
   accentForeground: neutral[950],
 };
 
-// ---------------------------------------------------------------------------
-// Domain color maps — one base hue per status/priority. Components render
-// these as soft "badge" chips (see chipSx in projectMeta.ts).
-// ---------------------------------------------------------------------------
 export const projectStatus = {
   backlog: neutral[400],
   planned: blue[500],

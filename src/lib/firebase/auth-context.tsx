@@ -1,8 +1,7 @@
 "use client";
 
-// AuthProvider: global state management for Firebase user auth & membership roles.
-// On first login, shows a "Setting up your account" screen with rotating messages
-// until all data (member + employees + role sync) is ready.
+// Global auth state: Firebase user, member role, and employee record.
+// Shows a setup screen on first login until role sync completes.
 
 import {
   createContext,
@@ -53,7 +52,7 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// Non-blocking profile sync in the background so it never slows down login/boot.
+// Non-blocking background sync of the Firebase user profile document.
 function syncUserProfile(user: User): void {
   setDoc(
     doc(db, "users", user.uid),
@@ -68,7 +67,7 @@ function syncUserProfile(user: User): void {
   ).catch((err) => console.error("Profile sync failed:", err));
 }
 
-// Membership: read immediately (served instantly from local cache if available).
+// Reads the member doc or creates one on first sign-in.
 async function fetchOrCreateMember(user: User): Promise<Member> {
   const memberRef = doc(db, "members", user.uid);
   try {
@@ -90,7 +89,7 @@ async function fetchOrCreateMember(user: User): Promise<Member> {
   }
 }
 
-// ─── Setup screen messages ────────────────────────────────────────────────────
+
 const SETUP_MESSAGES = [
   "Loading your workspace…",
   "Syncing your permissions…",
@@ -167,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // roleSynced: the initial member ↔ employee role sync has completed.
   const [roleSynced, setRoleSynced] = useState(false);
 
-  // ── 1. Auth state listener ────────────────────────────────────────────────
+  // 1. Auth state listener
   useEffect(() => {
     let memberUnsub: (() => void) | undefined;
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
@@ -180,8 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         syncUserProfile(nextUser);
         try {
           let m = await fetchOrCreateMember(nextUser);
-          // If the owner email has no member doc (e.g. after emulator reset), recreate it
-          // so that Firestore security rules (isMember()) work on subsequent reads.
+          // Ensure owner emails always have the 'owner' role.
           if (m && m.role === "member" && nextUser.email) {
             const ownerEmails = ["haseeb.a@ziriumai.com", "haseeb.a@zirium.com", "ziriumai@gmail.com"];
             if (ownerEmails.includes(nextUser.email.trim().toLowerCase())) {
@@ -218,7 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // ── 2. Employee directory subscription ────────────────────────────────────
+  // 2. Subscribe to employee directory.
   useEffect(() => {
     if (!user || !memberLoaded) return;
     const userIsOwnerEmail =
@@ -226,8 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ["haseeb.a@ziriumai.com", "haseeb.a@zirium.com", "ziriumai@gmail.com"].includes(
         user.email.trim().toLowerCase(),
       );
-    // Subscribe for members with a member doc, OR for the hard-coded owner email
-    // (in case their member doc was wiped by an emulator restart / data reset).
+    // Subscribe for members with a member doc, or for the hard-coded owner email.
     if (!member && !userIsOwnerEmail) return;
     // Reset sync state on new user login
     setRoleSynced(false);
@@ -241,7 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user, memberLoaded, member]);
 
-  // ── 3. Match current user to their employee record ────────────────────────
+  // 3. Match current user to their employee record.
   const employee =
     user?.email && employees
       ? (employees.find(
@@ -249,19 +246,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ) ?? null)
       : null;
 
-  // ── 4. Bind auth uid → employee record on first match ─────────────────────
+  // 4. Bind auth uid to employee record on first match.
   useEffect(() => {
     if (employee && user && !employee.uid) {
       updateDeveloper(employee.id, { uid: user.uid }).catch(() => {});
     }
   }, [employee, user]);
 
-  // ── 5. Sync member.role ↔ employee.accessLevel ────────────────────────────
+  // 5. Sync member.role with employee.accessLevel.
   const syncedRolesRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!user || !member || employees === null) return;
 
-    // Current user's role sync
+    // Sync current user's role.
     if (employee && user.uid) {
       const isEmpIntern =
         employee.accessLevel === "intern" || employee.employmentType === "intern";
@@ -275,17 +272,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cacheKey = `${user.uid}_${targetRole}`;
       if (!syncedRolesRef.current.has(cacheKey) && member.role !== targetRole) {
         syncedRolesRef.current.add(cacheKey);
-        // Update local state immediately in memory so UI reflects the correct role
         setMember((prev) => prev ? { ...prev, role: targetRole } : prev);
-        // Sync role to Firestore
         updateMemberRole(user.uid, targetRole).catch(() => {});
       }
     }
 
-    // Mark role as synced — this unblocks the loading gate.
     setRoleSynced(true);
 
-    // Admin: batch-sync all employees' member roles in Firestore
+    // If admin: batch-sync all employees' member roles.
     const isPrivileged = member.role === "owner" || member.role === "admin";
     if (isPrivileged) {
       employees.forEach((emp) => {
@@ -301,17 +295,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, member, employee, employees]);
 
-  // ── 6. Compute loading ────────────────────────────────────────────────────
-  // loading stays true until auth is resolved AND member doc has been checked.
-  // If member is null (unregistered user), we don't try to load employees at all —
-  // accessBlocked will fire immediately so the user sees an error without hanging.
+  // 6. loading is true until auth + member doc + employees + role sync complete.
   const loading =
     !authResolved ||
     (!!user && !memberLoaded) ||
     // If member doc exists, also wait for employees and role sync.
     (!!user && !!member && (employees === null || !roleSynced));
 
-  // ── 7. Access check (offboarded / terminated / unregistered) ──────────────
+  // 7. Block offboarded, terminated, or unregistered users.
   const isOwnerByEmail =
     user?.email != null &&
     ["haseeb.a@ziriumai.com", "haseeb.a@zirium.com", "ziriumai@gmail.com"].includes(
@@ -335,7 +326,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               ? "Your email is not registered in the system. Please contact your administrator to be added before logging in or registering."
               : null;
 
-  // ── 8. Role resolution ────────────────────────────────────────────────────
+  // 8. Resolve final app role.
   const isAdmin = employee
     ? employee.accessLevel === "admin" || member?.role === "owner"
     : employees !== null && (
@@ -358,7 +349,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             : "employee"
           : null;
 
-  // ── Auth actions ──────────────────────────────────────────────────────────
+  // Auth actions
   async function signInWithGoogle() {
     await signInWithPopup(auth, googleProvider);
   }
@@ -383,7 +374,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(auth);
   }
 
-  // ── Render gates ──────────────────────────────────────────────────────────
 
   // Access denied screen (offboarded / terminated / unregistered)
   if (accessBlocked) {
@@ -405,9 +395,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  // First-time setup screen: shown ONLY when a user is signing in for the very first time
-  // (i.e. their employee profile has not yet been bound to their auth UID: !employee.uid).
-  // Established users whose accounts are already bound never see this screen on future logins.
+  // Show setup screen only on first login (before employee uid is bound).
   if (user && loading && authResolved && memberLoaded && (!employee || !employee.uid)) {
     return <SetupScreen />;
   }

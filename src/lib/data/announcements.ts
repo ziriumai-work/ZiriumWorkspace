@@ -28,9 +28,6 @@ export function subscribeToAnnouncements(
         (d) => ({ id: d.id, ...d.data() } as Announcement)
       );
 
-      // Filter out expired announcements locally for active banner display.
-      // Admins might need to see expired ones to delete them, but for simplicity,
-      // we'll fetch all and the UI can decide what to show.
       onData(allAnnouncements);
     },
     (err) => {

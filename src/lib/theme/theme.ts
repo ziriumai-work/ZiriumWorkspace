@@ -1,8 +1,5 @@
 "use client";
 
-// MUI theme built from the brand color system in colors.js. CSS variables are
-// enabled with the `media` color-scheme selector so light/dark follows the OS
-// preference — the same behavior the app had with plain CSS variables.
 
 import { createTheme } from "@mui/material/styles";
 import { blue, neutral, green, amber, red, light, dark } from "./colors";

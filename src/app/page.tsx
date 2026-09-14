@@ -1,10 +1,5 @@
 "use client";
 
-// Landing route ("/"): send signed-out visitors to login and signed-in users
-// to their role's home screen (admin/employee → dashboard, intern → My Space).
-// Auth state only exists on the client (Firebase SDK), so this redirect
-// happens client-side, and it waits for the role to resolve so nobody is
-// bounced to the wrong screen mid-load.
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";

@@ -145,7 +145,7 @@ export default function ZiriumPage() {
 
   return (
     <Box sx={{ display: "flex", height: "100%", flexDirection: "column" }}>
-      {/* Sub-header: model picker + new chat */}
+      {}
       <Box
         sx={{
           display: "flex",
@@ -244,7 +244,7 @@ export default function ZiriumPage() {
         </Box>
       </Box>
 
-      {/* Messages */}
+      {}
       <Box ref={scrollRef} sx={{ flex: 1, overflowY: "auto", scrollBehavior: "smooth" }}>
         <Box sx={{ mx: "auto", maxWidth: 760, px: 3, py: 3 }}>
           {isInitialState && (
@@ -346,9 +346,9 @@ export default function ZiriumPage() {
         </Box>
       </Box>
 
-      {/* Composer */}
+      {}
       <Box sx={{ px: { xs: 2, sm: 3 }, py: 3, position: "relative" }}>
-        {/* Subtle fade overlay behind composer to blend with messages */}
+        {}
         <Box sx={{ position: "absolute", top: -40, left: 0, right: 0, height: 40, background: "linear-gradient(to top, var(--mui-palette-background-default) 0%, transparent 100%)", pointerEvents: "none" }} />
         
         <Box sx={{ mx: "auto", maxWidth: 760, position: "relative", zIndex: 1 }}>

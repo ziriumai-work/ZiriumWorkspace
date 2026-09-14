@@ -128,7 +128,7 @@ export function ProjectDevelopers({
         />
       ))}
 
-      {/* Add control */}
+      {}
       {!editable ? null : roster.length === 0 ? (
         <Button
           component={Link}

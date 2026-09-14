@@ -184,7 +184,7 @@ export default function TasksPage() {
         </Typography>
       </Box>
 
-      {/* Minimalist Linear Statusline with Hover Lift & Glow */}
+      {}
       <Box
         sx={{
           mb: 3.5,
@@ -243,7 +243,7 @@ export default function TasksPage() {
         />
       )}
 
-      {/* Filter Toggle */}
+      {}
       <Box sx={{ display: "flex", justifyContent: "flex-start", mt: 3, mb: showFilters ? 2 : 3 }}>
         <IconButton 
           onClick={() => setShowFilters(!showFilters)}
@@ -262,7 +262,7 @@ export default function TasksPage() {
         </IconButton>
       </Box>
 
-      {/* Filters Form */}
+      {}
       <Collapse in={showFilters}>
         <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 3, display: "flex", flexDirection: "column", gap: 2 }}>
           <TextField

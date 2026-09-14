@@ -14,13 +14,13 @@ import { keyframes } from "@emotion/react";
 
 const ringAnimation = keyframes`
   0% { transform: rotate(0); }
-  25% { transform: rotate(0); } /* Wait 1 sec (25% of 4s) */
+  25% { transform: rotate(0); } 
   30% { transform: rotate(15deg); }
   35% { transform: rotate(-10deg); }
   40% { transform: rotate(5deg); }
   45% { transform: rotate(-5deg); }
   50% { transform: rotate(0); }
-  100% { transform: rotate(0); } /* Stay still for rest of 4s */
+  100% { transform: rotate(0); } 
 `;
 
 const rippleAnimation = keyframes`
@@ -63,9 +63,6 @@ export function GlobalBanner() {
       if (a.expiryDate && new Date(a.expiryDate) < now) {
         return false;
       }
-      // 2. Check dismissal (if created after dismissal, show it)
-      // If we dismissed at timestamp X, and the announcement createdAt > X, we show it.
-      // Wait, createdAt can be null initially (serverTimestamp). Treat null as "just created" = very new.
       const createdAtMs = a.createdAt ? (a.createdAt as any).toMillis?.() || Date.now() : Date.now();
       if (createdAtMs <= dismissedUntil) {
         return false;
@@ -123,7 +120,7 @@ export function GlobalBanner() {
         overflow: "hidden",
       }}
     >
-      {/* Premium Glass Edge Highlight */}
+      {}
       <Box
         sx={{
           position: "absolute",
@@ -135,7 +132,7 @@ export function GlobalBanner() {
 
       <Box sx={{ display: "flex", alignItems: "center", gap: { xs: 2, md: 3 }, width: "100%", maxWidth: "1400px" }}>
 
-        {/* Left Side: Icon & Badge */}
+        {}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <Box sx={{
             display: "flex",
@@ -178,10 +175,10 @@ export function GlobalBanner() {
           </Typography>
         </Box>
 
-        {/* Divider line */}
+        {}
         <Box sx={{ width: "1px", height: "32px", bgcolor: `${blue[400]}33`, display: { xs: "none", sm: "block" } }} />
 
-        {/* Center: Title & Description */}
+        {}
         <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, overflow: "hidden" }}>
           <Typography
             variant="subtitle2"
@@ -202,7 +199,7 @@ export function GlobalBanner() {
           )}
         </Box>
 
-        {/* Right Side: Controls */}
+        {}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {activeAnnouncements.length > 1 && (
             <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", mr: 1, bgcolor: isLight ? "rgba(0,0,0,0.05)" : "rgba(0,0,0,0.3)", borderRadius: "8px", px: 1, border: `1px solid ${isLight ? neutral[200] : neutral[800]}` }}>

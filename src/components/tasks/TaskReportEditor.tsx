@@ -1,8 +1,5 @@
 "use client";
 
-// Editor for a task's report: free-text, links, and file uploads (Firebase
-// Storage). Used inside an expanded task. `editable` is false for viewers who
-// aren't the assignee or an admin.
 
 import { useState } from "react";
 import Box from "@mui/material/Box";
@@ -100,7 +97,7 @@ export function TaskReportEditor({
   // Common render for a single report item
   const renderReportItem = (r: TaskReport, index: number) => (
     <Box key={r.id || index} sx={{ display: "flex", gap: 2, mb: 3, position: "relative" }}>
-      {/* Timeline Line */}
+      {}
       <Box sx={{ 
         position: "absolute", 
         left: "7px", 
@@ -111,7 +108,7 @@ export function TaskReportEditor({
         display: index === reports.length - 1 ? "none" : "block"
       }} />
       
-      {/* Timeline Dot */}
+      {}
       <Box sx={{ mt: 0.5, flexShrink: 0 }}>
         <Box sx={{ 
           width: 16, 
@@ -125,7 +122,7 @@ export function TaskReportEditor({
         }} />
       </Box>
 
-      {/* Content */}
+      {}
       <Box sx={{ flex: 1, pb: 1 }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5, alignItems: "center" }}>
           <Typography variant="caption" sx={{ fontWeight: 600, color: r.type === "review" ? "primary.main" : "text.primary" }}>
@@ -214,7 +211,7 @@ export function TaskReportEditor({
           fullWidth
         />
 
-      {/* Links */}
+      {}
       <Box>
         <LinkList
           links={links}
@@ -239,7 +236,7 @@ export function TaskReportEditor({
         </Box>
       </Box>
 
-      {/* Files */}
+      {}
       <Box>
         <FileList
           files={files}

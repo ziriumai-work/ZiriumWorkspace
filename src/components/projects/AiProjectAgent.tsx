@@ -134,7 +134,7 @@ export function AiProjectAgent({
         },
       }}
     >
-      {/* Header */}
+      {}
       <Box
         sx={{
           display: "flex",
@@ -164,7 +164,7 @@ export function AiProjectAgent({
         </TextField>
       </Box>
 
-      {/* Body */}
+      {}
       <Box sx={{ minHeight: 0, flex: 1, overflowY: "auto", p: 2 }}>
         {!plan ? (
           <>
@@ -233,7 +233,7 @@ export function AiProjectAgent({
             </Box>
             <Paper variant="outlined" sx={{ overflow: "hidden", borderRadius: 3 }}>
               <Box sx={{ maxHeight: 300, overflowY: "auto", overflowX: "auto" }}>
-                {/* Table Header */}
+                {}
                 <Box
                   sx={{
                     display: "grid",
@@ -251,7 +251,7 @@ export function AiProjectAgent({
                     </Box>
                   ))}
                 </Box>
-                {/* Table Body */}
+                {}
                 {plan.rows.map((r, i) => (
                   <Box
                     key={r.id}
@@ -303,7 +303,7 @@ export function AiProjectAgent({
         )}
       </Box>
 
-      {/* Footer */}
+      {}
       <Divider />
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, px: 2, py: 1.5 }}>
         <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>

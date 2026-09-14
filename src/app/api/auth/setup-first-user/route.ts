@@ -2,14 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
 
-/**
- * POST /api/auth/setup-first-user
- *
- * Sets up the very first user in the system by giving them the 'owner' role
- * and creating a 'developer' record for them with 'admin' access level.
- *
- * Body: { uid: string, email: string, name: string }
- */
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();

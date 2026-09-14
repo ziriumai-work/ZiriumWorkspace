@@ -1,13 +1,3 @@
-// The catalogue of AI models the workspace exposes ("Zirium AI"). This is the
-// single source of truth shared by the model selectors (client) and the
-// /api/ai route handler (server). The API key lives only on the server.
-//
-// IMPORTANT — product name vs. real engine:
-// DeepSeek's public API does not (yet) expose "v4-pro" / "v4-flash" model ids.
-// We keep those as our product-facing ids/labels and map each to a REAL DeepSeek
-// engine via `apiId`. When DeepSeek ships a v4 API, just change the apiId here.
-//   Flash -> deepseek-chat      (fast, general purpose — DeepSeek V3)
-//   Pro   -> deepseek-reasoner  (deliberate reasoning   — DeepSeek R1)
 
 export interface AiModel {
   id: string; // app-facing id (selector value, sent from the client)

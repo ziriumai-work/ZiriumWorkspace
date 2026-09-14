@@ -81,7 +81,7 @@ export function EmployeeStatsDashboard({ myStats, employee }: EmployeeStatsDashb
         </Typography>
       </Box>
 
-      {/* Warning chips if penalty conditions active */}
+      {}
       <Box sx={{ display: "flex", gap: 1, mt: 2, flexWrap: "wrap" }}>
         {myStats.isPenaltyActive && (
           <Chip

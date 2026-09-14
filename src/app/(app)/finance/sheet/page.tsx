@@ -1,11 +1,5 @@
 "use client";
 
-// Finance → Monthly Sheet: the running ledger of monthly expenses (salaries,
-// utilities, and any custom type). The balance column is fully live: money
-// received on finance projects flows in (green), allotments and expenses flow
-// out (red, − sign). If the balance turns positive it goes green and the −
-// sign disappears — automatically, because everything derives from the same
-// real-time subscriptions.
 
 import { useEffect, useMemo, useState } from "react";
 import Alert from "@mui/material/Alert";
@@ -160,7 +154,7 @@ export default function MonthlySheetPage() {
 
   return (
     <Box sx={{ mx: "auto", width: "100%", maxWidth: 1400, px: 4, py: 4 }}>
-      {/* Live balance strip */}
+      {}
       <Grid container spacing={1.5}>
         <SummaryCard label="Money in (received)">
           <Money value={balance.totalReceived} balance sx={{ fontSize: "1.25rem" }} />
@@ -176,7 +170,7 @@ export default function MonthlySheetPage() {
         </SummaryCard>
       </Grid>
 
-      {/* Add expense */}
+      {}
       <Paper variant="outlined" sx={{ mt: 3, p: 2, borderRadius: 3 }}>
         <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
           Add a monthly expense
@@ -234,7 +228,7 @@ export default function MonthlySheetPage() {
         </Alert>
       )}
 
-      {/* Month ledger */}
+      {}
       <Box sx={{ mt: 3, display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
         <Typography variant="subtitle2">
           {new Date(month + "-01").toLocaleDateString(undefined, {

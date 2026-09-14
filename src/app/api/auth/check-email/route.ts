@@ -1,19 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/firebaseAdmin";
 
-/**
- * POST /api/auth/check-email
- *
- * Checks whether a given email exists in the /developers collection.
- * This is called BEFORE creating a Firebase Auth account during registration
- * so that unregistered emails are rejected without creating any Auth or Firestore
- * documents.
- *
- * Body: { email: string }
- * Response 200: { allowed: true,  name: string }
- * Response 403: { allowed: false, message: string }
- * Response 400: { error: "missing email" }
- */
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();

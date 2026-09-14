@@ -116,7 +116,7 @@ export default function ProjectsPage() {
         }}
       />
 
-      {/* Header + toolbar */}
+      {}
       <Box
         component="header"
         sx={{
@@ -208,7 +208,7 @@ export default function ProjectsPage() {
         </Box>
       </Box>
 
-      {/* Quick-add row (admins only) */}
+      {}
       {isAdmin && (
         <Box
           sx={{
@@ -245,7 +245,7 @@ export default function ProjectsPage() {
         </Alert>
       )}
 
-      {/* View */}
+      {}
       <Box sx={{ flex: 1, overflow: "auto" }}>
         {loading ? (
           <Box sx={{ px: 4, py: 5 }}>

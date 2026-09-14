@@ -2,11 +2,7 @@
 
 import { getApiModelId } from "@/lib/ai/ai-models";
 
-/**
- * Lightweight JWT payload decode — checks `aud`, `exp`, and `sub` locally,
- * then attempts full network verification with a 4 s timeout.
- * Falls back to local checks on network errors to avoid 401s from Cloudflare/Google timeouts.
- */
+
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const parts = token.split(".");

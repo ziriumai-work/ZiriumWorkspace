@@ -15,8 +15,7 @@ import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { SessionManager } from "@/components/attendance/SessionManager";
 import { GlobalBanner } from "@/components/announcements/GlobalBanner";
 
-// Which roles may visit which top-level routes. Prefix match; routes not
-// listed (none today) are open to every signed-in user.
+// Route access rules: prefix match; unlisted routes are open to all signed-in users.
 const ROUTE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: "/dashboard", roles: ["admin", "employee"] },
   { prefix: "/intern", roles: ["intern"] },
@@ -47,7 +46,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!loading && !user && !accessBlocked) router.replace("/login");
   }, [user, loading, accessBlocked, router]);
 
-  // Keep each role on its permitted routes once the role is known.
+  // Redirect each role to its permitted home when on a disallowed path.
   useEffect(() => {
     if (role && !allowedPath(role, pathname)) {
       router.replace(ROLE_HOME[role]);

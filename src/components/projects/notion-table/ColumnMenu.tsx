@@ -54,7 +54,7 @@ export function ColumnMenu({
       </Box>
 
       <MenuList dense sx={{ px: 0.5, py: 0 }}>
-        {/* Change type — collapsible, Notion-style list */}
+        {}
         <MenuItem
           onClick={() => setTypeOpen((v) => !v)}
           sx={{ borderRadius: 1.5, justifyContent: "space-between", fontSize: 14 }}
@@ -203,7 +203,7 @@ export function OptionsEditor({
                 "&:hover": { bgcolor: "surface" },
               }}
             >
-              {/* color swatch -> opens palette */}
+              {}
               <Box
                 component="button"
                 onClick={() => setColorFor(colorFor === o.id ? null : o.id)}
@@ -279,7 +279,7 @@ export function OptionsEditor({
         ))}
       </Box>
 
-      {/* add option */}
+      {}
       <Box sx={{ mt: 0.5, display: "flex", alignItems: "center", gap: 0.5 }}>
         <TextField
           value={newLabel}

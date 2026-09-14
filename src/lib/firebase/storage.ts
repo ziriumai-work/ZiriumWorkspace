@@ -1,6 +1,3 @@
-// File uploads for task reports, backed by Firebase Storage.
-// Requires Storage to be enabled in the Firebase console (Build → Storage) and
-// storage.rules published. Until then, uploads throw a helpful error.
 
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase/client";
